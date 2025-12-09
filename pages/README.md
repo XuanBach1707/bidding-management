@@ -1,0 +1,1 @@
+This page folder is necessary, even though it's empty.
