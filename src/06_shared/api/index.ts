@@ -20,3 +20,11 @@ export type {
 
 // Export Utils (Hàm hỗ trợ)
 export { validateResponse } from "./utils";
+
+
+export {  
+    AuthResponseSchema,
+    UserRoleSchema
+} from "./schema"; // Đảm bảo đúng đường dẫn
+
+export type { UserRole, AuthResponse } from "./schema";
