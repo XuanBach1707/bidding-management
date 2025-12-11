@@ -40,7 +40,7 @@ export const sidebarRoutes: SidebarRoute[] = [
     icon: Search,
     children: [
       { 
-        title: "Săn tìm gói thầu", 
+        title: "Tra cứu gói thầu", 
         href: "/opportunities", 
         icon: Search 
       },
