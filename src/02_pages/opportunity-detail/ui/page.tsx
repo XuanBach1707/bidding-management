@@ -188,11 +188,22 @@ const SectionCard = ({ title, children }: { title: string; children: React.React
   </div>
 );
 
-const InfoRow = ({ label, value, isLink, fullWidth }: { label: string; value: string | number; isLink?: boolean; fullWidth?: boolean }) => (
+const InfoRow = ({ 
+  label, 
+  value, 
+  isLink, 
+  fullWidth 
+}: { 
+  label: string; 
+  value?: string | number | null; // <-- Đã sửa: Cho phép null hoặc undefined
+  isLink?: boolean; 
+  fullWidth?: boolean 
+}) => (
   <div className={`flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 ${fullWidth ? 'col-span-1 md:col-span-2' : ''}`}>
     <span className="text-sm font-medium text-slate-500 min-w-[160px]">{label}</span>
     <span className={`text-sm ${isLink ? 'text-blue-600 cursor-pointer hover:underline' : 'text-slate-900'} text-right sm:text-left sm:flex-1 break-words`}>
-      {value || "--"}
+      {/* Logic hiển thị fallback vẫn hoạt động tốt */}
+      {value ?? "--"} 
     </span>
   </div>
 );
@@ -212,7 +223,7 @@ const DetailSkeleton = () => (
     </div>
 );
 
-const formatDate = (dateString?: string) => {
+const formatDate = (dateString?: string | null) => { // <-- Đã sửa: Cho phép string | null | undefined
     if (!dateString) return "--";
     try {
         return format(new Date(dateString), "dd/MM/yyyy HH:mm");

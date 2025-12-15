@@ -31,7 +31,9 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
   const pathname = usePathname() || "";
   const [isOpen, setIsOpen] = useState(false);
 
-  const isActive = route.href ? pathname.startsWith(route.href) : false;
+  const isActive = route.href 
+  ? (pathname === route.href || pathname.startsWith(`${route.href}/`)) 
+  : false
   
   const hasActiveChild = route.children?.some(
     (child) => child.href && pathname.startsWith(child.href)

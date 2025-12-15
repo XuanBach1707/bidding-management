@@ -1,83 +1,84 @@
-// src/entities/bidding/model/types.ts
+import { z } from "zod";
 
-// --- 1. COMMON TYPES ---
-export interface BaseResponse<T> {
-  success: boolean;
-  status: number;
-  message: string;
-  data: T;
-}
+// --- 1. COMMON SCHEMAS ---
+export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
+  z.object({
+    success: z.boolean(),
+    status: z.number(),
+    message: z.string().optional().nullable(), // API hay trả về null
+    data: dataSchema,
+  });
 
-// --- 2. MAIN ENTITY (Gói thầu) ---
-export interface BiddingPackage {
-  hsmtId: number;
-  maTbmt: string;
-  phienBanThayDoi: string;
-  ngayDangTai: string;
+// --- 2. MAIN ENTITY SCHEMA (Gói thầu) ---
+export const BiddingPackageSchema = z.object({
+  hsmtId: z.number(),
+  maTbmt: z.string(),
+  phienBanThayDoi: z.string().optional().nullable(), // Có thể null
+  ngayDangTai: z.string(),
   
-  // Nhóm KHLCNT
-  maKhlcnt: string;
-  phanLoaiKhlcnt: string;
-  tenDuAn: string; 
+  // Nhóm KHLCNT (Cho phép null/optional hết để an toàn)
+  maKhlcnt: z.string().optional().nullable(),
+  phanLoaiKhlcnt: z.string().optional().nullable(),
+  tenDuAn: z.string().optional().nullable(),
   
   // Nhóm Thông tin gói thầu
-  quyTrinhApDung: string;
-  tenGoiThau: string;
-  chuDauTu: string;
-  chiTietNguonVon: string;
-  linhVuc: string;
-  hinhThucLuaChonNhaThau: string;
-  loaiHopDong: string;
-  trongNuocHoacQuocTe: string;
-  phuongThucLuaChonNhaThau: string;
-  thoiGianThucHienGoiThau: string;
+  quyTrinhApDung: z.string().optional().nullable(),
+  tenGoiThau: z.string(),
+  chuDauTu: z.string().optional().nullable(),
+  chiTietNguonVon: z.string().optional().nullable(),
+  linhVuc: z.string().optional().nullable(),
+  hinhThucLuaChonNhaThau: z.string().optional().nullable(),
+  loaiHopDong: z.string().optional().nullable(),
+  trongNuocHoacQuocTe: z.string().optional().nullable(),
+  phuongThucLuaChonNhaThau: z.string().optional().nullable(),
+  thoiGianThucHienGoiThau: z.string().optional().nullable(),
   
   // Nhóm khác
-  goiThauCoNhieuPhanLo: string;
-  hinhThucDuThau: string;
-  diaDiemPhatHanhEHsmt: string;
-  chiPhiNop: string;
-  diaDiemNhanEHsdt: string;
-  diaDiemThucHienGoiThau: string;
-  thoiDiemDongThau: string;
-  thoiDiemMoThau: string;
-  diaDiemMoThau: string;
-  hieuLucHsdt: string;
-  soTienDamBaoDuThau: string;
-  hinhThucDamBaoDuThau: string;
-  loaiCongTrinh: string;
-  soQuyetDinhPheDuyet: string;
-  ngayPheDuyet: string;
-  coQuanBanHanhQuyetDinh: string;
-  quyetDinhPheDuyet: string;
-  duongDanGoiThau: string;
-  trangThai: string; 
-  createdAt: string;
-}
+  goiThauCoNhieuPhanLo: z.string().optional().nullable(),
+  hinhThucDuThau: z.string().optional().nullable(),
+  diaDiemPhatHanhEHsmt: z.string().optional().nullable(),
+  chiPhiNop: z.string().optional().nullable(),
+  diaDiemNhanEHsdt: z.string().optional().nullable(),
+  diaDiemThucHienGoiThau: z.string().optional().nullable(),
+  thoiDiemDongThau: z.string().optional().nullable(),
+  thoiDiemMoThau: z.string().optional().nullable(),
+  diaDiemMoThau: z.string().optional().nullable(),
+  hieuLucHsdt: z.string().optional().nullable(),
+  soTienDamBaoDuThau: z.string().optional().nullable(),
+  hinhThucDamBaoDuThau: z.string().optional().nullable(),
+  loaiCongTrinh: z.string().optional().nullable(),
+  soQuyetDinhPheDuyet: z.string().optional().nullable(),
+  ngayPheDuyet: z.string().optional().nullable(),
+  coQuanBanHanhQuyetDinh: z.string().optional().nullable(),
+  quyetDinhPheDuyet: z.string().optional().nullable(),
+  duongDanGoiThau: z.string().optional().nullable(),
+  trangThai: z.string().optional().nullable(),
+  createdAt: z.string(),
+});
 
-// --- 3. PARAMS & RESPONSES ---
+// --- 3. FILES SCHEMA ---
+export const BiddingFileSchema = z.object({
+  fileId: z.number(),
+  hsmtId: z.number(),
+  fileName: z.string(),
+  fileType: z.string(),
+  uploadDate: z.string(),
+  filePath: z.string(),
+});
 
-// [QUAN TRỌNG] Params cho API danh sách (cái đang bị lỗi thiếu)
+// --- 4. EXPORT TYPES (Infer từ Zod) ---
+// Đây là bước quan trọng: Code khác dùng các Type này y hệt như Interface cũ
+export type BiddingPackage = z.infer<typeof BiddingPackageSchema>;
+export type BiddingFile = z.infer<typeof BiddingFileSchema>;
+
+// Params (Giữ nguyên hoặc dùng Zod cũng được)
 export interface GetBiddingPackagesParams {
   skip?: number;
   limit?: number;
 }
 
-// Response danh sách
-export type BiddingPackageListResponse = BaseResponse<BiddingPackage[]>;
-
-// Response chi tiết (API trả về mảng 1 phần tử)
-export type BiddingPackageDetailResponse = BaseResponse<BiddingPackage[]>;
-
-// --- 4. FILES ---
-export interface BiddingFile {
-  fileId: number;
-  hsmtId: number;
-  fileName: string;
-  fileType: string;
-  uploadDate: string;
-  filePath: string;
-}
-
-// Response danh sách file
-export type BiddingPackageFilesResponse = BaseResponse<BiddingFile[]>;
+// Response Types
+// Lưu ý: data trả về có thể null, nên mình bọc .nullable() cho an toàn
+export type BiddingPackageListResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
+export type BiddingPackageDetailResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
+export type BiddingPackageFilesResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingFileSchema>>>>;
