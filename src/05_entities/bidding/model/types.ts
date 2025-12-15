@@ -1,11 +1,21 @@
 import { z } from "zod";
 
-// --- 1. COMMON SCHEMAS ---
+// --- 1. COMMON SCHEMAS & TYPES ---
+
+// [FIX] Thêm lại interface này để các file khác (như index.ts) có thể import được
+export interface BaseResponse<T> {
+  success: boolean;
+  status: number;
+  message?: string | null;
+  data: T;
+}
+
+// Helper Zod Schema cho Response
 export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
     success: z.boolean(),
     status: z.number(),
-    message: z.string().optional().nullable(), // API hay trả về null
+    message: z.string().optional().nullable(),
     data: dataSchema,
   });
 
@@ -13,10 +23,10 @@ export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
 export const BiddingPackageSchema = z.object({
   hsmtId: z.number(),
   maTbmt: z.string(),
-  phienBanThayDoi: z.string().optional().nullable(), // Có thể null
+  phienBanThayDoi: z.string().optional().nullable(),
   ngayDangTai: z.string(),
   
-  // Nhóm KHLCNT (Cho phép null/optional hết để an toàn)
+  // Nhóm KHLCNT
   maKhlcnt: z.string().optional().nullable(),
   phanLoaiKhlcnt: z.string().optional().nullable(),
   tenDuAn: z.string().optional().nullable(),
@@ -67,18 +77,16 @@ export const BiddingFileSchema = z.object({
 });
 
 // --- 4. EXPORT TYPES (Infer từ Zod) ---
-// Đây là bước quan trọng: Code khác dùng các Type này y hệt như Interface cũ
 export type BiddingPackage = z.infer<typeof BiddingPackageSchema>;
 export type BiddingFile = z.infer<typeof BiddingFileSchema>;
 
-// Params (Giữ nguyên hoặc dùng Zod cũng được)
+// Params
 export interface GetBiddingPackagesParams {
   skip?: number;
   limit?: number;
 }
 
 // Response Types
-// Lưu ý: data trả về có thể null, nên mình bọc .nullable() cho an toàn
 export type BiddingPackageListResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
 export type BiddingPackageDetailResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
 export type BiddingPackageFilesResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingFileSchema>>>>;
