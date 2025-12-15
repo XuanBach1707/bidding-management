@@ -1,14 +1,19 @@
-// Export Models
+// 1. Export Models (Types)
 export type { 
   BiddingPackage, 
-  GetBiddingPackagesParams 
+  BiddingFile,
+  GetBiddingPackagesParams,
+  // Export thêm BaseResponse nếu các module khác cần dùng chung format
+  BaseResponse 
 } from "./model";
 
-// Export APIs
+// 2. Export APIs
 export { 
-  getBiddingPackages 
+  getBiddingPackages,
+  getBiddingPackageDetail,
+  getBiddingPackageFiles
 } from "./api";
 
-// Export UI
+// 3. Export UI Components
 export { BiddingCard } from "./ui/bidding-card";
-export { BiddingCardSkeleton } from "./ui/bidding-card-skeleton"; // <-- Mới thêm
+export { BiddingCardSkeleton } from "./ui/bidding-card-skeleton";

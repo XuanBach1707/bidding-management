@@ -1,5 +1,11 @@
-import { OpportunitiesPage } from "@/pages/opportunities";
+import { OpportunityDetailPage } from "@/pages/opportunity-detail";
 
-export default function Page() {
-  return <OpportunitiesPage />;
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function Page({ params }: PageProps) {
+  return <OpportunityDetailPage id={params.id} />;
 }

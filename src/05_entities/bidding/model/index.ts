@@ -1,6 +1,11 @@
-// src/entities/bidding/model/index.ts
 export type { 
   BiddingPackage, 
   GetBiddingPackagesParams, 
-  BiddingPackageListResponse 
+  BiddingPackageListResponse,
+  
+  // Các type mới cho Detail và Files
+  BiddingFile,
+  BiddingPackageDetailResponse,
+  BiddingPackageFilesResponse,
+  BaseResponse 
 } from "./types";
