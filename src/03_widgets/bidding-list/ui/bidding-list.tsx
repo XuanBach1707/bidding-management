@@ -1,75 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react"; // Icon cảnh báo lỗi
+
 import { 
   getBiddingPackages, 
-  BiddingPackage, 
-  GetBiddingPackagesParams,
-  BiddingCard,
-  BiddingCardSkeleton // <-- Import Skeleton
+  BiddingCard, 
+  BiddingCardSkeleton 
 } from "@/entities/bidding";
 
 export const BiddingList = () => {
-  const [data, setData] = useState<BiddingPackage[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [params, setParams] = useState<GetBiddingPackagesParams>({
-    skip: 0,
-    limit: 10,
+  // 1. Gọi API lấy dữ liệu
+  // staleTime: 1 phút (trong 1 phút nếu user quay lại sẽ không gọi API mới để đỡ tốn tài nguyên)
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["bidding-packages"],
+    queryFn: () => getBiddingPackages({ skip: 0, limit: 10 }),
+    staleTime: 60 * 1000, 
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Giả lập delay một chút để nhìn thấy hiệu ứng skeleton (nếu mạng quá nhanh)
-        // await new Promise(resolve => setTimeout(resolve, 1000)); 
-        
-        const res = await getBiddingPackages(params);
-        if (res.success) {
-            setData(res.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch bidding packages:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [params]);
-
-  // LOGIC LOADING MỚI: Render mảng Skeleton
-  if (loading) {
+  // 2. Trạng thái Đang Tải (Loading)
+  if (isLoading) {
     return (
-      <div className="flex flex-col gap-4">
-        {/* Render giả 3-5 items */}
-        {Array.from({ length: 5 }).map((_, index) => (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Render 6 khung xương giả lập loading */}
+        {Array.from({ length: 6 }).map((_, index) => (
           <BiddingCardSkeleton key={index} />
         ))}
       </div>
     );
   }
 
-  if (data.length === 0) {
+  // 3. Trạng thái Lỗi (Error)
+  if (isError) {
     return (
-        <div className="text-center py-10 text-slate-500 bg-white rounded-lg border border-dashed">
-            Không tìm thấy gói thầu nào.
-        </div>
-    )
+      <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 p-8 text-center">
+        <AlertCircle className="mb-2 h-8 w-8 text-red-500" />
+        <p className="text-sm font-medium text-red-800">
+          Không thể tải danh sách gói thầu.
+        </p>
+        <p className="text-xs text-red-600 mt-1">
+          {error instanceof Error ? error.message : "Lỗi không xác định"}
+        </p>
+      </div>
+    );
   }
 
+  // 4. Lấy mảng dữ liệu an toàn
+  // data?.data vì cấu trúc trả về là { success: true, data: [...] }
+  const packages = data?.data || [];
+
+  // 5. Trạng thái Rỗng (Empty)
+  if (packages.length === 0) {
+    return (
+      <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
+        <p className="text-sm text-slate-500">Chưa tìm thấy gói thầu nào.</p>
+      </div>
+    );
+  }
+
+  // 6. Trạng thái Có dữ liệu -> Render danh sách
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between pb-2">
-        <h2 className="text-lg font-semibold text-slate-800">
-            Kết quả tìm kiếm ({data.length})
-        </h2>
+      {/* (Tùy chọn) Hiển thị số lượng kết quả */}
+      <div className="flex items-center justify-between">
+         <p className="text-sm font-medium text-slate-500">
+            Hiển thị {packages.length} kết quả mới nhất
+         </p>
       </div>
-      
-      <div className="flex flex-col gap-4">
-        {data.map((item) => (
-          <BiddingCard key={item.hsmtId || item.maTbmt} data={item} />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {packages.map((item) => (
+          <BiddingCard 
+            // Dùng hsmtId làm key là chuẩn nhất theo API
+            key={item.hsmtId} 
+            data={item} 
+          />
         ))}
       </div>
     </div>

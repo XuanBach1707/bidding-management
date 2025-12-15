@@ -1,12 +1,14 @@
-import { OpportunityDetailPage } from "@/pages/opportunity-detail";
+import { OpportunityDetailPage } from "@/pages/opportunity-detail"; // <-- Kiểm tra đường dẫn import này trúng file index của FSD chưa
 
+// Next.js 15/16 yêu cầu params là Promise
 interface PageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
-export default function Page({ params }: PageProps) {
-  // Pass ID xuống cho Page thực tế xử lý
-  return <OpportunityDetailPage id={params.id} />;
+export default async function Page({ params }: PageProps) {
+  // BẮT BUỘC: Phải await params trước khi lấy id
+  const { id } = await params;
+
+  // Truyền ID xuống cho UI xử lý
+  return <OpportunityDetailPage id={id} />;
 }
