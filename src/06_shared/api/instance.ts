@@ -5,7 +5,7 @@ import snakecaseKeys from 'snakecase-keys';
 
 import { authStorage } from '@/shared/lib/auth'; // Giữ nguyên đường dẫn của bạn
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://26.118.131.110:8000/";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://26.112.109.171:8000/";
 
 export const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
