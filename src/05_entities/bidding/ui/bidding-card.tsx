@@ -72,7 +72,7 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
         </div>
         <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
         <div className="flex flex-col">
-          <span className="text-xs text-slate-500">Hình thức dự thầu</span>
+          <span className="text-xs text-slate-500">Hình thức lựa chọn nhà thầu</span>
           <span className="font-medium text-slate-900">{data.hinhThucLuaChonNhaThau}</span>
         </div>
       </div>
