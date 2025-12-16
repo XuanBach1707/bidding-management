@@ -1,10 +1,9 @@
 // src/shared/lib/auth-storage.ts
 
-// Định nghĩa Key ở một chỗ để tránh gõ sai
 const STORAGE_KEY = {
   ACCESS_TOKEN: "ACCESS_TOKEN",
   REFRESH_TOKEN: "REFRESH_TOKEN",
-  EXPIRES_IN: "EXPIRES_IN", // Lưu thời gian hết hạn (dạng timestamp hoặc giây)
+  EXPIRES_AT: "EXPIRES_AT", // Đổi tên để rõ nghĩa: Thời điểm hết hạn (Timestamp)
   USER_INFO: "USER_INFO",
 };
 
@@ -23,7 +22,7 @@ export const authStorage = {
   },
 
   // ==============================
-  // 2. REFRESH TOKEN (Mới thêm)
+  // 2. REFRESH TOKEN
   // ==============================
   getRefreshToken: () => {
     if (typeof window === "undefined") return null;
@@ -32,26 +31,26 @@ export const authStorage = {
 
   setRefreshToken: (token: string) => {
     if (typeof window === "undefined") return;
-    // Kiểm tra kỹ null/undefined vì refresh token đôi khi BE không trả về
     if (!token) return; 
     localStorage.setItem(STORAGE_KEY.REFRESH_TOKEN, token);
   },
 
   // ==============================
-  // 3. EXPIRES IN (Mới thêm)
+  // 3. EXPIRES AT (Logic Mới)
   // ==============================
-  getExpiresIn: (): number | null => {
+  // Lấy ra thời điểm hết hạn (Timestamp)
+  getExpiresAt: (): number | null => {
     if (typeof window === "undefined") return null;
-    const value = localStorage.getItem(STORAGE_KEY.EXPIRES_IN);
+    const value = localStorage.getItem(STORAGE_KEY.EXPIRES_AT);
     return value ? Number(value) : null;
   },
 
-  setExpiresIn: (seconds: number) => {
+  // Lưu vào: Nhận số giây (seconds) -> Cộng với Date.now()
+  setExpiresAt: (seconds: number) => {
     if (typeof window === "undefined") return;
-    // Lưu ý: Nên lưu thời điểm hết hạn cụ thể (Current Time + Expires In)
-    // Ví dụ: Bây giờ là 10h, expires trong 1h -> Lưu "11h"
-    // Nhưng để đơn giản, ta cứ lưu raw số giây backend trả về trước đã
-    localStorage.setItem(STORAGE_KEY.EXPIRES_IN, String(seconds));
+    // Date.now() tính bằng ms, nên seconds phải * 1000
+    const expiresAt = Date.now() + seconds * 1000; 
+    localStorage.setItem(STORAGE_KEY.EXPIRES_AT, String(expiresAt));
   },
 
   // ==============================
@@ -74,17 +73,16 @@ export const authStorage = {
   },
 
   // ==============================
-  // 5. CLEAR ALL (LOGOUT)
+  // 5. CLEAR ALL
   // ==============================
   clear: () => {
     if (typeof window === "undefined") return;
-    // Xóa sạch sẽ tất cả keys liên quan
     localStorage.removeItem(STORAGE_KEY.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEY.REFRESH_TOKEN);
-    localStorage.removeItem(STORAGE_KEY.EXPIRES_IN);
+    localStorage.removeItem(STORAGE_KEY.EXPIRES_AT);
     localStorage.removeItem(STORAGE_KEY.USER_INFO);
     
-    // Xóa luôn mấy key rác cũ của bạn (chạy 1 lần rồi xóa dòng này đi cũng được)
+    // Cleanup cũ
     localStorage.removeItem("authToken");
     localStorage.removeItem("pms_auth_token");
     localStorage.removeItem("currentUser");

@@ -7,13 +7,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 
 // Import Shared & Entities
-// Lưu ý: Đảm bảo đường dẫn import đúng với cấu trúc folder của bạn (vd: @/shared hoặc @/src/06_shared)
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { useToast } from "@/shared/lib/hooks/use-toast"; 
-import { authStorage } from "@/shared/lib/auth"; // SỬA: Import đúng file auth-storage
+import { authStorage } from "@/shared/lib"; // [UPDATE] Import đúng file storage
 
 // Import API & Schema
 import { authApi, LoginRequest, LoginRequestSchema } from "../api/auth.api"; 
@@ -22,7 +21,6 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // 1. Setup Form với React Hook Form + Zod
   const form = useForm<LoginRequest>({
     resolver: zodResolver(LoginRequestSchema),
     defaultValues: {
@@ -31,26 +29,24 @@ export function LoginForm() {
     },
   });
 
-  // 2. Setup Mutation (TanStack Query) để gọi API
   const loginMutation = useMutation({
     mutationFn: (data: LoginRequest) => authApi.login(data),
+    
     onSuccess: (data) => {
-      // --- CẬP NHẬT LOGIC LƯU STORAGE TẠI ĐÂY ---
-      
       // 1. Lưu Access Token
       authStorage.setToken(data.accessToken);
 
-      // 2. Lưu Refresh Token (Nếu có)
+      // 2. Lưu Refresh Token
       if (data.refreshToken) {
         authStorage.setRefreshToken(data.refreshToken);
       }
 
-      // 3. Lưu Expires In (Nếu có - để tính giờ logout)
+      // 3. [UPDATE] Lưu ExpiresAt (Sử dụng hàm mới đã sửa ở auth-storage)
       if (data.expiresIn) {
-        authStorage.setExpiresIn(data.expiresIn);
+        authStorage.setExpiresAt(data.expiresIn);
       }
 
-      // 4. Lưu User Info (Để hiển thị tên/avatar)
+      // 4. Lưu User Info
       if (data.user) {
         authStorage.setUser(data.user);
       }
@@ -58,16 +54,16 @@ export function LoginForm() {
       toast({
         title: "Đăng nhập thành công",
         description: "Đang chuyển hướng...",
+        className: "bg-green-600 text-white border-none" // [Optional] Style cho đẹp
       });
 
-      // Chuyển hướng vào trang dashboard
       router.push("/dashboard"); 
     },
+
     onError: (error: any) => {
-      // Xử lý lỗi từ API trả về
-      // Vì đã cài camelcase-keys nên error response cũng có thể đã được convert,
-      // nhưng để an toàn cứ check cả message thường.
-      const msg = error?.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+      // [QUAN TRỌNG] Sửa cách lấy lỗi
+      // Vì authApi đã throw new Error("Message từ BE") nên ta lấy error.message
+      const msg = error.message || "Đăng nhập thất bại. Vui lòng thử lại.";
       
       toast({
         variant: "destructive",
@@ -77,7 +73,6 @@ export function LoginForm() {
     },
   });
 
-  // 3. Hàm Submit
   const onSubmit = (values: LoginRequest) => {
     loginMutation.mutate(values);
   };
@@ -128,7 +123,7 @@ export function LoginForm() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={loginMutation.isPending} // Disable khi đang call API
+              disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? "Đang xử lý..." : "Đăng nhập"}
             </Button>
