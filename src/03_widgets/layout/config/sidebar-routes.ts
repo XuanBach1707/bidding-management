@@ -51,7 +51,7 @@ export const sidebarRoutes: SidebarRoute[] = [
       },
       { 
         title: "Cấu hình Bot", 
-        href: "/admin/crawler-config", 
+        href: "/bot-config", 
         icon: Bot,   // Đã đổi icon cho hợp ngữ cảnh
         roles: ["ADMIN"] 
       },
