@@ -21,15 +21,42 @@ import {
 } from "@/shared/ui/form";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/shared/ui/select"; // <-- NHỚ IMPORT CÁI NÀY
+} from "@/shared/ui/select"; 
 import { useToast } from "@/shared/lib/hooks/use-toast";
-import { Badge } from "@/shared/ui/badge"; // Thêm Badge cho đẹp
+import { Badge } from "@/shared/ui/badge"; 
 
 import { ruleApi, ruleSchema, type Rule } from "@/entities/crawler";
 
 // --- HELPERS ---
+
+// Format tiền tệ
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' } as const).format(value);
+};
+
+// [SỬA LẠI] Helper xử lý logic hiển thị range ngân sách (Ép kiểu Number)
+const formatBudgetRange = (min: any, max: any) => {
+  // 1. Ép kiểu dữ liệu về số để an toàn tuyệt đối
+  const minNum = Number(min) || 0; // Nếu null/undefined/nan -> về 0
+  const maxNum = Number(max) || 0;
+
+  // 2. Logic hiển thị
+  // Trường hợp 1: Cả 2 đều là 0 -> Không giới hạn
+  if (minNum === 0 && maxNum === 0) {
+    return <span className="text-muted-foreground italic">Không giới hạn</span>;
+  }
+  
+  // Trường hợp 2: Có min nhưng max là 0 -> Min - Không giới hạn
+  if (minNum > 0 && maxNum === 0) {
+    return (
+      <span>
+        {formatCurrency(minNum)} - <span className="text-muted-foreground italic">Không giới hạn</span>
+      </span>
+    );
+  }
+
+  // Trường hợp 3: Bình thường (Min - Max)
+  return `${formatCurrency(minNum)} - ${formatCurrency(maxNum)}`;
 };
 
 const readMoneyToText = (number: number) => {
@@ -112,7 +139,7 @@ export const CrawlerRuleManager = () => {
       minBudget: 0,
       maxBudget: 0,
       locations: [],
-      priority: 3, // Mặc định là Trung bình (3) cho an toàn
+      priority: 3, 
     },
   });
 
@@ -181,7 +208,7 @@ export const CrawlerRuleManager = () => {
       minBudget: 0,
       maxBudget: 0,
       locations: [],
-      priority: 3, // Reset về 3
+      priority: 3, 
     });
     setIsOpen(true);
   };
@@ -306,7 +333,7 @@ export const CrawlerRuleManager = () => {
                             onChange={e => field.onChange(e.target.valueAsNumber)} 
                         />
                       </FormControl>
-                       {(field.value as number) > 0 && (
+                        {(field.value as number) > 0 && (
                           <FormDescription className="text-blue-600 font-medium">
                             {readMoneyToText(field.value as number)}
                           </FormDescription>
@@ -344,9 +371,7 @@ export const CrawlerRuleManager = () => {
                     <FormItem>
                       <FormLabel>Độ ưu tiên</FormLabel>
                       <Select 
-                        // Select của Shadcn nhận value là String
                         value={field.value?.toString()} 
-                        // Khi change thì ép kiểu về Number
                         onValueChange={(val) => field.onChange(Number(val))}
                       >
                         <FormControl>
@@ -384,7 +409,7 @@ export const CrawlerRuleManager = () => {
               <TableHead>Lĩnh vực</TableHead>
               <TableHead>Từ khóa (Include)</TableHead>
               <TableHead>Ngân sách</TableHead>
-              <TableHead>Độ ưu tiên</TableHead> {/* Thêm cột Priority */}
+              <TableHead>Độ ưu tiên</TableHead> 
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -396,10 +421,12 @@ export const CrawlerRuleManager = () => {
                 <TableCell className="max-w-[200px] truncate">
                    {item.keywordsInclude?.join(", ")}
                 </TableCell>
+                
+                {/* [ĐÃ SỬA] Dùng helper formatBudgetRange mới */}
                 <TableCell>
-                    {formatCurrency(item.minBudget)} - {formatCurrency(item.maxBudget)}
+                    {formatBudgetRange(item.minBudget, item.maxBudget)}
                 </TableCell>
-                {/* Hiển thị Priority dạng Badge cho đẹp */}
+                
                 <TableCell>
                    <Badge variant={item.priority === 1 ? "destructive" : item.priority === 2 ? "default" : "secondary"}>
                       {getPriorityLabel(item.priority)}
