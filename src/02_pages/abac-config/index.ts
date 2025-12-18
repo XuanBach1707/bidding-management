@@ -1,0 +1,1 @@
+export { AbacConfigPage } from './ui/AbacConfigPage';

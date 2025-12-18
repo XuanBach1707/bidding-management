@@ -1,13 +1,16 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import camelcaseKeys from 'camelcase-keys';
 import snakecaseKeys from 'snakecase-keys';
-
-// Đảm bảo bạn đã update file auth-storage như bước trước (có hàm setExpiresAt)
 import { authStorage } from '@/shared/lib/auth'; 
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://26.112.109.171:8000/";
+const SKIP_TRANSFORM_HEADER = 'x-no-transform';
 
-// 1. Instance chính (Dùng cho mọi request thông thường)
+// Mở rộng type để chứa cờ nội bộ
+interface CustomAxiosConfig extends InternalAxiosRequestConfig {
+  _skipTransform?: boolean;
+}
+
 export const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -16,73 +19,82 @@ export const http: AxiosInstance = axios.create({
   timeout: 10000,
 });
 
-// 2. Instance phụ (CHỈ dùng để gọi API refresh token)
-// Lý do: Để tránh bị lặp vô tận nếu chính API refresh cũng bị interceptor chặn
 const refreshHttp = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
-// --- LOGIC HÀNG ĐỢI (QUEUE) ---
-// Giúp xử lý trường hợp nhiều request cùng bị 401 một lúc
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
   failedQueue = [];
 };
 
 // =================================================================
-// 1. REQUEST INTERCEPTOR (Gửi đi: camelCase -> snake_case)
+// 1. REQUEST INTERCEPTOR
 // =================================================================
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Ép kiểu sang CustomConfig để dùng biến _skipTransform
+    const customConfig = config as CustomAxiosConfig;
+
     // 1. Gắn Token
     const token = authStorage.getToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // 2. Chuyển đổi dữ liệu gửi đi (camelCase -> snake_case)
-    if (config.data && !(config.data instanceof FormData)) {
+    // 2. Kiểm tra header chặn transform
+    const skipHeader = config.headers?.[SKIP_TRANSFORM_HEADER];
+    
+    // LƯU Ý QUAN TRỌNG: Lưu trạng thái vào biến nội bộ _skipTransform
+    if (skipHeader) {
+      customConfig._skipTransform = true;
+      // Sau khi lưu xong thì xóa header đi để tránh gửi rác lên server
+      delete config.headers[SKIP_TRANSFORM_HEADER];
+    }
+
+    // 3. Chuyển đổi dữ liệu gửi đi (Chỉ khi không có cờ chặn)
+    if (config.data && !(config.data instanceof FormData) && !customConfig._skipTransform) {
       config.data = snakecaseKeys(config.data, { deep: true });
     }
 
-    return config;
+    return customConfig;
   },
   (error) => Promise.reject(error)
 );
 
 // =================================================================
-// 2. RESPONSE INTERCEPTOR (Nhận về: snake_case -> camelCase)
+// 2. RESPONSE INTERCEPTOR
 // =================================================================
 http.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Convert dữ liệu nhận về (snake_case -> camelCase)
-    if (response.data && typeof response.data === 'object') {
+    // Lấy cờ skip từ config (đã được lưu ở Request Interceptor)
+    const customConfig = response.config as CustomAxiosConfig;
+    const skipTransform = customConfig._skipTransform;
+
+    // Convert dữ liệu nhận về (Chỉ convert nếu KHÔNG có cờ skip)
+    if (response.data && typeof response.data === 'object' && !skipTransform) {
       response.data = camelcaseKeys(response.data, { deep: true });
     }
     return response.data;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as CustomAxiosConfig & { _retry?: boolean };
+    const skipTransform = originalRequest?._skipTransform;
 
-    // Convert lỗi sang camelCase (để dễ debug trên FE)
-    if (error.response?.data && typeof error.response.data === 'object') {
+    // Convert lỗi sang camelCase (nếu không chặn)
+    if (error.response?.data && typeof error.response.data === 'object' && !skipTransform) {
        error.response.data = camelcaseKeys(error.response.data as any, { deep: true });
     }
 
-    // --- XỬ LÝ 401: Token hết hạn ---
+    // --- XỬ LÝ 401 (Giữ nguyên logic cũ) ---
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      
-      // Nếu đang có tiến trình refresh chạy rồi, request này sẽ xếp hàng đợi
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -93,74 +105,41 @@ http.interceptors.response.use(
             }
             return http(originalRequest);
           })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       const refreshToken = authStorage.getRefreshToken();
-
-      // Nếu không có refresh token -> Logout ngay
       if (!refreshToken) {
         handleLogout();
         return Promise.reject(error);
       }
 
       try {
-        // --- GỌI API REFRESH ---
-        // Sử dụng refreshHttp (không qua interceptor chính)
-        // Body: { "refresh_token": "string" }
-        const { data } = await refreshHttp.post('/auth/refresh', { 
-          refresh_token: refreshToken 
-        });
-        
-        // --- XỬ LÝ DỮ LIỆU TRẢ VỀ ---
-        // API trả về: { success: true, data: { access_token, refresh_token, expiresIn, ... } }
-        
-        // 1. Dùng camelcaseKeys để chuẩn hóa key nhận về (access_token -> accessToken)
+        const { data } = await refreshHttp.post('/auth/refresh', { refresh_token: refreshToken });
+        // Refresh token API luôn trả về snake_case chuẩn nên ta convert thủ công hoặc dùng camelcaseKeys
         const responseData = camelcaseKeys(data, { deep: true });
-        
-        // 2. Lấy data từ responseData.data (do wrapper của API)
-        const { 
-            accessToken, 
-            refreshToken: newRefreshToken, 
-            expiresIn 
-        } = responseData.data;
+        const { accessToken, refreshToken: newRefreshToken, expiresIn } = responseData.data;
 
-        if (!accessToken) {
-            throw new Error("API Refresh thành công nhưng không có accessToken");
-        }
+        if (!accessToken) throw new Error("Missing accessToken");
 
-        // 3. Lưu lại vào Storage
         authStorage.setToken(accessToken);
-        
-        // Nếu BE trả về refresh token mới thì cập nhật, không thì giữ cái cũ
-        if (newRefreshToken) {
-            authStorage.setRefreshToken(newRefreshToken);
-        }
-        
-        // Lưu thời gian hết hạn (dùng hàm setExpiresAt bạn đã update ở bước trước)
-        if (expiresIn) {
-            authStorage.setExpiresAt(expiresIn);
-        }
+        if (newRefreshToken) authStorage.setRefreshToken(newRefreshToken);
+        if (expiresIn) authStorage.setExpiresAt(expiresIn);
 
-        // 4. Update header cho request hiện tại & request trong hàng đợi
         http.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
         if (originalRequest.headers) {
              originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
         }
 
-        // 5. Giải phóng hàng đợi
         processQueue(null, accessToken);
-
-        // 6. Gọi lại request ban đầu với token mới
+        
+        // Quan trọng: Khi retry, phải đảm bảo cờ _skipTransform vẫn được giữ
         return http(originalRequest);
 
       } catch (refreshError) {
-        // Refresh thất bại (Refresh token hết hạn hoặc lỗi server) -> Logout
         processQueue(refreshError, null);
         handleLogout();
         return Promise.reject(refreshError);
@@ -169,27 +148,21 @@ http.interceptors.response.use(
       }
     }
 
-    // --- LOG CÁC LỖI KHÁC ---
+    // --- LOG (Giữ nguyên) ---
     if (error.response) {
-       const status = error.response.status;
-       switch (status) {
-         case 403: console.error("Forbidden: Không có quyền."); break;
-         case 500: console.error("Server Error."); break;
-       }
-    } else {
-       console.error("Network Error: Không thể kết nối Server.");
+        const status = error.response.status;
+        if (status === 403) console.error("Forbidden");
+        if (status === 500) console.error("Server Error");
     }
     
     return Promise.reject(error);
   }
 );
 
-// Helper Logout
 function handleLogout() {
   if (typeof window !== 'undefined') {
      const isLoginPage = window.location.pathname.includes('/login');
      if (!isLoginPage) {
-        console.warn("Phiên đăng nhập hết hạn. Đang đăng xuất...");
         authStorage.clear();
         window.location.href = '/login';
      }

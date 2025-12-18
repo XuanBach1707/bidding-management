@@ -1,4 +1,3 @@
-// src/03_widgets/layout/config/sidebar-routes.ts
 import { 
   LayoutDashboard, 
   Search, 
@@ -10,21 +9,22 @@ import {
   Truck,
   Scale,
   Landmark,
-  Bot,         // Thêm icon Bot
-  Filter,      // Thêm icon Filter
-  History,     // Thêm icon History
-  CheckSquare, // Thêm icon Task
-  PlayCircle,  // Thêm icon Active
+  Bot,
+  Filter,
+  History,
+  CheckSquare,
+  PlayCircle,
+  ShieldCheck, // <--- 1. Thêm icon Khiên bảo mật
   type LucideIcon 
 } from "lucide-react";
 
-// 1. Định nghĩa Type cho Route (để dùng được ở sidebar.tsx)
+// 1. Định nghĩa Type cho Route (Giữ nguyên)
 export interface SidebarRoute {
   title: string;
-  href?: string;       // Có thể null nếu là menu cha
-  icon?: LucideIcon;   // Có thể null nếu không muốn hiện icon ở menu con
-  roles?: string[];    // Mảng các role được phép xem
-  children?: SidebarRoute[]; // Đệ quy menu con
+  href?: string;
+  icon?: LucideIcon;
+  roles?: string[];
+  children?: SidebarRoute[];
 }
 
 // 2. Cấu hình danh sách Menu
@@ -47,12 +47,12 @@ export const sidebarRoutes: SidebarRoute[] = [
       { 
         title: "Phân tích & Sàng lọc", 
         href: "/opportunities/analysis", 
-        icon: Filter // Đã đổi icon cho hợp ngữ cảnh
+        icon: Filter 
       },
       { 
         title: "Cấu hình Bot", 
         href: "/bot-config", 
-        icon: Bot,   // Đã đổi icon cho hợp ngữ cảnh
+        icon: Bot,
         roles: ["ADMIN"] 
       },
     ],
@@ -89,6 +89,16 @@ export const sidebarRoutes: SidebarRoute[] = [
       { title: "Hợp đồng tương tự", href: "/resources/contracts", icon: FileText },
     ],
   },
+  
+  // --- MỚI THÊM: ABAC MODULE ---
+  // Tôi để nó gần Settings vì đây là tính năng quản trị hệ thống
+  {
+    title: "Phân quyền (ABAC)", 
+    icon: ShieldCheck,       // Icon cái khiên
+    href: "/abac-config",    // Đường dẫn trỏ tới page chúng ta vừa làm
+    roles: ["ADMIN"],        // Chỉ Admin mới thấy
+  },
+
   {
     title: "Hệ thống",
     icon: Settings,
