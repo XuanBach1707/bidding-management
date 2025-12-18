@@ -96,5 +96,17 @@ export const abacApi = {
         console.error("Failed to fetch system tables", error);
         return [];
     }
+  },
+
+  // Lấy danh sách Actions từ hệ thống (MỚI CẬP NHẬT)
+  getActions: async (): Promise<string[]> => {
+    try {
+      const response: any = await http.get('/system/actions');
+      // Trích xuất mảng string từ field 'data' trong response
+      return response.data || [];
+    } catch (error) {
+      console.error("Failed to fetch system actions", error);
+      return [];
+    }
   }
 };

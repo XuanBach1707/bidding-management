@@ -2,7 +2,6 @@ import { z } from "zod";
 
 // --- 1. COMMON SCHEMAS & TYPES ---
 
-// [FIX] Thêm lại interface này để các file khác (như index.ts) có thể import được
 export interface BaseResponse<T> {
   success: boolean;
   status: number;
@@ -10,7 +9,6 @@ export interface BaseResponse<T> {
   data: T;
 }
 
-// Helper Zod Schema cho Response
 export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
     success: z.boolean(),
@@ -62,7 +60,13 @@ export const BiddingPackageSchema = z.object({
   coQuanBanHanhQuyetDinh: z.string().optional().nullable(),
   quyetDinhPheDuyet: z.string().optional().nullable(),
   duongDanGoiThau: z.string().optional().nullable(),
-  trangThai: z.string().optional().nullable(),
+  
+  // TRẠNG THÁI: Chuyển thành Enum/Literal để hết lỗi .includes()
+  trangThai: z.enum(["NEW", "INTERESTED", "NO_GO", "BIDDING", "SUBMITTED", "CLOSED"]).optional().nullable(),
+  
+  // PHÂN QUYỀN: Thêm trường allowedActions từ Backend (đã qua Interceptor convert)
+  allowedActions: z.array(z.string()).optional().default([]),
+  
   createdAt: z.string(),
 });
 
@@ -76,14 +80,15 @@ export const BiddingFileSchema = z.object({
   filePath: z.string(),
 });
 
-// --- 4. EXPORT TYPES (Infer từ Zod) ---
+// --- 4. EXPORT TYPES ---
 export type BiddingPackage = z.infer<typeof BiddingPackageSchema>;
 export type BiddingFile = z.infer<typeof BiddingFileSchema>;
 
-// Params
+// [FIX] Cập nhật Params hỗ trợ Search cho BiddingList
 export interface GetBiddingPackagesParams {
   skip?: number;
   limit?: number;
+  search?: string; // Thêm search ở đây
 }
 
 // Response Types

@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react"; // Icon cảnh báo lỗi
+import { Search, AlertCircle } from "lucide-react"; 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { Input } from "@/shared/ui/input";
+import { useDebounce } from "@/shared/lib/hooks/use-debounce"; 
 
 import { 
   getBiddingPackages, 
@@ -10,73 +14,61 @@ import {
 } from "@/entities/bidding";
 
 export const BiddingList = () => {
-  // 1. Gọi API lấy dữ liệu
-  // staleTime: 1 phút (trong 1 phút nếu user quay lại sẽ không gọi API mới để đỡ tốn tài nguyên)
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["bidding-packages"],
-    queryFn: () => getBiddingPackages({ skip: 0, limit: 10 }),
-    staleTime: 60 * 1000, 
+    queryKey: ["bidding-packages", debouncedSearch],
+    queryFn: () => getBiddingPackages({ search: debouncedSearch }),
   });
 
-  // 2. Trạng thái Đang Tải (Loading)
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Render 6 khung xương giả lập loading */}
-        {Array.from({ length: 6 }).map((_, index) => (
-          <BiddingCardSkeleton key={index} />
-        ))}
-      </div>
-    );
-  }
-
-  // 3. Trạng thái Lỗi (Error)
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 p-8 text-center">
-        <AlertCircle className="mb-2 h-8 w-8 text-red-500" />
-        <p className="text-sm font-medium text-red-800">
-          Không thể tải danh sách gói thầu.
-        </p>
-        <p className="text-xs text-red-600 mt-1">
-          {error instanceof Error ? error.message : "Lỗi không xác định"}
-        </p>
-      </div>
-    );
-  }
-
-  // 4. Lấy mảng dữ liệu an toàn
-  // data?.data vì cấu trúc trả về là { success: true, data: [...] }
   const packages = data?.data || [];
 
-  // 5. Trạng thái Rỗng (Empty)
-  if (packages.length === 0) {
-    return (
-      <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
-        <p className="text-sm text-slate-500">Chưa tìm thấy gói thầu nào.</p>
-      </div>
-    );
-  }
+  // Sửa lỗi 1 & 2 bằng cách check tồn tại và ép kiểu
+  const pending = packages.filter(p => 
+    p.trangThai && ["NEW", "INTERESTED"].includes(p.trangThai as string)
+  );
 
-  // 6. Trạng thái Có dữ liệu -> Render danh sách
+  const approved = packages.filter(p => 
+    p.trangThai && ["BIDDING", "SUBMITTED", "CLOSED"].includes(p.trangThai as string)
+  );
+
+  if (isError) return <div className="text-red-500">Lỗi: {(error as any)?.message}</div>;
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* (Tùy chọn) Hiển thị số lượng kết quả */}
-      <div className="flex items-center justify-between">
-         <p className="text-sm font-medium text-slate-500">
-            Hiển thị {packages.length} kết quả mới nhất
-         </p>
+    <div className="space-y-6">
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Input 
+          placeholder="Tìm kiếm gói thầu..." 
+          className="pl-9"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {packages.map((item) => (
-          <BiddingCard 
-            // Dùng hsmtId làm key là chuẩn nhất theo API
-            key={item.hsmtId} 
-            data={item} 
-          />
-        ))}
-      </div>
+      <Tabs defaultValue="pending">
+        <TabsList>
+          <TabsTrigger value="pending">Chờ xử lý ({pending.length})</TabsTrigger>
+          <TabsTrigger value="approved">Đã duyệt ({approved.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          {isLoading ? (
+             Array.from({ length: 3 }).map((_, i) => <BiddingCardSkeleton key={i} />)
+          ) : pending.map(item => (
+            <BiddingCard key={item.hsmtId} data={item} />
+          ))}
+        </TabsContent>
+
+        <TabsContent value="approved" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          {isLoading ? (
+             Array.from({ length: 3 }).map((_, i) => <BiddingCardSkeleton key={i} />)
+          ) : approved.map(item => (
+            <BiddingCard key={item.hsmtId} data={item} />
+          ))}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

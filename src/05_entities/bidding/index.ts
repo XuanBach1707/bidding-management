@@ -13,6 +13,7 @@ export {
   getBiddingPackageDetail,
   getBiddingPackageFiles
 } from "./api";
+export { updateBiddingDecision } from "./api/decision";
 
 // 3. Export UI Components
 export { BiddingCard } from "./ui/bidding-card";
