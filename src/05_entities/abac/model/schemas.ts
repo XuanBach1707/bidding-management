@@ -4,34 +4,33 @@ import { z } from 'zod';
 // 1. ATTRIBUTE SCHEMA
 // ==========================================
 
-// SỬA ĐOẠN NÀY: Logic "ép kiểu" mạnh tay
 export const AttributeTypeSchema = z.preprocess(
   (val) => {
-    if (!val) return "STRING"; // Null/Undefined -> STRING
+    if (!val) return "STRING";
     
     const s = String(val).toUpperCase();
     
-    // 1. Map các kiểu lạ về kiểu chuẩn (nếu Backend trả về kiểu SQL)
-    if (["INT", "INTEGER", "FLOAT", "DECIMAL", "DOUBLE"].includes(s)) return "NUMBER";
-    if (["TEXT", "CHAR", "VARCHAR"].includes(s)) return "STRING";
-    if (["BOOL"].includes(s)) return "BOOLEAN";
-    if (["DATE", "TIMESTAMP"].includes(s)) return "DATETIME";
+    // 1. Giữ nguyên hoặc Map về đúng Enum của Backend để tránh Payload sai lệch
+    if (["INTEGER", "INT"].includes(s)) return "INTEGER";
+    if (["DECIMAL", "FLOAT", "DOUBLE", "NUMBER"].includes(s)) return "DECIMAL";
+    if (["BOOLEAN", "BOOL"].includes(s)) return "BOOLEAN";
+    if (["LIST", "ARRAY", "JSON"].includes(s)) return "LIST";
+    if (["DATETIME", "TIMESTAMP", "DATE"].includes(s)) return "DATETIME";
 
-    // 2. Nếu đúng kiểu chuẩn rồi thì giữ nguyên
-    if (["STRING", "NUMBER", "BOOLEAN", "DATETIME"].includes(s)) return s;
-
-    // 3. Fallback: Nếu vẫn lạ hoắc (VD: "JSON", "LIST") -> Coi như STRING để không crash App
+    // 2. Mặc định là STRING cho các kiểu TEXT, VARCHAR hoặc không xác định
     return "STRING"; 
   },
-  z.enum(["STRING", "NUMBER", "BOOLEAN", "DATETIME"])
+  // Enum này phải khớp chính xác với các giá trị Backend mong đợi trong Payload
+  z.enum(["STRING", "INTEGER", "DECIMAL", "BOOLEAN", "LIST", "DATETIME"]) 
 );
 
 export const AttributeSchema = z.object({
   id: z.number(),
-  attr_key: z.string().min(1, "Key không được để trống"), 
-  attr_type: AttributeTypeSchema, // Đã được bọc giáp chống lỗi
-  source_table: z.string().nullable().optional(), 
-  description: z.string().optional(),
+  attr_key: z.string().min(1, "Key không được để trống"),
+  attr_type: AttributeTypeSchema,
+  source_table: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  mapping_path: z.string().nullable().optional(), // Trường từ Backend
 });
 
 // ==========================================
@@ -63,17 +62,17 @@ export const ConditionGroupSchema: z.ZodType<ConditionGroup> = z.lazy(() =>
 );
 
 // ==========================================
-// 3. POLICY SCHEMA (Giữ nguyên)
+// 3. POLICY SCHEMA
 // ==========================================
 export const PolicySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(3, "Tên chính sách phải dài hơn 3 ký tự"),
   description: z.string().optional(),
   target_resource: z.string().min(1, "Phải chọn Resource"),
-  action: z.array(z.string()).min(1, "Phải chọn ít nhất 1 hành động"), 
+  action: z.array(z.string()).min(1, "Phải chọn ít nhất 1 hành động"),
   effect: z.enum(["ALLOW", "DENY"]),
   priority: z.number().int().min(1).default(1),
-  condition_json: ConditionGroupSchema, 
+  condition_json: ConditionGroupSchema,
   is_active: z.boolean().default(true),
   created_at: z.string().optional().nullable(),
   updated_at: z.string().optional().nullable(),
