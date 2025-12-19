@@ -2,11 +2,22 @@
 import React, { useEffect, useState } from 'react';
 import { abacApi, AbacAttribute } from '@/entities/abac';
 import { useToast } from "@/shared/lib/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/shared/ui/alert-dialog";
 
 export const AttributeDictionary = () => {
   const { toast } = useToast();
   const [attrs, setAttrs] = useState<AbacAttribute[]>([]);
-  const [tableOptions, setTableOptions] = useState<string[]>([]); // Danh sách bảng hệ thống
+  const [tableOptions, setTableOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,7 +25,7 @@ export const AttributeDictionary = () => {
   const [formData, setFormData] = useState({
     attr_key: '',
     attr_type: 'STRING',
-    source_table: '', // Bắt buộc
+    source_table: '',
     description: ''
   });
 
@@ -56,8 +67,6 @@ export const AttributeDictionary = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Kiểm tra bắt buộc source_table
     if (!formData.source_table) {
         toast({ variant: "destructive", title: "Lỗi", description: "Vui lòng chọn Nguồn dữ liệu (Source Table)." });
         return;
@@ -78,14 +87,13 @@ export const AttributeDictionary = () => {
     }
   };
 
-  const handleDelete = async (id: number, key: string) => {
-    if (!confirm(`Xóa thuộc tính "${key}"?`)) return;
+  const onConfirmDelete = async (id: number) => {
     try {
       await abacApi.deleteAttribute(id);
       toast({ title: "Thành công", description: "Đã xóa thuộc tính." });
       loadData();
     } catch (error) {
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể xóa." });
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể xóa thuộc tính này." });
     }
   };
 
@@ -124,7 +132,31 @@ export const AttributeDictionary = () => {
                 <td className="p-4 text-gray-400 italic">{a.description || '-'}</td>
                 <td className="p-4 text-right space-x-3">
                   <button onClick={() => handleOpenEdit(a)} className="text-indigo-600 hover:text-indigo-900 font-bold">Sửa</button>
-                  <button onClick={() => handleDelete(a.id, a.attr_key)} className="text-red-500 hover:text-red-700 font-bold">Xóa</button>
+                  
+                  {/* Tích hợp AlertDialog vào đây */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="text-red-500 hover:text-red-700 font-bold">Xóa</button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Xác nhận xóa thuộc tính?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Bạn sắp xóa thuộc tính <code className="text-blue-600 font-bold">{a.attr_key}</code>. 
+                          Nếu có chính sách nào đang sử dụng thuộc tính này, logic kiểm tra có thể bị lỗi.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => onConfirmDelete(a.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Xác nhận xóa
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </td>
               </tr>
             ))}
@@ -132,9 +164,9 @@ export const AttributeDictionary = () => {
         </table>
       </div>
 
-      {/* FORM MODAL */}
+      {/* FORM MODAL (Giữ nguyên logic cũ của bạn) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
               <h3 className="font-bold text-gray-800">{editingId ? 'Sửa thuộc tính' : 'Thêm thuộc tính mới'}</h3>
@@ -193,7 +225,7 @@ export const AttributeDictionary = () => {
 
               <div className="flex justify-end gap-3 pt-4">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 font-medium">Hủy</button>
-                <button type="submit" className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                <button type="submit" className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg transition-all">
                   {editingId ? 'Cập nhật' : 'Tạo mới'}
                 </button>
               </div>

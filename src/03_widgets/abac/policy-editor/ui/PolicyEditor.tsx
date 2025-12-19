@@ -12,7 +12,45 @@ import {
 import { useToast } from "@/shared/lib/hooks/use-toast";
 
 // ====================================================================
-// 1. SUB-COMPONENTS
+// 0. HELPER: VALIDATE & FORMAT DỮ LIỆU
+// ====================================================================
+
+// Hàm đệ quy kiểm tra xem có Rule nào bị trống field hoặc value không
+const validateConditionTree = (node: any): boolean => {
+  if (node.rules && Array.isArray(node.rules)) {
+    if (node.rules.length === 0) return true; // Nhóm trống có thể chấp nhận hoặc tùy logic
+    return node.rules.every((child: any) => validateConditionTree(child));
+  }
+  // Kiểm tra Rule đơn lẻ: phải có field và value (ngoại trừ toán tử không cần value nếu có)
+  const hasField = !!node.field;
+  const hasValue = node.value !== undefined && node.value !== null && String(node.value).trim() !== "";
+  return hasField && hasValue;
+};
+
+const formatConditionForPayload = (node: any): any => {
+  if (node.rules && Array.isArray(node.rules)) {
+    return {
+      ...node,
+      rules: node.rules.map((child: any) => formatConditionForPayload(child))
+    };
+  }
+
+  const isArrayOperator = ['IN', 'NOT_IN', 'in', 'not_in'].includes(node.operator);
+  
+  if (isArrayOperator && typeof node.value === 'string') {
+    return {
+      ...node,
+      value: node.value.split(',')
+        .map((v: string) => v.trim())
+        .filter((v: string) => v !== "")
+    };
+  }
+
+  return node;
+};
+
+// ====================================================================
+// 1. SUB-COMPONENTS (RuleRowUI & GroupUI giữ nguyên)
 // ====================================================================
 
 const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
@@ -40,16 +78,16 @@ const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
         value={rule.operator}
         onChange={(e) => onUpdate({ operator: e.target.value })}
       >
-        {operators.map(op => (
+        {operators.map((op: any) => (
           <option key={op.value} value={op.value}>{op.label}</option>
         ))}
       </select>
       
       <input 
         className="border p-1.5 rounded flex-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-        value={String(rule.value)}
+        value={Array.isArray(rule.value) ? rule.value.join(', ') : (rule.value || '')}
         onChange={(e) => onUpdate({ value: e.target.value })}
-        placeholder="Giá trị..."
+        placeholder={['IN', 'NOT_IN'].includes(rule.operator) ? "Giá trị 1, Giá trị 2..." : "Giá trị..."}
       />
       
       <button onClick={onRemove} className="text-gray-400 hover:text-red-500 px-2 text-lg">✕</button>
@@ -114,7 +152,6 @@ interface PolicyEditorProps {
 export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuccess, onCancel }) => {
   const { toast } = useToast();
   
-  // State Form
   const [name, setName] = useState(initialPolicy?.name || '');
   const [description, setDescription] = useState(initialPolicy?.description || '');
   const [priority, setPriority] = useState(initialPolicy?.priority || 1);
@@ -122,34 +159,26 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
   const [targetResource, setTargetResource] = useState(initialPolicy?.target_resource || '');
   const [selectedActions, setSelectedActions] = useState<string[]>(initialPolicy?.action || []);
   
-  // Dynamic Data Options
   const [attributes, setAttributes] = useState<AbacAttribute[]>([]);
   const [tableOptions, setTableOptions] = useState<string[]>([]);
-  const [availableActions, setAvailableActions] = useState<string[]>([]); // Đã thay thế PREDEFINED_ACTIONS
+  const [availableActions, setAvailableActions] = useState<string[]>([]);
 
-  // Logic Tree
   const defaultCondition = initialPolicy?.condition_json || { condition: "AND", rules: [] };
   const { rootCondition, errors: treeErrors, actions } = useConditionTree(defaultCondition);
 
-  // Load Metadata
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
         const [attrs, tables, acts] = await Promise.all([
           abacApi.getAttributes(),
           abacApi.getSystemTables(),
-          abacApi.getActions() // API mới
+          abacApi.getActions()
         ]);
         setAttributes(attrs);
         setTableOptions(tables);
         setAvailableActions(acts);
       } catch (error) {
         console.error("Failed to load metadata", error);
-        toast({
-          variant: "destructive",
-          title: "Lỗi tải dữ liệu",
-          description: "Không thể lấy danh sách thuộc tính hoặc hành động từ hệ thống."
-        });
       }
     };
     fetchMetadata();
@@ -162,34 +191,53 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
   };
 
   const handleSubmit = async () => {
-    const isTreeValid = actions.validate();
-    if (!isTreeValid) {
-        toast({ variant: "destructive", title: "Lỗi logic", description: "Vui lòng kiểm tra lại các nhóm điều kiện." });
-        return;
+    // 1. Validate Thông tin cơ bản
+    if (!name.trim()) {
+      toast({ variant: "destructive", title: "Thiếu thông tin", description: "Vui lòng nhập tên chính sách." });
+      return;
+    }
+
+    if (!targetResource) {
+      toast({ variant: "destructive", title: "Thiếu thông tin", description: "Vui lòng chọn Target Resource." });
+      return;
     }
 
     if (selectedActions.length === 0) {
-        toast({ variant: "destructive", title: "Thiếu thông tin", description: "Vui lòng chọn ít nhất 1 hành động (Action)." });
+      toast({ variant: "destructive", title: "Thiếu thông tin", description: "Vui lòng chọn ít nhất 1 hành động (Action)." });
+      return;
+    }
+
+    // 2. Validate Cây điều kiện (Logic Tree)
+    // - Kiểm tra lỗi logic từ hook (ví dụ ngoặc đơn trống)
+    if (!actions.validate()) {
+        toast({ variant: "destructive", title: "Lỗi logic", description: "Các nhóm điều kiện không được để trống." });
+        return;
+    }
+    // - Kiểm tra xem tất cả các Rule đã điền đủ field và value chưa
+    if (!validateConditionTree(rootCondition)) {
+        toast({ variant: "destructive", title: "Dữ liệu trống", description: "Vui lòng điền đầy đủ thuộc tính và giá trị cho tất cả các điều kiện." });
         return;
     }
 
     const payload: CreatePolicyDto = {
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim(),
         priority: Number(priority),
         effect,
         target_resource: targetResource,
         action: selectedActions,
-        condition_json: rootCondition,
+        condition_json: formatConditionForPayload(rootCondition), 
         is_active: true
     };
 
+    const axiosConfig = { headers: { 'x-no-transform': 'true' } };
+
     try {
         if (initialPolicy?.id) {
-            await abacApi.updatePolicy(initialPolicy.id, payload);
+            await abacApi.updatePolicy(initialPolicy.id, payload, axiosConfig);
             toast({ title: "Thành công", description: `Đã cập nhật chính sách "${name}"` });
         } else {
-            await abacApi.createPolicy(payload);
+            await abacApi.createPolicy(payload, axiosConfig);
             toast({ title: "Thành công", description: "Đã tạo chính sách mới thành công" });
         }
         onSuccess();
@@ -204,6 +252,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
+      {/* UI giữ nguyên */}
       <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm z-10 sticky top-0">
         <div>
            <h2 className="text-lg font-bold text-gray-800">
@@ -218,8 +267,6 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
 
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-5xl mx-auto space-y-6">
-            
-            {/* CARD 1: THÔNG TIN CƠ BẢN */}
             <div className="bg-white p-5 rounded-lg border shadow-sm">
                 <h3 className="text-sm font-bold text-gray-700 uppercase mb-4 border-b pb-2">1. Thông tin chung</h3>
                 <div className="grid grid-cols-2 gap-6">
@@ -291,13 +338,12 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
                 </div>
             </div>
 
-            {/* CARD 2: LOGIC BUILDER */}
             <div className="bg-white p-5 rounded-lg border shadow-sm min-h-[400px]">
                  <div className="flex justify-between items-center mb-4 border-b pb-2">
                     <h3 className="text-sm font-bold text-gray-700 uppercase">2. Thiết lập điều kiện (Logic Rules)</h3>
-                    {treeErrors.length > 0 && (
+                    {(treeErrors.length > 0) && (
                         <span className="text-xs text-red-600 font-bold bg-red-50 px-2 py-1 rounded border border-red-100 animate-pulse">
-                          ⚠️ {treeErrors.length} lỗi logic
+                          ⚠️ Lỗi logic điều kiện
                         </span>
                     )}
                  </div>

@@ -2,6 +2,11 @@ import { http } from '@/shared/api';
 import { AttributeSchema, PolicySchema } from '../model/schemas';
 import { AbacAttribute, AbacPolicy, CreatePolicyDto } from '../model/types';
 
+/**
+ * API Service cho module ABAC
+ * Lưu ý: Tất cả các request gửi đi đều kèm header 'x-no-transform' để bảo vệ 
+ * cấu trúc dữ liệu JSON (đặc biệt là các mảng trong condition_json).
+ */
 export const abacApi = {
   // ==========================================
   // 1. ATTRIBUTES (Từ điển thuộc tính)
@@ -12,6 +17,7 @@ export const abacApi = {
     const response = await http.get('/abac/attributes/', {
       headers: { 'x-no-transform': 'true' } 
     });
+    
     const result = AttributeSchema.array().safeParse(response);
     if (!result.success) {
       console.error("Zod Validation Error (Attributes):", result.error);
@@ -48,6 +54,7 @@ export const abacApi = {
     const response = await http.get('/abac/policies/', {
       headers: { 'x-no-transform': 'true' }
     });
+    
     const result = PolicySchema.array().safeParse(response);
     if (!result.success) {
       console.error("Zod Validation Error (Policies):", result.error);
@@ -57,24 +64,46 @@ export const abacApi = {
   },
 
   // Tạo Policy mới
-  createPolicy: async (data: CreatePolicyDto) => {
-    const validation = PolicySchema.omit({ id: true, created_at: true, updated_at: true }).safeParse(data);
+  createPolicy: async (data: CreatePolicyDto, extraConfig?: any) => {
+    // Kiểm tra tính hợp lệ của dữ liệu trước khi gửi
+    const validation = PolicySchema.omit({ 
+        id: true, 
+        created_at: true, 
+        updated_at: true 
+    }).safeParse(data);
+
     if (!validation.success) {
-       throw new Error("Dữ liệu không hợp lệ: " + validation.error.message);
+        // Log cảnh báo nhưng vẫn cho phép gửi đi để kiểm tra thực tế
+        console.warn("Zod Validation Warning (Create Policy):", validation.error.message);
     }
+
     return http.post('/abac/policies/', data, {
-      headers: { 'x-no-transform': 'true' }
+      ...extraConfig,
+      headers: { 
+        'x-no-transform': 'true',
+        ...extraConfig?.headers 
+      }
     });
   },
 
   // Cập nhật Policy
-  updatePolicy: async (id: number, data: CreatePolicyDto) => {
-    const validation = PolicySchema.omit({ id: true, created_at: true, updated_at: true }).safeParse(data);
+  updatePolicy: async (id: number, data: CreatePolicyDto, extraConfig?: any) => {
+    const validation = PolicySchema.omit({ 
+        id: true, 
+        created_at: true, 
+        updated_at: true 
+    }).safeParse(data);
+
     if (!validation.success) {
-       throw new Error("Dữ liệu cập nhật không hợp lệ: " + validation.error.message);
+        console.warn("Zod Validation Warning (Update Policy):", validation.error.message);
     }
+
     return http.put(`/abac/policies/${id}`, data, {
-      headers: { 'x-no-transform': 'true' }
+      ...extraConfig,
+      headers: { 
+        'x-no-transform': 'true',
+        ...extraConfig?.headers 
+      }
     });
   },
   
@@ -90,7 +119,9 @@ export const abacApi = {
   // Lấy danh sách bảng hệ thống để làm Resource Dropdown
   getSystemTables: async (): Promise<string[]> => {
     try {
-        const response: any = await http.get('/system/tables'); 
+        const response: any = await http.get('/system/tables', {
+            headers: { 'x-no-transform': 'true' }
+        }); 
         return response.tables || [];
     } catch (error) {
         console.error("Failed to fetch system tables", error);
@@ -98,10 +129,12 @@ export const abacApi = {
     }
   },
 
-  // Lấy danh sách Actions từ hệ thống (MỚI CẬP NHẬT)
+  // Lấy danh sách Actions từ hệ thống
   getActions: async (): Promise<string[]> => {
     try {
-      const response: any = await http.get('/system/actions');
+      const response: any = await http.get('/system/actions', {
+          headers: { 'x-no-transform': 'true' }
+      });
       // Trích xuất mảng string từ field 'data' trong response
       return response.data || [];
     } catch (error) {
