@@ -61,13 +61,17 @@ export const BiddingPackageSchema = z.object({
   quyetDinhPheDuyet: z.string().optional().nullable(),
   duongDanGoiThau: z.string().optional().nullable(),
   
+  // LIÊN KẾT DỰ ÁN: Thêm trường này để đồng bộ với Backend
+  // Sử dụng nullable vì gói thầu mới sẽ chưa có project_id
+  projectId: z.number().optional().nullable(),
+  
   // TRẠNG THÁI: Chuyển thành Enum/Literal để hết lỗi .includes()
   trangThai: z.enum(["NEW", "INTERESTED", "NO_GO", "BIDDING", "SUBMITTED", "CLOSED"]).optional().nullable(),
   
   // PHÂN QUYỀN: Thêm trường allowedActions từ Backend (đã qua Interceptor convert)
   allowedActions: z.array(z.string()).optional().default([]),
   
-  createdAt: z.string(),
+  createdAt: z.string().optional().nullable(),
 });
 
 // --- 3. FILES SCHEMA ---
@@ -81,6 +85,7 @@ export const BiddingFileSchema = z.object({
 });
 
 // --- 4. EXPORT TYPES ---
+// Khi cập nhật Schema ở trên, Type BiddingPackage sẽ tự động có thêm projectId
 export type BiddingPackage = z.infer<typeof BiddingPackageSchema>;
 export type BiddingFile = z.infer<typeof BiddingFileSchema>;
 
@@ -88,10 +93,10 @@ export type BiddingFile = z.infer<typeof BiddingFileSchema>;
 export interface GetBiddingPackagesParams {
   skip?: number;
   limit?: number;
-  search?: string; // Thêm search ở đây
+  search?: string; 
 }
 
 // Response Types
 export type BiddingPackageListResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
-export type BiddingPackageDetailResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
+export type BiddingPackageDetailResponse = z.infer<ReturnType<typeof BaseResponseSchema<typeof BiddingPackageSchema>>>;
 export type BiddingPackageFilesResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingFileSchema>>>>;

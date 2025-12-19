@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { Building2, FileText, Clock, ArrowRight } from "lucide-react";
+import { Building2, FileText, Clock, ArrowRight, CheckCircle2, ExternalLink } from "lucide-react";
 import { BiddingPackage } from "../model/types";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -10,8 +12,9 @@ interface BiddingCardProps {
 
 export const BiddingCard = ({ data }: BiddingCardProps) => {
   const detailUrl = data.hsmtId ? `/opportunities/${data.hsmtId}` : "#";
+  const projectUrl = data.projectId ? `/bidding-projects/${data.projectId}` : "#";
 
-  // Helper để hiển thị Badge trạng thái
+  // Helper để hiển thị Badge trạng thái gói thầu
   const getStatusBadge = () => {
     switch (data.trangThai) {
       case "BIDDING":
@@ -27,12 +30,23 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
 
   return (
     <div className="group relative flex flex-col gap-3 rounded-lg border bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-blue-200">
-      {/* Header */}
+      
+      {/* Header & Project Status */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-slate-500">
           Mã TBMT: <span className="text-slate-700 font-bold">{data.maTbmt}</span>
         </span>
-        {getStatusBadge()}
+        <div className="flex gap-2 items-center">
+          {/* Badge hiển thị nếu đã có dự án */}
+          {data.projectId && (
+            <Link href={projectUrl}>
+              <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 border flex gap-1 items-center px-1.5 py-0">
+                <CheckCircle2 className="h-3 w-3" /> Đã tạo dự án
+              </Badge>
+            </Link>
+          )}
+          {getStatusBadge()}
+        </div>
       </div>
 
       {/* Title */}
@@ -81,32 +95,40 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
         </div>
 
         <div className="flex gap-2">
-          {/* LÃNH ĐẠO (MANAGER): Chỉ hiện Duyệt khi chưa BIDDING/NO_GO */}
-          {data.allowedActions?.includes("APPROVE_BID") && 
-           data.trangThai !== "BIDDING" && 
-           data.trangThai !== "NO_GO" && (
-            <Button size="sm" variant="outline" className="h-8 text-xs border-green-200 text-green-700 hover:bg-green-50" asChild>
-              <Link href={detailUrl}>Duyệt ngay</Link>
-            </Button>
-          )}
-
-          {/* TRƯỞNG PHÒNG (BID_MANAGER): Chỉ hiện Tạo dự án khi đã là BIDDING */}
-          {data.allowedActions?.includes("CREATE_PROJECT") && 
-           data.trangThai === "BIDDING" && (
-            <Button size="sm" className="h-8 text-xs gap-1 shadow-sm" asChild>
-              <Link href={detailUrl}>
-                Tạo dự án <ArrowRight className="h-3 w-3" />
+          {/* CASE 1: ĐÃ CÓ DỰ ÁN -> Hiện nút xem dự án */}
+          {data.projectId ? (
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800" asChild>
+              <Link href={projectUrl}>
+                Xem dự án <ExternalLink className="h-3 w-3" />
               </Link>
             </Button>
+          ) : (
+            <>
+              {/* CASE 2: CHƯA CÓ DỰ ÁN & CÓ QUYỀN DUYỆT (MANAGER) */}
+              {data.allowedActions?.includes("APPROVE_BID") && 
+               data.trangThai !== "BIDDING" && 
+               data.trangThai !== "NO_GO" && (
+                <Button size="sm" variant="outline" className="h-8 text-xs border-green-200 text-green-700 hover:bg-green-50" asChild>
+                  <Link href={detailUrl}>Duyệt ngay</Link>
+                </Button>
+              )}
+
+              {/* CASE 3: CHƯA CÓ DỰ ÁN & CÓ QUYỀN TẠO (BID_MANAGER) */}
+              {data.allowedActions?.includes("CREATE_PROJECT") && 
+               data.trangThai === "BIDDING" && (
+                <Button size="sm" className="h-8 text-xs gap-1 shadow-sm" asChild>
+                  <Link href={detailUrl}>
+                    Tạo dự án <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </Button>
+              )}
+            </>
           )}
 
-          {/* Fallback: Luôn có nút xem chi tiết nếu không có action khả dụng */}
-          {(!data.allowedActions?.includes("APPROVE_BID") || data.trangThai === "BIDDING" || data.trangThai === "NO_GO") && 
-           (!data.allowedActions?.includes("CREATE_PROJECT") || data.trangThai !== "BIDDING") && (
-            <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400" asChild>
-              <Link href={detailUrl}>Xem chi tiết</Link>
-            </Button>
-          )}
+          {/* Fallback & Xem chi tiết */}
+          <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400" asChild>
+            <Link href={detailUrl}>Chi tiết gói</Link>
+          </Button>
         </div>
       </div>
     </div>

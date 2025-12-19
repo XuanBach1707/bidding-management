@@ -12,6 +12,9 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { Badge } from "@/shared/ui/badge"; 
 import { useToast } from "@/shared/lib/hooks/use-toast";
 
+// Features
+import { CreateProjectModal } from "@/features/bidding-project/create-project";
+
 // Entities & Types
 import { 
   getBiddingPackageDetail, 
@@ -31,6 +34,9 @@ export const OpportunityDetailPage = ({ id }: Props) => {
   const [files, setFiles] = useState<BiddingFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // State quản lý việc đóng/mở Modal khởi tạo dự án
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -57,7 +63,6 @@ export const OpportunityDetailPage = ({ id }: Props) => {
     if (id) fetchData();
   }, [id]);
 
-  // --- XỬ LÝ QUYẾT ĐỊNH (LÃNH ĐẠO - MANAGER) ---
   const handleDecision = async (decision: "GO" | "NO_GO") => {
     const actionLabel = decision === "GO" ? "Phê duyệt (GO)" : "Bỏ qua (NO GO)";
     const reason = window.prompt(`Xác nhận ${actionLabel}. Nhập lý do:`, "");
@@ -69,7 +74,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
       const res = await updateBiddingDecision(id, decision, reason || "N/A");
       if (res.success) {
         toast({ title: "Thành công", description: `Đã thực hiện quyết định: ${decision}` });
-        await fetchData(); // Cập nhật lại UI ngay lập tức
+        await fetchData(); 
       }
     } catch (error: any) {
       toast({ 
@@ -116,7 +121,6 @@ export const OpportunityDetailPage = ({ id }: Props) => {
           <div className="flex gap-2 shrink-0 items-center">
             {isSubmitting && <Loader2 className="h-5 w-5 animate-spin text-slate-400 mr-2" />}
             
-            {/* LÃNH ĐẠO (MANAGER): Chỉ hiện nút khi có quyền VÀ chưa duyệt xong */}
             {(data.trangThai !== "BIDDING" && data.trangThai !== "NO_GO") && (
               <>
                 {data.allowedActions?.includes("REJECT_BID") && (
@@ -143,9 +147,13 @@ export const OpportunityDetailPage = ({ id }: Props) => {
               </>
             )}
 
-            {/* TRƯỞNG PHÒNG (BID_MANAGER): Chỉ hiện khi đã là BIDDING và có quyền */}
+            {/* TRƯỞNG PHÒNG (BID_MANAGER): Gọi Modal khởi tạo dự án */}
             {data.trangThai === "BIDDING" && data.allowedActions?.includes("CREATE_PROJECT") && (
-              <Button disabled={isSubmitting} className="bg-primary hover:bg-primary/90 gap-2 shadow-sm">
+              <Button 
+                disabled={isSubmitting} 
+                className="bg-primary hover:bg-primary/90 gap-2 shadow-sm"
+                onClick={() => setIsCreateProjectOpen(true)}
+              >
                 <FolderOpen className="h-4 w-4" /> Khởi tạo Dự án
               </Button>
             )}
@@ -255,11 +263,21 @@ export const OpportunityDetailPage = ({ id }: Props) => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* MODAL KHỞI TẠO DỰ ÁN */}
+      {data && (
+        <CreateProjectModal 
+          isOpen={isCreateProjectOpen}
+          onClose={() => setIsCreateProjectOpen(false)}
+          hsmtId={data.hsmtId} 
+          defaultName={data.tenGoiThau}
+        />
+      )}
     </div>
   );
 };
 
-// --- SUB COMPONENTS (GIỮ NGUYÊN) ---
+// --- SUB COMPONENTS ---
 
 const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="rounded-lg border bg-white overflow-hidden shadow-sm">

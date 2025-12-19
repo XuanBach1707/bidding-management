@@ -1,0 +1,1 @@
+export { ProjectInfoHeader } from './ui/project-info-header';
