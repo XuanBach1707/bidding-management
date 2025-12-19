@@ -63,7 +63,7 @@ export const sidebarRoutes: SidebarRoute[] = [
     children: [
       { 
         title: "Dự án đang chạy", 
-        href: "/projects/active",
+        href: "/bidding-projects-list",
         icon: PlayCircle 
       },
       { 
