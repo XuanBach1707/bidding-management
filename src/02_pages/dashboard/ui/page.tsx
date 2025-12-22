@@ -31,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/sha
 // Import các Widget
 import { 
   RevenueWidget, LocationWidget, FailureReasonWidget, TopOpportunitiesWidget, RoiWidget, SummaryStatsWidget 
-} from "./widgets";
+} from "./widget";
 
 // --- CẤU HÌNH WIDGET REGISTRY ---
 type WidgetType = 'REVENUE' | 'LOCATION' | 'FAILURE' | 'OPPORTUNITIES' | 'ROI';

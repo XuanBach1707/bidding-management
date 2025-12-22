@@ -9,6 +9,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   SortingState,
+  getExpandedRowModel,
+  ExpandedState,
 } from "@tanstack/react-table";
 
 import {
@@ -24,26 +26,33 @@ import { Button } from "@/06_shared/ui/button";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  // Fix type: Trả về TData[] hoặc undefined (không dùng null)
+  getSubRows?: (row: TData, index: number) => TData[] | undefined;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  getSubRows,
 }: DataTableProps<TData, TValue>) {
-  // State quản lý sắp xếp (Sort)
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
-  // Khởi tạo Table Instance
   const table = useReactTable({
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(), // Hỗ trợ phân trang
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
+      expanded,
     },
+    onSortingChange: setSorting,
+    onExpandedChange: setExpanded,
+    // Fix logic: Đảm bảo trả về đúng định nghĩa của TanStack
+    getSubRows: (row, index) => getSubRows?.(row, index) || undefined,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
   });
 
   return (
@@ -99,7 +108,6 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       
-      {/* Phân trang đơn giản (Prev/Next) */}
       <div className="flex items-center justify-end space-x-2 py-4">
         <Button
           variant="outline"

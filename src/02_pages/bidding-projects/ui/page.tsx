@@ -4,9 +4,12 @@ import { useRouter } from 'next/navigation';
 import { biddingProjectApi, BiddingProject } from '@/entities/bidding-project';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { ArrowLeft, Package, Trash2, Calendar, User2, Building } from 'lucide-react';
+import { ArrowLeft, Package, Trash2, Calendar, User2, Building, ListChecks } from 'lucide-react'; // Thêm icon ListChecks
 import { Button } from '@/shared/ui/button';
 import { useToast } from "@/shared/lib/hooks/use-toast";
+
+// [MỚI] Import Widget danh sách công việc
+import { ProjectTaskList } from "@/widgets/project-task-list";
 
 // Import Shadcn AlertDialog
 import {
@@ -73,7 +76,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
   if (!project) return <div className="p-10 text-center text-red-500 font-medium">Không tìm thấy dự án.</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto min-h-screen bg-slate-50/20">
+    <div className="p-6 space-y-8 max-w-7xl mx-auto min-h-screen bg-slate-50/20">
       {/* Nút quay lại */}
       <Button variant="ghost" onClick={() => router.back()} className="gap-2 text-slate-400 hover:text-slate-900 transition-all">
         <ArrowLeft className="h-4 w-4" /> Quay lại
@@ -91,7 +94,6 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
           <div className="flex gap-2 shrink-0">
             <Button variant="outline" size="sm" className="font-bold">Chỉnh sửa</Button>
             
-            {/* Sử dụng AlertDialog của Shadcn */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
@@ -179,6 +181,20 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      {/* [MỚI] Phần danh sách công việc được tích hợp */}
+      <Card className="border-slate-200 shadow-sm overflow-hidden rounded-xl">
+        <CardHeader className="bg-white border-b py-4 px-6 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ListChecks className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-base font-bold text-slate-700">Tiến độ công việc thầu</CardTitle>
+          </div>
+          {/* Bạn có thể thêm nút "Tạo Task" ở đây sau này */}
+        </CardHeader>
+        <CardContent className="p-6">
+          <ProjectTaskList projectId={Number(id)} />
         </CardContent>
       </Card>
     </div>

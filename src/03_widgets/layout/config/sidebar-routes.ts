@@ -14,26 +14,24 @@ import {
   History,
   CheckSquare,
   PlayCircle,
-  ShieldCheck, // <--- 1. Thêm icon Khiên bảo mật
+  ShieldCheck,
   type LucideIcon 
 } from "lucide-react";
 
-// 1. Định nghĩa Type cho Route (Giữ nguyên)
 export interface SidebarRoute {
   title: string;
   href?: string;
   icon?: LucideIcon;
-  roles?: string[];
+  roles?: string[]; // Mảng chứa các role được phép xem
   children?: SidebarRoute[];
 }
 
-// 2. Cấu hình danh sách Menu
 export const sidebarRoutes: SidebarRoute[] = [
   {
     title: "Tổng quan",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["ADMIN", "MANAGER", "STAFF"],
+    roles: ["ADMIN", "MANAGER", "BID_MANAGER", "SPECIALIST", "ENGINEER", "JKAN"],
   },
   {
     title: "Cơ hội đấu thầu",
@@ -69,7 +67,9 @@ export const sidebarRoutes: SidebarRoute[] = [
       { 
         title: "Nhiệm vụ của tôi", 
         href: "/my-tasks",
-        icon: CheckSquare 
+        icon: CheckSquare,
+        // Chặn MANAGER và BID_MANAGER nhìn thấy mục này
+        roles: ["ADMIN", "SPECIALIST", "ENGINEER", "JKAN"] 
       },
       { 
         title: "Lịch sử & Kết quả", 
@@ -89,16 +89,12 @@ export const sidebarRoutes: SidebarRoute[] = [
       { title: "Hợp đồng tương tự", href: "/resources/contracts", icon: FileText },
     ],
   },
-  
-  // --- MỚI THÊM: ABAC MODULE ---
-  // Tôi để nó gần Settings vì đây là tính năng quản trị hệ thống
   {
     title: "Phân quyền (ABAC)", 
-    icon: ShieldCheck,       // Icon cái khiên
-    href: "/abac-config",    // Đường dẫn trỏ tới page chúng ta vừa làm
-    roles: ["ADMIN"],        // Chỉ Admin mới thấy
+    icon: ShieldCheck,
+    href: "/abac-config",
+    roles: ["ADMIN"],
   },
-
   {
     title: "Hệ thống",
     icon: Settings,
