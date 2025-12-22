@@ -1,3 +1,11 @@
+// 1. DTO gửi đi (Khớp với Schema)
+export interface CreateBiddingProjectDto {
+  name: string;
+  status?: string;
+  sourcePackageId: number; // Interceptor sẽ đổi thành source_package_id
+}
+
+// 2. Entity con: Gói thầu (lồng trong dự án)
 export interface BiddingPackage {
   hsmtId: number;
   maTbmt: string;
@@ -6,6 +14,7 @@ export interface BiddingPackage {
   ngayDangTai: string;
 }
 
+// 3. Entity chính: Dự án đấu thầu (Response từ BE)
 export interface BiddingProject {
   id: number;
   name: string;
@@ -14,11 +23,5 @@ export interface BiddingProject {
   bidTeamLeaderId: number;
   createdAt: string;
   updatedAt: string;
-  packages: BiddingPackage[];
-}
-
-export interface CreateBiddingProjectDto {
-  name: string;
-  status?: string;
-  sourcePackageId: number; // Interceptor sẽ tự đổi thành source_package_id
+  packages: BiddingPackage[]; // Mảng gói thầu liên quan
 }
