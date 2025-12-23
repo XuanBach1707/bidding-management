@@ -1,19 +1,32 @@
-// 1. Export Models (Types)
-export type { 
-  BiddingPackage, 
-  BiddingFile,
-  GetBiddingPackagesParams,
-  // Export thêm BaseResponse nếu các module khác cần dùng chung format
-  BaseResponse 
+// 1. Export Models & Types
+export {
+  // Types
+  type BiddingPackage,
+  type BiddingFile,
+  type GetBiddingPackagesParams,
+  type BaseResponse,
+  
+  // AI Types (Để Feature dùng)
+  type BidAiExtractData,
+  type BidGeneralInfo,
+  type BidFinancialReq,
+  type BidPersonnelReq,
+  type BidEquipmentReq,
+
+  // Schemas (Nếu cần validate lại ở form)
+  BiddingPackageSchema,
+  BidAiExtractDataSchema,
 } from "./model";
 
 // 2. Export APIs
-export { 
+export {
   getBiddingPackages,
   getBiddingPackageDetail,
-  getBiddingPackageFiles
+  getBiddingPackageFiles,
+  updateBiddingDecision,
+  analyzeBidAi, // API mới
+  getBidAnalysisResult, // API mới
 } from "./api";
-export { updateBiddingDecision } from "./api/decision";
 
 // 3. Export UI Components
 export { BiddingCard } from "./ui/bidding-card";

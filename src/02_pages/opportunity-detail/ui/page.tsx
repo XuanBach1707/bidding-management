@@ -12,16 +12,20 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { Badge } from "@/shared/ui/badge"; 
 import { useToast } from "@/shared/lib/hooks/use-toast";
 
-// Features
+// Features Existing
 import { CreateProjectModal } from "@/features/bidding-project/create-project";
+
+// --- NEW FEATURE: AI SUMMARY ---
+// Import từ feature index ta vừa tạo
+import { BiddingAiSummary } from "@/features/bid";
 
 // Entities & Types
 import { 
   getBiddingPackageDetail, 
   getBiddingPackageFiles, 
   updateBiddingDecision, 
-  BiddingPackage, 
-  BiddingFile 
+  type BiddingPackage, 
+  type BiddingFile
 } from "@/entities/bidding";
 
 interface Props {
@@ -41,8 +45,8 @@ export const OpportunityDetailPage = ({ id }: Props) => {
   const fetchData = async () => {
     try {
       const [detailRes, fileRes] = await Promise.all([
-        getBiddingPackageDetail(id),
-        getBiddingPackageFiles(id)
+        getBiddingPackageDetail(Number(id)), // Đảm bảo id là number nếu API yêu cầu
+        getBiddingPackageFiles(Number(id))
       ]);
 
       if (detailRes.success && detailRes.data) {
@@ -61,6 +65,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
 
   useEffect(() => {
     if (id) fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleDecision = async (decision: "GO" | "NO_GO") => {
@@ -71,7 +76,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
 
     setIsSubmitting(true);
     try {
-      const res = await updateBiddingDecision(id, decision, reason || "N/A");
+      const res = await updateBiddingDecision(Number(id), decision, reason || "N/A");
       if (res.success) {
         toast({ title: "Thành công", description: `Đã thực hiện quyết định: ${decision}` });
         await fetchData(); 
@@ -178,6 +183,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
             </TabsTrigger>
           </TabsList>
 
+          {/* TAB 1: THÔNG TIN CHUNG */}
           <TabsContent value="general" className="space-y-6">
             <SectionCard title="Thông tin cơ bản">
               <InfoRow label="Mã TBMT" value={data.maTbmt} />
@@ -230,6 +236,18 @@ export const OpportunityDetailPage = ({ id }: Props) => {
             </SectionCard>
           </TabsContent>
 
+          {/* TAB 2: AI SUMMARY (CẬP NHẬT: SMART COMPONENT) */}
+          <TabsContent value="ai" className="mt-4">
+             {/* Component tự lo việc gọi API getBidAnalysisResult */}
+             <BiddingAiSummary hsmtId={data.hsmtId} />
+          </TabsContent>
+
+          {/* TAB 3: HEALTH CHECK */}
+          <TabsContent value="health" className="p-10 bg-white rounded border border-dashed text-slate-400 text-center">
+             Tính năng Health Check đang được xử lý...
+          </TabsContent>
+
+          {/* TAB 4: FILES */}
           <TabsContent value="files">
              <div className="bg-white rounded-lg border p-4 shadow-sm">
                 {files.length === 0 ? (
@@ -254,13 +272,6 @@ export const OpportunityDetailPage = ({ id }: Props) => {
                 )}
              </div>
           </TabsContent>
-
-          <TabsContent value="ai" className="p-10 bg-white rounded border border-dashed text-slate-400 text-center">
-             Tính năng AI Analysis đang được xử lý...
-          </TabsContent>
-          <TabsContent value="health" className="p-10 bg-white rounded border border-dashed text-slate-400 text-center">
-             Tính năng Health Check đang được xử lý...
-          </TabsContent>
         </Tabs>
       </div>
 
@@ -277,7 +288,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
   );
 };
 
-// --- SUB COMPONENTS ---
+// --- SUB COMPONENTS (Giữ nguyên không đổi) ---
 
 const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="rounded-lg border bg-white overflow-hidden shadow-sm">
