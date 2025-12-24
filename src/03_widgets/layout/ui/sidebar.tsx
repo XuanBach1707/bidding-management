@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, type LucideIcon } from "lucide-react";
@@ -9,6 +9,44 @@ import { cn } from "@/shared/lib/utils";
 import { sidebarRoutes, SidebarRoute } from "../config/sidebar-routes";
 
 export function Sidebar() {
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userInfoRaw = localStorage.getItem("USER_INFO");
+    if (userInfoRaw) {
+      try {
+        const userInfo = JSON.parse(userInfoRaw);
+        setUserRole(userInfo.role);
+      } catch (e) {
+        console.error("Error parsing USER_INFO", e);
+      }
+    }
+  }, []);
+
+  // Hàm lọc menu đệ quy dựa trên role
+  const filteredMenu = useMemo(() => {
+    if (!userRole) return [];
+
+    const filterFn = (routes: SidebarRoute[]): SidebarRoute[] => {
+      return routes
+        .filter((route) => {
+          if (!route.roles) return true;
+          return route.roles.includes(userRole);
+        })
+        .map((route) => ({
+          ...route,
+          children: route.children ? filterFn(route.children) : undefined,
+        }))
+        // Loại bỏ các mục cha nếu các mục con bị lọc hết (đối với nhóm menu)
+        .filter((route) => {
+            if (route.children && route.children.length === 0 && !route.href) return false;
+            return true;
+        });
+    };
+
+    return filterFn(sidebarRoutes);
+  }, [userRole]);
+
   return (
     <div className="flex h-full w-[250px] flex-col border-r bg-white">
       {/* Header / Logo */}
@@ -18,7 +56,7 @@ export function Sidebar() {
 
       {/* Menu List */}
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-        {sidebarRoutes.map((route, index) => (
+        {filteredMenu.map((route, index) => (
           <SidebarItem key={index} route={route} />
         ))}
       </div>
@@ -26,14 +64,13 @@ export function Sidebar() {
   );
 }
 
-// --- COMPONENT CON XỬ LÝ LOGIC ACCORDION ---
 function SidebarItem({ route }: { route: SidebarRoute }) {
   const pathname = usePathname() || "";
   const [isOpen, setIsOpen] = useState(false);
 
   const isActive = route.href 
-  ? (pathname === route.href || pathname.startsWith(`${route.href}/`)) 
-  : false
+    ? (pathname === route.href || pathname.startsWith(`${route.href}/`)) 
+    : false;
   
   const hasActiveChild = route.children?.some(
     (child) => child.href && pathname.startsWith(child.href)
@@ -45,10 +82,8 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
     }
   }, [hasActiveChild]);
 
-  // Lấy Icon ra biến riêng
   const Icon = route.icon;
 
-  // TRƯỜNG HỢP 1: CÓ MENU CON (Accordion)
   if (route.children && route.children.length > 0) {
     return (
       <div className="mb-1">
@@ -60,7 +95,6 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
           )}
         >
           <div className="flex items-center gap-3">
-            {/* SỬA LỖI Ở ĐÂY: Chỉ render nếu Icon tồn tại */}
             {Icon && (
               <Icon className={cn("h-5 w-5", hasActiveChild ? "text-primary" : "text-slate-400")} />
             )}
@@ -84,7 +118,6 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
     );
   }
 
-  // TRƯỜNG HỢP 2: KHÔNG CÓ MENU CON (Link thường)
   return (
     <Link
       href={route.href || "#"}
@@ -95,7 +128,6 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       )}
     >
-      {/* SỬA LỖI Ở ĐÂY: Chỉ render nếu Icon tồn tại */}
       {Icon && (
         <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-slate-400")} />
       )}
