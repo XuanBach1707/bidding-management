@@ -3,17 +3,24 @@ import { OrganizationUnit, UnitMember } from "../model/types";
 
 export const organizationApi = {
   /**
-   * 1. Lấy danh sách tất cả các phòng ban trong hệ thống
-   * Dùng để đổ vào Select chọn "Phòng ban chủ trì" (Host Unit)
+   * 1. Lấy danh sách các Ban (Boards)
+   * GET /organization/boards
    */
-  getAll: (): Promise<OrganizationUnit[]> => {
-    return http.get("/organization/");
+  getBoards: (): Promise<OrganizationUnit[]> => {
+    return http.get("/organization/boards");
   },
 
   /**
-   * 2. Lấy danh sách thành viên thuộc một phòng ban cụ thể
-   * @param unitId ID của phòng ban (lấy từ kết quả của API getAll)
-   * Interceptor sẽ tự convert: user_id -> userId, full_name -> fullName...
+   * 2. Lấy danh sách Phòng (Departments) thuộc một Ban cụ thể
+   * GET /organization/boards/{boardId}/departments
+   */
+  getDepartments: (boardId: number | string): Promise<OrganizationUnit[]> => {
+    return http.get(`/organization/boards/${boardId}/departments`);
+  },
+
+  /**
+   * 3. Lấy danh sách thành viên thuộc một đơn vị (Ban hoặc Phòng)
+   * GET /organization/{unitId}/members
    */
   getUnitMembers: (unitId: number | string): Promise<UnitMember[]> => {
     return http.get(`/organization/${unitId}/members`);
