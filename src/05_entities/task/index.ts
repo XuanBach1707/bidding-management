@@ -8,7 +8,8 @@ export {
   SecurityLevelEnum,
   AssignmentTypeEnum,
   UserRoleEnum,
-  TaskStatusEnum
+  TaskStatusEnum,
+  TaskPriorityEnum // <--- [MỚI] Export Enum mức độ ưu tiên
 } from "./model/schemas";
 
 // 3. Types
