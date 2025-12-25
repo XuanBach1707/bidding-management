@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { organizationApi, OrganizationUnit } from "@/entities/organization";
 import { biddingProjectApi } from "@/entities/bidding-project";
-import { taskApi, TaskAssignment } from "@/entities/task"; 
+import { taskApi, TaskAssignment, TaskTag } from "@/entities/task"; 
 import { driveApi, DriveItem } from "@/entities/drive"; 
 import { TempTask, FIXED_SECTIONS } from "./create-project.model";
 
@@ -36,7 +36,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     }
   };
 
-  // --- LOGIC DRIVE (GIỮ NGUYÊN) ---
+  // --- LOGIC DRIVE ---
   const fetchAutoDocuments = useCallback(async () => {
     try {
       const rootRes = await driveApi.getRootProjects();
@@ -96,6 +96,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           const t: TempTask = {
             id: s.id,
             name: s.name,
+            tag: s.tag, // [MỚI] Gán tag từ FIXED_SECTIONS
             deadline: undefined,
             parentId: null,
             isFixed: true,
@@ -161,6 +162,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     const newTask: TempTask = {
       id: `sub_${Date.now()}_${Math.random()}`,
       name: "",
+      tag: parentTask?.tag || "OTHER" as TaskTag, // [MỚI] Sub-task kế thừa tag từ cha
       deadline: undefined,
       parentId: parentId,
       isFixed: false,
@@ -193,7 +195,6 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
 
       // 1. Tạo các Parent Task
       for (const p of parentTasks) {
-        // [LOGIC MỚI] Nếu có file tự động -> Set COMPLETED luôn
         const hasAutoFiles = p.files && p.files.length > 0;
         const initialStatus = hasAutoFiles ? "COMPLETED" : "OPEN";
 
@@ -201,13 +202,11 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           taskName: p.name, 
           biddingProjectId: newProjectId, 
           deadline: p.deadline ? p.deadline.toISOString() : undefined,
-          
-          // Tự động DONE nếu có file
           status: initialStatus, 
-          
           priority: "HIGH", 
           sourceType: "SYSTEM", 
-          parentTaskId: null, // Đã fix thành null
+          tag: p.tag, // [MỚI] Gửi tag lên API
+          parentTaskId: null,
           assignments: p.assignments, 
           assigneeId: undefined
         });
@@ -227,6 +226,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           status: "OPEN", 
           priority: "MEDIUM", 
           sourceType: "USER", 
+          tag: s.tag, // [MỚI] Gửi tag lên API (đã được kế thừa từ lúc addSubTask)
           parentTaskId: realParentId, 
           assignments: s.assignments, 
           assigneeId: undefined 

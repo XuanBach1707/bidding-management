@@ -5,19 +5,22 @@ import {
   TaskStatusEnum,
   AssignmentTypeEnum, 
   UserRoleEnum,
-  TaskPriorityEnum // [MỚI] Import enum priority
+  TaskPriorityEnum,
+  TaskTagEnum // [MỚI]
 } from "./schemas";
 
-// 1. Export Enum thô để dùng trong logic (Dropdown, so sánh, badge color)
+// 1. Export Enum thô
 export const AssignmentType = AssignmentTypeEnum.enum; 
-export const TaskPriority = TaskPriorityEnum.enum; // [MỚI]
+export const TaskPriority = TaskPriorityEnum.enum;
+export const TaskTag = TaskTagEnum.enum; // [MỚI]
 
 // 2. Types suy luận từ Zod
 export type CreateTaskDto = z.infer<typeof CreateTaskSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusEnum>;
-export type TaskPriority = z.infer<typeof TaskPriorityEnum>; // [MỚI] Type: "LOW" | "MEDIUM" | "HIGH"
+export type TaskPriority = z.infer<typeof TaskPriorityEnum>;
+export type TaskTag = z.infer<typeof TaskTagEnum>; // [MỚI] Type: "LEGAL" | "FINANCE" | ...
 
-// 3. Interface cho Task đã qua Interceptor (camelCase)
+// 3. Interface cho Task thực thể (sau khi fetch từ API)
 export interface TaskAssignment {
   assignmentId: number;
   assignedUnitId: number;
@@ -28,16 +31,12 @@ export interface TaskAssignment {
   isAccepted: boolean;
 }
 
-// Interface Task kế thừa từ CreateTaskDto nên đã tự động có field 'priority' thay cho 'isMilestone'
 export interface Task extends Omit<CreateTaskDto, 'assignments'> {
   id: number;
   assignments: TaskAssignment[]; 
   subTasks: Task[]; 
   createdAt?: string;
   updatedAt?: string;
-  
-  // [Optional] Nếu cần map thêm trường file/progress từ UI mẫu vào đây
-  // (hiện tại để optional để không gãy code cũ, sau này BE trả về thì bỏ dấu ?)
   progress?: number; 
   hasFile?: boolean;
 }
