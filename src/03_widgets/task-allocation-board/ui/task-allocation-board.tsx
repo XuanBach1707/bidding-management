@@ -33,6 +33,7 @@ export const TaskAllocationBoard = ({ parentTask, onRefresh }: TaskAllocationBoa
     );
   }
 
+  // Lấy unitId từ assignment đầu tiên của task cha
   const parentUnitId = parentTask.assignments?.[0]?.assignedUnitId;
 
   if (!parentUnitId) {
@@ -59,7 +60,7 @@ export const TaskAllocationBoard = ({ parentTask, onRefresh }: TaskAllocationBoa
             {parentTask.subTasks?.length || 0} tasks
           </span>
           
-          {/* NÚT TẠO CHI TIẾT -> Gọi handleOpenCreateModal */}
+          {/* NÚT TẠO CHI TIẾT */}
           <button 
             onClick={handleOpenCreateModal}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition shadow-sm"
@@ -86,7 +87,6 @@ export const TaskAllocationBoard = ({ parentTask, onRefresh }: TaskAllocationBoa
             {parentTask.subTasks?.map((subtask, index) => (
               <tr 
                 key={subtask.id} 
-                // [MỚI] Sự kiện Click vào dòng -> Mở chi tiết
                 onClick={() => handleOpenViewModal(subtask)}
                 className="hover:bg-blue-50 group bg-white border-b border-gray-100 cursor-pointer transition-colors"
               >
@@ -103,18 +103,36 @@ export const TaskAllocationBoard = ({ parentTask, onRefresh }: TaskAllocationBoa
                     {subtask.taskType === "SELECTION" ? "Chọn tài liệu" : "Soạn thảo"}
                   </span>
                 </td>
+                
+                {/* CỘT NGƯỜI THỰC HIỆN - UPDATE */}
                 <td className="py-3 border-t border-b border-gray-100">
-                   {subtask.assignments?.[0]?.assignedUserId ? (
-                     <div className="flex items-center gap-2">
-                       <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
-                         {subtask.assignments[0].assignedUserId}
-                       </div>
-                       <span className="text-gray-600">User {subtask.assignments[0].assignedUserId}</span>
-                     </div>
-                   ) : (
-                     <span className="text-gray-300 italic text-xs">-- Chưa gán --</span>
-                   )}
+                  {(() => {
+                    const assignment = subtask.assignments?.[0];
+                    const hasAssignee = !!assignment?.assignedUserId;
+                    
+                    // Logic hiển thị tên: User FullName -> User ID -> Chưa gán
+                    const displayName = assignment?.user?.fullName || (hasAssignee ? `User ${assignment.assignedUserId}` : "-- Chưa gán --");
+                    
+                    // Avatar chữ cái đầu
+                    const avatarChar = displayName !== "-- Chưa gán --" ? displayName.charAt(0).toUpperCase() : "?";
+
+                    if (hasAssignee) {
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0">
+                            {avatarChar}
+                          </div>
+                          <span className="text-gray-600 text-sm truncate max-w-[150px]" title={displayName}>
+                            {displayName}
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      return <span className="text-gray-300 italic text-xs">-- Chưa gán --</span>;
+                    }
+                  })()}
                 </td>
+
                 <td className="py-3 text-gray-500 border-t border-b border-gray-100 rounded-r-md">
                   {subtask.deadline ? new Date(subtask.deadline).toLocaleDateString("vi-VN") : "--"}
                 </td>
@@ -132,7 +150,7 @@ export const TaskAllocationBoard = ({ parentTask, onRefresh }: TaskAllocationBoa
         />
       </div>
 
-      {/* MODAL (DÙNG CHUNG CHO CẢ TẠO VÀ XEM) */}
+      {/* MODAL CHI TIẾT */}
       <DetailSubtaskModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -140,7 +158,6 @@ export const TaskAllocationBoard = ({ parentTask, onRefresh }: TaskAllocationBoa
         biddingProjectId={parentTask.biddingProjectId}
         parentUnitId={parentUnitId}
         onSuccess={onRefresh}
-        // [MỚI] Truyền task đang chọn vào modal
         existingTask={selectedSubtask}
       />
     </div>

@@ -96,7 +96,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           const t: TempTask = {
             id: s.id,
             name: s.name,
-            tag: s.tag as TaskTag, // Cast type rõ ràng
+            tag: s.tag as TaskTag,
             deadline: undefined,
             parentId: null,
             isFixed: true,
@@ -182,48 +182,51 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
   };
 
-  // --- SUBMIT ---
+  // --- SUBMIT (LOGIC MỚI: TUẦN TỰ) ---
   const handleSubmit = async () => {
     if (!projectName.trim()) return toast({ variant: "destructive", description: "Vui lòng nhập tên dự án" });
     
     setIsSubmitting(true);
     try {
-      // 1. Tạo Project trong DB
-      const projectRes = await biddingProjectApi.create({ name: projectName, status: "New", sourcePackageId: hsmtId });
-      const newProjectId = projectRes.id;
+      // 1. Tạo Project trong DB trước
+      const projectRes = await biddingProjectApi.create({ 
+        name: projectName, 
+        status: "New", 
+        sourcePackageId: hsmtId 
+      });
       
-      // 2. [MỚI] Gọi API Init Drive (Chạy ngầm - không await chặn UI, hoặc await nếu muốn chắc chắn)
-      // Dùng defaultName (ma_tbmt) để tạo folder như yêu cầu
+      const newProjectId = projectRes.id;
+
+      // 2. Có ID rồi mới gọi API Init Drive
+      // Truyền { projectId: newProjectId } (API file đã sửa sẽ nhận cái này)
       try {
-        if (defaultName) {
-           await driveApi.initProject({ projectName: defaultName });
-           console.log("Đã gửi yêu cầu init drive folder cho:", defaultName);
+        if (newProjectId) {
+           await driveApi.initProject({ projectId: newProjectId });
+           console.log("Đã khởi tạo Drive folder cho Project ID:", newProjectId);
         }
       } catch (driveErr) {
-        console.error("Lỗi Init Drive:", driveErr);
-        // Có thể không chặn luồng chính nếu drive lỗi, tùy nghiệp vụ
+        console.error("Lỗi Init Drive (nhưng vẫn tiếp tục tạo tasks):", driveErr);
+        // Có thể toast cảnh báo nhẹ nếu muốn, hoặc ignore để không làm gián đoạn UX
       }
 
+      // 3. Chuẩn bị Map để tạo Task
       const parentMap: Record<string, number> = {};
       const parentTasks = tasks.filter((t) => t.isFixed);
 
-      // 3. Tạo các Parent Task
+      // 4. Tạo các Parent Task
       for (const p of parentTasks) {
         const hasAutoFiles = p.files && p.files.length > 0;
         const initialStatus = hasAutoFiles ? "COMPLETED" : "OPEN";
 
         const res = await taskApi.create({
           taskName: p.name, 
-          biddingProjectId: newProjectId, 
+          biddingProjectId: newProjectId, // Dùng ID mới
           deadline: p.deadline ? p.deadline.toISOString() : undefined,
           status: initialStatus, 
           priority: "HIGH", 
           sourceType: "SYSTEM",
-          
-          // [FIX LỖI] Thêm taskType & tag
           taskType: "DRAFTING", 
           tag: p.tag as TaskTag,
-
           parentTaskId: null,
           assignments: p.assignments, 
           assigneeId: undefined
@@ -231,7 +234,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
         parentMap[p.id] = res.id;
       }
 
-      // 4. Tạo các Sub Task
+      // 5. Tạo các Sub Task
       const subTasks = tasks.filter((t) => !t.isFixed && t.name.trim() !== "");
       for (const s of subTasks) {
         const realParentId = s.parentId ? parentMap[s.parentId] : null;
@@ -244,11 +247,8 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           status: "OPEN", 
           priority: "MEDIUM", 
           sourceType: "USER",
-          
-          // [FIX LỖI] Thêm taskType & tag
           taskType: "DRAFTING",
           tag: s.tag as TaskTag,
-
           parentTaskId: realParentId, 
           assignments: s.assignments, 
           assigneeId: undefined 

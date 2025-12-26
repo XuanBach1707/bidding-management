@@ -10,22 +10,23 @@ export interface DriveItem {
   link: string;
   access: string; // VD: "GRANTED"
   
-  // Các trường optional (chỉ có ở cấp file hoặc chi tiết folder)
+  // Các trường optional
   mimeType?: string;
   level?: number;
 }
 
 export interface DriveResponse {
-  // Response có thể trả về currentContext (ở root) hoặc currentFolderId (ở folder con)
   currentContext?: string; 
   currentFolderId?: string;
   
-  total?: number;       // Map từ total (root)
-  totalItems?: number;  // Map từ total_items (folder)
+  total?: number;
+  totalItems?: number;
   
   data: DriveItem[];
 }
 
+// --- [SỬA ĐỔI TẠI ĐÂY] ---
 export interface InitDriveProjectDto {
-  projectName: string; // FE dùng camelCase, Interceptor sẽ tự đổi thành snake_case 'project_name' khi gửi
+  projectId: number; 
+  // FE dùng 'projectId', Interceptor sẽ tự đổi thành 'project_id' khi gửi request
 }

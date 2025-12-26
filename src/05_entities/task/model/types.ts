@@ -10,7 +10,7 @@ import {
   TaskTypeEnum // [MỚI]
 } from "./schemas";
 
-// 1. Export Enum thô (Dùng cho UI logic)
+// 1. Export Enum thô (Dùng cho UI logic - ví dụ so sánh TaskType.SELECTION)
 export const AssignmentType = AssignmentTypeEnum.enum; 
 export const TaskPriority = TaskPriorityEnum.enum;
 export const TaskTag = TaskTagEnum.enum;
@@ -32,6 +32,18 @@ export interface TaskAssignment {
   requiredRole: z.infer<typeof UserRoleEnum>;
   requiredMinSecurity: number;
   isAccepted: boolean;
+  
+  // [MỚI] Bổ sung thông tin User & Unit để hiển thị trên UI
+  // Dữ liệu này được trả về từ API (ví dụ: /tasks/user/me hoặc getList)
+  user?: {
+    fullName?: string;
+    email?: string;
+    avatarUrl?: string;
+  } | null;
+
+  unit?: {
+    unitName?: string;
+  } | null;
 }
 
 export interface Task extends Omit<CreateTaskDto, 'assignments'> {
