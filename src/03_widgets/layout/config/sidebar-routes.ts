@@ -72,8 +72,8 @@ export const sidebarRoutes: SidebarRoute[] = [
         roles: ["ADMIN", "SPECIALIST", "ENGINEER", "JKAN"] 
       },
       { 
-        title: "Lịch sử & Kết quả", 
-        href: "/projects/history",
+        title: "Nhiệm vụ dự án", 
+        href: "/task-allocation",
         icon: History 
       },
     ],

@@ -25,7 +25,6 @@ export const TaskStatusEnum = z.enum([
 
 export const TaskPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
 
-// [MỚI] Enum cho Task Tag theo yêu cầu Backend
 export const TaskTagEnum = z.enum([
   "LEGAL",    // Hồ sơ pháp lý
   "FINANCE",  // Hồ sơ tài chính
@@ -34,6 +33,13 @@ export const TaskTagEnum = z.enum([
   "DEVICE",   // Hồ sơ máy móc thiết bị
   "HR",       // Hồ sơ nhân sự
   "OTHER"     // Hồ sơ khác
+]);
+
+// [MỚI] Enum cho Task Type
+export const TaskTypeEnum = z.enum([
+  "AUTO",       // Tự động (Hệ thống/AI)
+  "SELECTION",  // Chọn tài liệu
+  "DRAFTING"    // Soạn thảo
 ]);
 
 // --- SUB-SCHEMA: Task Assignment ---
@@ -60,13 +66,20 @@ export const CreateTaskSchema = z.object({
   status: TaskStatusEnum.default("OPEN"),
   priority: TaskPriorityEnum.default("MEDIUM"), 
   
-  // [MỚI] Bổ sung trường tag vào request gửi lên API
-  tag: TaskTagEnum.default("OTHER"),
+  // [CẬP NHẬT] Tag có thể null (đối với subtask)
+  tag: TaskTagEnum.nullable().optional(),
   
+  // [MỚI] Loại công việc
+  taskType: TaskTypeEnum.default("DRAFTING"),
+
   sourceType: z.string().default("USER"), 
 
   assigneeId: z.number().nullable().optional(),
   reviewerId: z.number().nullable().optional(),
+
+  // [MỚI] Các trường bổ sung từ API
+  templateId: z.number().nullable().optional(),
+  attachmentUrl: z.string().nullable().optional(),
 
   assignments: z.array(TaskAssignmentSchema).default([]),
 });

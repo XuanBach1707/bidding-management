@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { organizationApi, OrganizationUnit } from "@/entities/organization";
 import { biddingProjectApi } from "@/entities/bidding-project";
-import { taskApi, TaskAssignment, TaskTag } from "@/entities/task"; 
+import { taskApi, TaskAssignment, TaskTag, TaskType } from "@/entities/task"; 
 import { driveApi, DriveItem } from "@/entities/drive"; 
 import { TempTask, FIXED_SECTIONS } from "./create-project.model";
 
 interface UseCreateProjectProps {
   isOpen: boolean;
   hsmtId: number;
-  defaultName: string;
+  defaultName: string; // Đây chính là MA_TBMT
   onClose: () => void;
 }
 
@@ -36,7 +36,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     }
   };
 
-  // --- LOGIC DRIVE ---
+  // --- LOGIC DRIVE (GIỮ NGUYÊN) ---
   const fetchAutoDocuments = useCallback(async () => {
     try {
       const rootRes = await driveApi.getRootProjects();
@@ -96,7 +96,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           const t: TempTask = {
             id: s.id,
             name: s.name,
-            tag: s.tag, // [MỚI] Gán tag từ FIXED_SECTIONS
+            tag: s.tag as TaskTag, // Cast type rõ ràng
             deadline: undefined,
             parentId: null,
             isFixed: true,
@@ -148,7 +148,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
       });
       const isParent = FIXED_SECTIONS.some((s) => s.id === taskId);
       if (isParent) {
-         newTasks = newTasks.map((t) => {
+          newTasks = newTasks.map((t) => {
           if (t.parentId === taskId) return { ...t, assignments: [newAssignment], assigneeId: undefined };
           return t;
         });
@@ -162,7 +162,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     const newTask: TempTask = {
       id: `sub_${Date.now()}_${Math.random()}`,
       name: "",
-      tag: parentTask?.tag || "OTHER" as TaskTag, // [MỚI] Sub-task kế thừa tag từ cha
+      tag: parentTask?.tag || "OTHER" as TaskTag,
       deadline: undefined,
       parentId: parentId,
       isFixed: false,
@@ -185,15 +185,29 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
   // --- SUBMIT ---
   const handleSubmit = async () => {
     if (!projectName.trim()) return toast({ variant: "destructive", description: "Vui lòng nhập tên dự án" });
+    
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      // 1. Tạo Project trong DB
       const projectRes = await biddingProjectApi.create({ name: projectName, status: "New", sourcePackageId: hsmtId });
       const newProjectId = projectRes.id;
-      const parentMap: Record<string, number> = {};
       
+      // 2. [MỚI] Gọi API Init Drive (Chạy ngầm - không await chặn UI, hoặc await nếu muốn chắc chắn)
+      // Dùng defaultName (ma_tbmt) để tạo folder như yêu cầu
+      try {
+        if (defaultName) {
+           await driveApi.initProject({ projectName: defaultName });
+           console.log("Đã gửi yêu cầu init drive folder cho:", defaultName);
+        }
+      } catch (driveErr) {
+        console.error("Lỗi Init Drive:", driveErr);
+        // Có thể không chặn luồng chính nếu drive lỗi, tùy nghiệp vụ
+      }
+
+      const parentMap: Record<string, number> = {};
       const parentTasks = tasks.filter((t) => t.isFixed);
 
-      // 1. Tạo các Parent Task
+      // 3. Tạo các Parent Task
       for (const p of parentTasks) {
         const hasAutoFiles = p.files && p.files.length > 0;
         const initialStatus = hasAutoFiles ? "COMPLETED" : "OPEN";
@@ -204,8 +218,12 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           deadline: p.deadline ? p.deadline.toISOString() : undefined,
           status: initialStatus, 
           priority: "HIGH", 
-          sourceType: "SYSTEM", 
-          tag: p.tag, // [MỚI] Gửi tag lên API
+          sourceType: "SYSTEM",
+          
+          // [FIX LỖI] Thêm taskType & tag
+          taskType: "DRAFTING", 
+          tag: p.tag as TaskTag,
+
           parentTaskId: null,
           assignments: p.assignments, 
           assigneeId: undefined
@@ -213,7 +231,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
         parentMap[p.id] = res.id;
       }
 
-      // 2. Tạo các Sub Task
+      // 4. Tạo các Sub Task
       const subTasks = tasks.filter((t) => !t.isFixed && t.name.trim() !== "");
       for (const s of subTasks) {
         const realParentId = s.parentId ? parentMap[s.parentId] : null;
@@ -225,8 +243,12 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           deadline: s.deadline ? s.deadline.toISOString() : undefined,
           status: "OPEN", 
           priority: "MEDIUM", 
-          sourceType: "USER", 
-          tag: s.tag, // [MỚI] Gửi tag lên API (đã được kế thừa từ lúc addSubTask)
+          sourceType: "USER",
+          
+          // [FIX LỖI] Thêm taskType & tag
+          taskType: "DRAFTING",
+          tag: s.tag as TaskTag,
+
           parentTaskId: realParentId, 
           assignments: s.assignments, 
           assigneeId: undefined 

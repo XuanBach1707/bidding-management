@@ -9,7 +9,7 @@ export const LoginPage = () => {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tighter text-primary">
-            BMS
+            PC1
           </h1>
           <p className="text-muted-foreground">
             Hệ thống quản lý đấu thầu tập trung
@@ -21,7 +21,7 @@ export const LoginPage = () => {
         
         {/* Footer của trang (nếu có) */}
         <div className="text-center text-sm text-slate-500">
-          &copy; 2025 BMS Corp. All rights reserved.
+          &copy; 2025 PC1 Corp. All rights reserved.
         </div>
       </div>
     </div>

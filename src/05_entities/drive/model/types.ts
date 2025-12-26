@@ -25,3 +25,7 @@ export interface DriveResponse {
   
   data: DriveItem[];
 }
+
+export interface InitDriveProjectDto {
+  projectName: string; // FE dùng camelCase, Interceptor sẽ tự đổi thành snake_case 'project_name' khi gửi
+}

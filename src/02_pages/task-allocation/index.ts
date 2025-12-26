@@ -1,0 +1,1 @@
+export { TaskAllocationPage } from "./ui/task-allocation-page";
