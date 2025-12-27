@@ -182,3 +182,5 @@ export type BiddingPackageListResponse = z.infer<ReturnType<typeof BaseResponseS
 export type BiddingPackageDetailResponse = z.infer<ReturnType<typeof BaseResponseSchema<typeof BiddingPackageSchema>>>;
 export type BiddingPackageFilesResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingFileSchema>>>>;
 export type BidAiExtractResponse = z.infer<ReturnType<typeof BaseResponseSchema<typeof BidAiExtractDataSchema>>>;
+
+

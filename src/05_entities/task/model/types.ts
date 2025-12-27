@@ -3,33 +3,58 @@ import {
   CreateTaskSchema, 
   TaskAssignmentSchema, 
   TaskStatusEnum,
-  AssignmentTypeEnum, // Import cái này từ schemas
+  AssignmentTypeEnum, 
   UserRoleEnum
 } from "./schemas";
 
-// 1. Export Enum thô để dùng trong logic so sánh (Đây là chỗ bị thiếu)
 export const AssignmentType = AssignmentTypeEnum.enum; 
-// Hoặc đơn giản là: export { AssignmentTypeEnum };
 
-// 2. Types suy luận từ Zod
-export type CreateTaskDto = z.infer<typeof CreateTaskSchema>;
-export type TaskStatus = z.infer<typeof TaskStatusEnum>;
-
-// 3. Interface cho Task đã qua Interceptor (camelCase)
-export interface TaskAssignment {
-  assignmentId: number;
-  assignedUnitId: number;
-  assignedUserId: number | null;
-  assignmentType: z.infer<typeof AssignmentTypeEnum>; // Nó sẽ là "MAIN" | "SUPPORT" | "REVIEW"
-  requiredRole: z.infer<typeof UserRoleEnum>;
-  requiredMinSecurity: number;
-  isAccepted: boolean;
+// --- 1. Thêm Types phụ trợ cho User và Unit ---
+export interface SimpleUser {
+  full_name: string;
+  avatar_url?: string; // Optional
 }
 
-export interface Task extends Omit<CreateTaskDto, 'assignments'> {
+export interface SimpleUnit {
+  unit_name: string;
+}
+
+// --- 2. Cập nhật TaskAssignment ---
+export interface TaskAssignment {
+  assignment_id: number; // Mapping theo JSON trả về (snake_case)
+  assigned_unit_id: number | null;
+  assigned_user_id: number | null;
+  assignment_type: string; // "MAIN", "SUPPORT", "REVIEW"
+  required_role: string;
+  is_accepted: boolean;
+  
+  // [QUAN TRỌNG] Object lồng nhau từ API
+  user?: SimpleUser | null;
+  unit?: SimpleUnit | null;
+}
+
+// --- 3. Cập nhật Task Interface chính ---
+export interface Task {
   id: number;
+  task_name: string;
+  deadline: string | null;
+  status: string; // OPEN, IN_PROGRESS, ...
+  priority: string | null;
+  task_type: string;
+  description: string | null;
+  project_name: string | null;
+  
+  // Thông tin liên kết
+  bidding_project_id: number | null;
+  parent_task_id: number | null;
+  
+  // Danh sách phân công (để lấy tên người làm)
   assignments: TaskAssignment[]; 
-  subTasks: Task[]; 
-  createdAt?: string;
-  updatedAt?: string;
+  
+  // Task con
+  sub_tasks: Task[]; 
+  
+  // Các trường khác
+  tag?: string | null;
+  source_type?: string;
 }
