@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 // --- ENUMS ---
-// Dùng z.nativeEnum cho object số (khớp với BE)
 export const SecurityLevelEnum = z.nativeEnum({
   PUBLIC: 1,
   INTERNAL: 2,
@@ -9,7 +8,6 @@ export const SecurityLevelEnum = z.nativeEnum({
   SECRET: 4,
 });
 
-// Dùng z.enum cho chuỗi
 export const AssignmentTypeEnum = z.enum(["MAIN", "SUPPORT", "REVIEW"]);
 
 export const UserRoleEnum = z.enum([
@@ -25,42 +23,65 @@ export const TaskStatusEnum = z.enum([
   "OPEN", "ASSIGNED", "IN_PROGRESS", "PENDING_REVIEW", "COMPLETED", "REJECTED"
 ]);
 
+export const TaskPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
+
+export const TaskTagEnum = z.enum([
+  "LEGAL",    // Hồ sơ pháp lý
+  "FINANCE",  // Hồ sơ tài chính
+  "TECH",     // Biện pháp thi công
+  "CONTRACT", // Hồ sơ hợp đồng tương tự
+  "DEVICE",   // Hồ sơ máy móc thiết bị
+  "HR",       // Hồ sơ nhân sự
+  "OTHER"     // Hồ sơ khác
+]);
+
+// [MỚI] Enum cho Task Type
+export const TaskTypeEnum = z.enum([
+  "AUTO",       // Tự động (Hệ thống/AI)
+  "SELECTION",  // Chọn tài liệu
+  "DRAFTING"    // Soạn thảo
+]);
+
 // --- SUB-SCHEMA: Task Assignment ---
 export const TaskAssignmentSchema = z.object({
-  // [FIX] Đã bỏ config message lỗi để tránh lỗi type, chỉ để z.number() đơn giản
   assignedUnitId: z.number(), 
-  
   requiredRole: UserRoleEnum.default("SPECIALIST"),
-  // BE trả về số (1,2,3,4) nên dùng z.number(), mặc định là 2 (INTERNAL)
   requiredMinSecurity: z.number().default(2), 
   assignmentType: AssignmentTypeEnum.default("MAIN"),
-  
-  // Có thể null hoặc optional
   assignedUserId: z.number().nullable().optional(),
   isAccepted: z.boolean().default(false),
 });
 
 // --- MAIN SCHEMA: Create Task ---
 export const CreateTaskSchema = z.object({
+  id: z.number().optional(), 
   biddingProjectId: z.number(), 
   
-  // ID cha (nếu tạo subtask), có thể null hoặc optional
   parentTaskId: z.number().nullable().optional(), 
 
   taskName: z.string().min(1, "Tên công việc không được để trống"),
-  deadline: z.string().nullable().optional(), // ISO String
+  deadline: z.string().nullable().optional(), 
   description: z.string().nullable().optional(),
   
   status: TaskStatusEnum.default("OPEN"),
-  isMilestone: z.boolean().default(false),
+  priority: TaskPriorityEnum.default("MEDIUM"), 
+  
+  // [CẬP NHẬT] Tag có thể null (đối với subtask)
+  tag: TaskTagEnum.nullable().optional(),
+  
+  // [MỚI] Loại công việc
+  taskType: TaskTypeEnum.default("DRAFTING"),
+
   sourceType: z.string().default("USER"), 
 
   assigneeId: z.number().nullable().optional(),
   reviewerId: z.number().nullable().optional(),
 
-  // Mảng phân công, mặc định rỗng
+  // [MỚI] Các trường bổ sung từ API
+  templateId: z.number().nullable().optional(),
+  attachmentUrl: z.string().nullable().optional(),
+
   assignments: z.array(TaskAssignmentSchema).default([]),
 });
 
-// Export type để dùng cho Form React Hook Form
 export type CreateTaskFormValues = z.infer<typeof CreateTaskSchema>;

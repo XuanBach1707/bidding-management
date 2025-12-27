@@ -1,0 +1,1 @@
+export { TaskAllocationBoard } from "./ui/task-allocation-board";

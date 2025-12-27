@@ -16,7 +16,7 @@ export const http: AxiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000,
+  timeout: 100000,
 });
 
 const refreshHttp = axios.create({
@@ -59,7 +59,15 @@ http.interceptors.request.use(
       delete config.headers[SKIP_TRANSFORM_HEADER];
     }
 
-    // 3. Chuyển đổi dữ liệu gửi đi (Chỉ khi không có cờ chặn)
+    // --- [MỚI] TỰ ĐỘNG XỬ LÝ FORM DATA ---
+    // Nếu data là FormData, ta xóa Content-Type mặc định (application/json)
+    // để trình duyệt tự động set multipart/form-data kèm boundary chuẩn.
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+    }
+
+    // 3. Chuyển đổi dữ liệu gửi đi (Chỉ khi không có cờ chặn VÀ không phải FormData)
+    // Lưu ý: Logic cũ của bạn đã có check !(config.data instanceof FormData), rất tốt.
     if (config.data && !(config.data instanceof FormData) && !customConfig._skipTransform) {
       config.data = snakecaseKeys(config.data, { deep: true });
     }

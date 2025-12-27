@@ -1,6 +1,10 @@
 import { http } from "@/06_shared/api/instance"; // Kiểm tra lại đường dẫn import instance của bạn
 import { CreateTaskDto, Task } from "../model/types";
 
+// [MỚI] Định nghĩa type cho Update
+// Dùng Partial vì khi update ta không bắt buộc gửi lại toàn bộ (ví dụ projectId)
+export type UpdateTaskDto = Partial<CreateTaskDto>;
+
 export const taskApi = {
   /**
    * 1. Lấy danh sách task theo Project ID
@@ -17,17 +21,26 @@ export const taskApi = {
   },
 
   /**
-   * 3. [MỚI] Lấy chi tiết task theo ID
-   * Endpoint: /tasks/{id}
-   */
-  getDetail: (taskId: number | string): Promise<any> => {
-    return http.get(`/tasks/${taskId}`);
-  },
-
-  /**
-   * 4. Tạo task mới
+   * 3. Tạo task mới
    */
   create: (data: CreateTaskDto): Promise<Task> => {
     return http.post("/tasks/", data);
+  },
+
+  /**
+   * 4. [MỚI] Cập nhật Task
+   * PUT /tasks/{id}
+   * Payload: UpdateTaskDto (Gửi assignments để thay thế người làm)
+   */
+  update: (id: number, data: UpdateTaskDto): Promise<Task> => {
+    return http.put(`/tasks/${id}`, data);
+  },
+
+  /**
+   * 5. [MỚI] Xóa Task (Nếu cần)
+   * DELETE /tasks/{id}
+   */
+  delete: (id: number): Promise<any> => {
+    return http.delete(`/tasks/${id}`);
   }
 };
