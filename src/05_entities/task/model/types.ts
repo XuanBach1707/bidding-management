@@ -46,8 +46,22 @@ export interface TaskAssignment {
   } | null;
 }
 
-export interface Task extends Omit<CreateTaskDto, 'assignments'> {
+// --- 3. Cập nhật Task Interface chính ---
+export interface Task {
   id: number;
+  task_name: string;
+  deadline: string | null;
+  status: string; // OPEN, IN_PROGRESS, ...
+  priority: string | null;
+  task_type: string;
+  description: string | null;
+  project_name: string | null;
+  
+  // Thông tin liên kết
+  bidding_project_id: number | null;
+  parent_task_id: number | null;
+  
+  // Danh sách phân công (để lấy tên người làm)
   assignments: TaskAssignment[]; 
   subTasks: Task[]; 
   createdAt?: string;

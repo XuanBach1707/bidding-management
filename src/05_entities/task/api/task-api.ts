@@ -1,4 +1,4 @@
-import { http } from "@/shared/api";
+import { http } from "@/06_shared/api/instance"; // Kiểm tra lại đường dẫn import instance của bạn
 import { CreateTaskDto, Task } from "../model/types";
 
 // [MỚI] Định nghĩa type cho Update

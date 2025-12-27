@@ -1,58 +1,53 @@
-"use client";
+"use client"; // <--- BẮT BUỘC PHẢI CÓ DÒNG NÀY Ở ĐẦU FILE
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MyTaskList } from "@/widgets/my-task-list";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { taskApi } from "@/05_entities/task/api/task-api"; 
+import { Skeleton } from "@/06_shared/ui/skeleton";
+
+// Import components
+import { TaskSidebar } from "./task-sidebar";
+import { TaskDetailView } from "./TaskDetailView"; // Import component mới tạo ở trên
 
 export const MyTasksPage = () => {
-  const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
+  // State quản lý task đang được chọn
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const userInfoRaw = localStorage.getItem("USER_INFO");
-    
-    if (!userInfoRaw) {
-      router.push("/login");
-      return;
-    }
+  // Lấy danh sách task của tôi
+  const { data: tasks, isLoading } = useQuery({
+    queryKey: ["tasks", "me"],
+    queryFn: () => taskApi.getMyTasks(),
+  });
 
-    try {
-      const userInfo = JSON.parse(userInfoRaw);
-      const forbiddenRoles = ["MANAGER", "BID_MANAGER"];
-
-      if (forbiddenRoles.includes(userInfo.role)) {
-        // Nếu là quản lý, redirect về trang cơ hội hoặc dashboard tổng
-        router.push("/opportunities"); 
-      } else {
-        setIsChecking(false);
-      }
-    } catch (error) {
-      console.error("Lỗi parse USER_INFO:", error);
-      router.push("/login");
-    }
-  }, [router]);
-
-  if (isChecking) {
+  if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <p className="text-slate-500 animate-pulse">Đang kiểm tra quyền truy cập...</p>
+      <div className="flex h-screen p-4 gap-4">
+        <div className="w-[300px] flex flex-col gap-4">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-[100px] w-full" />
+          <Skeleton className="h-[100px] w-full" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-full w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Nhiệm vụ của tôi
-        </h1>
-        <p className="text-sm text-slate-500">
-          Quản lý các task được giao trực tiếp cho bạn trên toàn hệ thống.
-        </p>
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-white border-t"> 
+      {/* 1. Sidebar bên trái: Danh sách công việc */}
+      <div className="w-[350px] border-r flex-shrink-0 bg-slate-50/30">
+        <TaskSidebar 
+          tasks={tasks || []} // Đảm bảo tasks là mảng
+          selectedTaskId={selectedTaskId}
+          onSelectTask={(task) => setSelectedTaskId(task.id)} // Giả sử sidebar trả về object task, ta chỉ lấy ID
+        />
       </div>
-
-      <div className="rounded-xl border bg-white shadow-sm">
-        <MyTaskList />
+      
+      {/* 2. Content bên phải: Chi tiết công việc (3 Tabs) */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <TaskDetailView taskId={selectedTaskId} />
       </div>
     </div>
   );
