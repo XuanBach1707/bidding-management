@@ -1,20 +1,24 @@
-// 1. DTO gửi đi (Khớp với Schema)
+// 1. DTO gửi đi (Dữ liệu tạo dự án)
 export interface CreateBiddingProjectDto {
   name: string;
   status?: string;
-  sourcePackageId: number; // Interceptor sẽ đổi thành source_package_id
+  sourcePackageId: number; 
 }
 
-// 2. Entity con: Gói thầu (lồng trong dự án)
+// 2. Entity: Thông tin Gói thầu (Lấy từ E-HSMT)
+// Khớp với JSON response camelCase bạn đã show
 export interface BiddingPackage {
-  hsmtId: number;
+  hsmtId: number;         // Quan trọng để fetch Requirements
   maTbmt: string;
   tenGoiThau: string;
-  trangThai: string;
+  trangThai: string;      // BIDDING, v.v.
   ngayDangTai: string;
+  maKhlcnt: string;       // Bổ sung từ JSON
+  benMoiThau: string;     // Bổ sung từ JSON (chuDauTu)
+  linhVuc: string;
 }
 
-// 3. Entity chính: Dự án đấu thầu (Response từ BE)
+// 3. Entity chính: Dự án đấu thầu (Của hệ thống mình)
 export interface BiddingProject {
   id: number;
   name: string;
@@ -23,5 +27,9 @@ export interface BiddingProject {
   bidTeamLeaderId: number;
   createdAt: string;
   updatedAt: string;
-  packages: BiddingPackage[]; // Mảng gói thầu liên quan
+  
+  // Lưu ý: Nếu logic dự án của bạn là 1 Dự án - 1 Gói thầu 
+  // thì chỗ này có thể là object thay vì array. 
+  // Nhưng để an toàn theo definition của bạn thì cứ để array.
+  packages?: BiddingPackage[]; 
 }

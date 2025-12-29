@@ -7,23 +7,23 @@ import {
   UserRoleEnum,
   TaskPriorityEnum,
   TaskTagEnum,
-  TaskTypeEnum // [MỚI]
+  TaskTypeEnum 
 } from "./schemas";
 
-// 1. Export Enum thô (Dùng cho UI logic - ví dụ so sánh TaskType.SELECTION)
+// 1. Export Enum Value
 export const AssignmentType = AssignmentTypeEnum.enum; 
 export const TaskPriority = TaskPriorityEnum.enum;
 export const TaskTag = TaskTagEnum.enum;
-export const TaskType = TaskTypeEnum.enum; // [MỚI]
+export const TaskType = TaskTypeEnum.enum; 
 
-// 2. Types suy luận từ Zod
+// 2. Types inferred
 export type CreateTaskDto = z.infer<typeof CreateTaskSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusEnum>;
 export type TaskPriority = z.infer<typeof TaskPriorityEnum>;
 export type TaskTag = z.infer<typeof TaskTagEnum>;
-export type TaskType = z.infer<typeof TaskTypeEnum>; // [MỚI]
+export type TaskType = z.infer<typeof TaskTypeEnum>;
 
-// 3. Interface cho Task thực thể (sau khi fetch từ API)
+// 3. Entity Interfaces
 export interface TaskAssignment {
   assignmentId: number;
   assignedUnitId: number;
@@ -33,8 +33,6 @@ export interface TaskAssignment {
   requiredMinSecurity: number;
   isAccepted: boolean;
   
-  // [MỚI] Bổ sung thông tin User & Unit để hiển thị trên UI
-  // Dữ liệu này được trả về từ API (ví dụ: /tasks/user/me hoặc getList)
   user?: {
     fullName?: string;
     email?: string;
@@ -54,5 +52,6 @@ export interface Task extends Omit<CreateTaskDto, 'assignments'> {
   updatedAt?: string;
   progress?: number; 
   hasFile?: boolean;
-  projectName?: string; // [MỚI] Field bổ sung từ response
+  projectName?: string; 
+  // attachmentUrl sẽ tự động là string[] nhờ CreateTaskDto
 }

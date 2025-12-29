@@ -35,11 +35,10 @@ export const TaskTagEnum = z.enum([
   "OTHER"     // Hồ sơ khác
 ]);
 
-// [MỚI] Enum cho Task Type
 export const TaskTypeEnum = z.enum([
-  "AUTO",       // Tự động (Hệ thống/AI)
-  "SELECTION",  // Chọn tài liệu
-  "DRAFTING"    // Soạn thảo
+  "AUTO",      // Tự động (Hệ thống/AI)
+  "SELECTION", // Chọn tài liệu
+  "DRAFTING"   // Soạn thảo
 ]);
 
 // --- SUB-SCHEMA: Task Assignment ---
@@ -56,7 +55,6 @@ export const TaskAssignmentSchema = z.object({
 export const CreateTaskSchema = z.object({
   id: z.number().optional(), 
   biddingProjectId: z.number(), 
-  
   parentTaskId: z.number().nullable().optional(), 
 
   taskName: z.string().min(1, "Tên công việc không được để trống"),
@@ -65,21 +63,16 @@ export const CreateTaskSchema = z.object({
   
   status: TaskStatusEnum.default("OPEN"),
   priority: TaskPriorityEnum.default("MEDIUM"), 
-  
-  // [CẬP NHẬT] Tag có thể null (đối với subtask)
   tag: TaskTagEnum.nullable().optional(),
-  
-  // [MỚI] Loại công việc
   taskType: TaskTypeEnum.default("DRAFTING"),
-
   sourceType: z.string().default("USER"), 
 
   assigneeId: z.number().nullable().optional(),
   reviewerId: z.number().nullable().optional(),
-
-  // [MỚI] Các trường bổ sung từ API
   templateId: z.number().nullable().optional(),
-  attachmentUrl: z.string().nullable().optional(),
+  
+  // [CẬP NHẬT] Sửa thành mảng chuỗi
+  attachmentUrl: z.array(z.string()).default([]),
 
   assignments: z.array(TaskAssignmentSchema).default([]),
 });

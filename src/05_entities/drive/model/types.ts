@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { cloneFileSchema } from "./schemas";
+
 export enum DriveItemType {
   FOLDER = "FOLDER",
   FILE = "FILE",
@@ -6,18 +9,26 @@ export enum DriveItemType {
 export interface DriveItem {
   id: string;
   name: string;
-  type: DriveItemType | string; // Enum: FOLDER | FILE
+  type: DriveItemType | string; 
   link: string;
-  access: string; // VD: "GRANTED"
+  access: string; 
   
   // Các trường optional
   mimeType?: string;
   level?: number;
+  
+  // [MỚI]
+  tag?: string;             // Ví dụ: "HR", "LEGAL"
+  grantedByProject?: string; // Tên dự án cấp quyền
 }
 
 export interface DriveResponse {
   currentContext?: string; 
   currentFolderId?: string;
+  
+  // [MỚI] Bổ sung cho khớp response API step 1
+  projectId?: number;
+  projectName?: string;
   
   total?: number;
   totalItems?: number;
@@ -25,8 +36,9 @@ export interface DriveResponse {
   data: DriveItem[];
 }
 
-// --- [SỬA ĐỔI TẠI ĐÂY] ---
 export interface InitDriveProjectDto {
   projectId: number; 
-  // FE dùng 'projectId', Interceptor sẽ tự đổi thành 'project_id' khi gửi request
 }
+
+// [MỚI] DTO cho Clone File
+export type CloneFileDto = z.infer<typeof cloneFileSchema>;

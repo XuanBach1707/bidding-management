@@ -4,18 +4,18 @@ import { CreateCommentSchema } from "./schemas";
 // 1. DTO cho API Request
 export type CreateCommentDto = z.infer<typeof CreateCommentSchema>;
 
-// 2. Interface cho Author (Người tạo comment)
+// 2. Interface cho Author
 export interface CommentAuthor {
-  user_id: number;
-  full_name: string;
+  userId: number;      // Đã sửa từ user_id
+  fullName: string;    // Đã sửa từ full_name
 }
 
-// 3. Interface cho Comment (Response từ API)
+// 3. Interface cho Comment
 export interface Comment {
   id: number;
-  task_id: number;
+  taskId: number;      // Đã sửa từ task_id
   content: string;
-  created_at: string; // ISO Date string
+  createdAt: string;   // Đã sửa từ created_at
   author: CommentAuthor;
-  replies: Comment[]; // Đệ quy: Comment con cũng có cấu trúc y hệt
+  replies: Comment[];  // Đệ quy
 }

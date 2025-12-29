@@ -1,0 +1,1 @@
+export { TaskDetailPanel } from "./ui/task-detail-panel";

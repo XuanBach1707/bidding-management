@@ -1,5 +1,5 @@
 import { http } from "@/shared/api";
-import { BiddingProject, CreateBiddingProjectDto } from "../model/types";
+import { BiddingProject, CreateBiddingProjectDto, BiddingPackage } from "../model/types";
 
 export const biddingProjectApi = {
   /**
@@ -29,11 +29,18 @@ export const biddingProjectApi = {
   /**
    * PUT /bidding-projects/{project_id}
    * Cập nhật thông tin dự án
-   * Lưu ý: Dùng Partial<CreateBiddingProjectDto> để chỉ cho phép sửa các trường 
-   * như name, status... tránh gửi nhầm packages hay createdAt lên.
    */
   update: (id: number, data: Partial<CreateBiddingProjectDto>): Promise<BiddingProject> => {
     return http.put(`/bidding-projects/${id}/`, data) as Promise<BiddingProject>;
+  },
+
+  /**
+   * GET /bidding-packages/by-project/{projectId}
+   * Lấy thông tin gói thầu E-HSMT liên kết với dự án
+   * (SỬA: Type trả về là BiddingPackage chuẩn camelCase)
+   */
+  getByProject: (projectId: number): Promise<{ data: BiddingPackage }> => {
+    return http.get(`/bidding-packages/by-project/${projectId}`);
   },
 
   /**

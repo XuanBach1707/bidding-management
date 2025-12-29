@@ -3,7 +3,7 @@ import { Comment, CreateCommentDto } from "../model/types";
 
 export const commentApi = {
   /**
-   * Lấy danh sách bình luận của một Task
+   * Lấy danh sách bình luận
    * GET /tasks/{taskId}/comments
    */
   getComments: (taskId: number | string): Promise<Comment[]> => {
@@ -11,7 +11,7 @@ export const commentApi = {
   },
 
   /**
-   * Tạo bình luận mới (hoặc trả lời bình luận)
+   * Tạo bình luận mới
    * POST /tasks/{taskId}/comments
    */
   createComment: (taskId: number | string, payload: CreateCommentDto): Promise<Comment> => {

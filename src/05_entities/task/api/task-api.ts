@@ -1,45 +1,52 @@
 import { http } from "@/shared/api";
 import { CreateTaskDto, Task } from "../model/types";
 
-// [MỚI] Định nghĩa type cho Update
-// Dùng Partial vì khi update ta không bắt buộc gửi lại toàn bộ (ví dụ projectId)
 export type UpdateTaskDto = Partial<CreateTaskDto>;
 
 export const taskApi = {
-  /**
-   * 1. Lấy danh sách task theo Project ID
-   */
+  // 1. Lấy danh sách task theo Project
   getList: (projectId: number | string): Promise<Task[]> => {
     return http.get(`/tasks/project/${projectId}`);
   },
 
-  /**
-   * 2. Lấy danh sách task của tôi
-   */
+  // 2. Lấy task của tôi (Giữ nguyên hoặc xóa tùy bạn, nhưng cứ để đấy dùng sau)
   getMyTasks: (): Promise<Task[]> => {
     return http.get("/tasks/user/me");
   },
 
   /**
-   * 3. Tạo task mới
+   * [QUAN TRỌNG] Lấy danh sách task được giao ĐÍCH DANH (Màn hình My Workspace)
+   * GET /tasks/user/assigned
    */
+  getAssignedTasks: (): Promise<Task[]> => {
+    return http.get("/tasks/user/assigned");
+  },
+
+  // 3. Tạo task
   create: (data: CreateTaskDto): Promise<Task> => {
     return http.post("/tasks/", data);
   },
 
-  /**
-   * 4. [MỚI] Cập nhật Task
-   * PUT /tasks/{id}
-   * Payload: UpdateTaskDto (Gửi assignments để thay thế người làm)
-   */
+  // 4. Update thông tin
   update: (id: number, data: UpdateTaskDto): Promise<Task> => {
     return http.put(`/tasks/${id}`, data);
   },
 
   /**
-   * 5. [MỚI] Xóa Task (Nếu cần)
-   * DELETE /tasks/{id}
+   * [MỚI] Cập nhật trạng thái Task (Tab Thông tin chung)
+   * PATCH /tasks/{id}/status
    */
+  updateStatus: (id: number, status: string): Promise<any> => {
+    return http.patch(`/tasks/${id}/status`, null, { 
+      params: { status } // API yêu cầu param 'status' (query param)
+    });
+    // LƯU Ý: Nếu API yêu cầu status trong BODY thì đổi thành:
+    // return http.patch(`/tasks/${id}/status`, { status });
+    // Dựa trên mô tả "param cần task_id và status", thường là Query Param hoặc Body. 
+    // Tôi để Query Param trước, nếu sai thì sửa thành Body nhé.
+  },
+
+  // 5. Xóa
   delete: (id: number): Promise<any> => {
     return http.delete(`/tasks/${id}`);
   }
