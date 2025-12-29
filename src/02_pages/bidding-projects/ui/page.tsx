@@ -197,7 +197,8 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {project.packages.map((pkg) => (
+                                {/* ĐÃ SỬA Ở ĐÂY: Thêm ( || []) */}
+                                {(project.packages || []).map((pkg) => (
                                     <TableRow key={pkg.maTbmt}>
                                         <TableCell className="font-mono text-blue-600 font-bold">{pkg.maTbmt}</TableCell>
                                         <TableCell>{pkg.tenGoiThau}</TableCell>

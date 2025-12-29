@@ -64,17 +64,17 @@ export const TaskCommentSection = ({ taskId }: TaskCommentSectionProps) => {
             <div key={cmt.id} className="flex gap-3 group">
               {/* Avatar */}
               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
-                {cmt.author?.full_name?.charAt(0) || "U"}
+                {cmt.author?.fullName?.charAt(0) || "U"}
               </div>
               
               {/* Content */}
               <div className="flex-1">
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-semibold text-gray-800">
-                    {cmt.author?.full_name || `User ${cmt.author?.user_id}`}
+                    {cmt.author?.fullName || `User ${cmt.author?.userId}`}
                   </span>
                   <span className="text-xs text-gray-400">
-                    {new Date(cmt.created_at).toLocaleString("vi-VN")}
+                    {new Date(cmt.createdAt).toLocaleString("vi-VN")}
                   </span>
                 </div>
                 <div className="text-sm text-gray-700 mt-0.5 bg-gray-50 p-2 rounded-md inline-block max-w-full break-words">

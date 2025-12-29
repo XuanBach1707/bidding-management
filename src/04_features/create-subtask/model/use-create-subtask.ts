@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { taskApi, CreateTaskDto, TaskPriority, TaskType, AssignmentType } from "@/entities/task";
-import { useToast } from "@/shared/lib/hooks/use-toast"; // Giả định bạn có hook này
-// Nếu chưa có useToast, bạn có thể thay bằng console.log hoặc alert tạm thời
+import { taskApi, CreateTaskDto, TaskPriority, TaskType } from "@/entities/task";
+import { useToast } from "@/shared/lib/hooks/use-toast";
 
 interface UseCreateSubtaskProps {
   parentId: number;
@@ -26,7 +25,7 @@ export const useCreateSubtask = ({
     deadline?: string; // YYYY-MM-DD
     description?: string;
     priority?: TaskPriority;
-    attachmentUrl?: string;
+    attachmentUrl?: string; // Input từ form thường là string đơn
   }) => {
     if (!values.taskName.trim()) {
       toast({ title: "Lỗi", description: "Tên công việc không được để trống", variant: "destructive" });
@@ -50,6 +49,11 @@ export const useCreateSubtask = ({
         
         // Subtask tag là null/undefined
         tag: undefined, 
+
+        // --- SỬA Ở ĐÂY: Thêm trường attachmentUrl ---
+        // Convert từ string (nếu có) sang mảng string [] để khớp với DTO
+        attachmentUrl: values.attachmentUrl ? [values.attachmentUrl] : [],
+        // ------------------------------------------
         
         // Logic gán người
         assignments: [{

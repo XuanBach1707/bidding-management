@@ -220,7 +220,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
 
         const res = await taskApi.create({
           taskName: p.name, 
-          biddingProjectId: newProjectId, // Dùng ID mới
+          biddingProjectId: newProjectId, 
           deadline: p.deadline ? p.deadline.toISOString() : undefined,
           status: initialStatus, 
           priority: "HIGH", 
@@ -229,7 +229,10 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           tag: p.tag as TaskTag,
           parentTaskId: null,
           assignments: p.assignments, 
-          assigneeId: undefined
+          assigneeId: undefined,
+          
+          // THÊM DÒNG NÀY:
+          attachmentUrl: [] 
         });
         parentMap[p.id] = res.id;
       }
@@ -251,7 +254,10 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           tag: s.tag as TaskTag,
           parentTaskId: realParentId, 
           assignments: s.assignments, 
-          assigneeId: undefined 
+          assigneeId: undefined,
+
+          // THÊM DÒNG NÀY:
+          attachmentUrl: []
         });
       }
       

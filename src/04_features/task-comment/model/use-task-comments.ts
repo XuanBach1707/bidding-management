@@ -38,7 +38,7 @@ export const useTaskComments = (taskId?: number) => {
     try {
       const payload: CreateCommentDto = {
         content: content,
-        parent_id: parentId || null,
+        parentId: parentId || null,
       };
 
       const newComment = await commentApi.createComment(taskId, payload);
