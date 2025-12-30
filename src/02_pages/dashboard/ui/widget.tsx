@@ -83,8 +83,8 @@ export const FailureReasonWidget = () => (
       </PieChart>
     </ResponsiveContainer>
     <div className="absolute top-1/2 left-1/2 transform -translate-x-[75%] -translate-y-1/2 text-center pointer-events-none">
-      <span className="text-xl font-bold text-slate-900">45%</span>
-      <p className="text-[10px] text-slate-500">Do giá cao</p>
+      <span className="text-xl font-bold text-slate-900"></span>
+      <p className="text-[10px] text-slate-500"></p>
     </div>
   </div>
 );

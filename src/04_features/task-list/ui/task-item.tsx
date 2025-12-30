@@ -76,5 +76,7 @@ export const TaskItem = ({ task, isActive, onClick }: TaskItemProps) => {
         </span>
       </div>
     </div>
+
+      
   );
 };

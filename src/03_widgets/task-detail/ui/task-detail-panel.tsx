@@ -1,13 +1,44 @@
-import { Task, TaskType, TaskPriority } from "@/entities/task";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"; // Giả sử bạn đã có component Tabs
-// Import 3 tab con (sẽ tạo bên dưới)
+import { Task, TaskPriority } from "@/entities/task";
+import { FolderOpen, Flag } from "lucide-react"; // Thêm icon Flag cho Priority
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"; 
 import { GeneralTab } from "./tabs/general-tab";
 import { WorkspaceTab } from "./tabs/workspace-tab";
 import { DocumentsTab } from "./tabs/documents-tab";
+import { cn } from "@/shared/lib/utils"; // Import hàm cn để ghép class
 
 interface TaskDetailPanelProps {
   task: Task | null;
 }
+
+// Helper: Cấu hình hiển thị cho Priority
+const getPriorityConfig = (priority: TaskPriority) => {
+  switch (priority) {
+    case TaskPriority.HIGH:
+      return { 
+        label: "Ưu tiên Cao", 
+        style: "bg-red-50 text-red-700 border-red-200",
+        iconColor: "text-red-600"
+      };
+    case TaskPriority.MEDIUM:
+      return { 
+        label: "Ưu tiên Trung Bình", 
+        style: "bg-blue-50 text-blue-700 border-blue-200",
+        iconColor: "text-blue-600"
+      };
+    case TaskPriority.LOW:
+      return { 
+        label: "Ưu tiên Thấp", 
+        style: "bg-slate-100 text-slate-600 border-slate-200",
+        iconColor: "text-slate-500"
+      };
+    default:
+      return { 
+        label: priority, 
+        style: "bg-gray-100 text-gray-700 border-gray-200",
+        iconColor: "text-gray-500"
+      };
+  }
+};
 
 export const TaskDetailPanel = ({ task }: TaskDetailPanelProps) => {
   if (!task) {
@@ -21,24 +52,51 @@ export const TaskDetailPanel = ({ task }: TaskDetailPanelProps) => {
     );
   }
 
+  const priorityConfig = getPriorityConfig(task.priority);
+
   return (
     <div className="flex flex-col h-full">
-      {/* 1. Header Area: Tên task & Meta info */}
-      <div className="px-6 py-4 border-b bg-white">
-        <div className="flex items-center gap-2 mb-2">
-           {/* Badge Status - Có thể tách thành component riêng sau */}
-           <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded font-bold uppercase">
-              {task.status}
-           </span>
-           {task.priority === TaskPriority.HIGH && (
-              <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded font-bold uppercase">
-                HIGH PRIORITY
-              </span>
-           )}
+      {/* 1. Header Area */}
+      <div className="px-6 py-5 border-b bg-white shadow-sm z-10">
+        
+        <div className="flex justify-between items-start gap-4">
+          
+          {/* CỘT TRÁI: Project Info & Task Name */}
+          <div className="flex-1">
+            <div className="flex items-center text-sm font-medium text-gray-500 mb-2">
+               <FolderOpen className="w-4 h-4 mr-2 text-blue-500" />
+               <span className="uppercase tracking-wide text-blue-600 font-semibold text-xs">
+                 {task.projectName || "Dự án không xác định"}
+               </span>
+            </div>
+
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+              {task.taskName}
+            </h1>
+          </div>
+
+          {/* CỘT PHẢI: Status & Priority */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            {/* Badge Status */}
+            <span className={cn(
+                "text-xs px-3 py-1 rounded font-bold uppercase border",
+                task.status === "COMPLETED" ? "bg-green-50 text-green-700 border-green-200" :
+                task.status === "IN_PROGRESS" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                "bg-gray-100 text-gray-700 border-gray-200"
+            )}>
+              {task.status.replace("_", " ")}
+            </span>
+            
+            {/* Badge Priority (MỚI THÊM) */}
+            <div className={cn(
+              "flex items-center text-xs px-3 py-1 rounded font-bold uppercase border",
+              priorityConfig.style
+            )}>
+              <Flag className={cn("w-3 h-3 mr-1.5 fill-current", priorityConfig.iconColor)} />
+              {priorityConfig.label}
+            </div>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-          {task.taskName}
-        </h1>
       </div>
 
       {/* 2. Tabs Navigation */}
@@ -63,12 +121,12 @@ export const TaskDetailPanel = ({ task }: TaskDetailPanelProps) => {
               value="documents"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none rounded-none px-4 h-full"
             >
-              Tài liệu công việc
+              Tài liệu
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* 3. Tab Contents - Khu vực cuộn chính */}
+        {/* 3. Tab Contents */}
         <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
           <TabsContent value="general" className="mt-0 h-full">
             <GeneralTab task={task} />
