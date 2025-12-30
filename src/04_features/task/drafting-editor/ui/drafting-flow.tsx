@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { 
-  ArrowRightLeft, 
   FileCode, 
   FileType, 
-  AlertCircle 
+  AlertCircle,
+  Sparkles // [MỚI] Import icon cho nút AI
 } from "lucide-react";
 
 // Shared UI
@@ -17,10 +17,11 @@ import { Template, templateApi } from "@/entities/template";
 // Feature Components & Logic
 import { TemplateSelector } from "./template-selector";
 import { RichTextEditor } from "./rich-text-editor";
-import { RawHtmlEditor } from "./raw-html-editor"; // Giả sử bạn đã tách file này
+import { RawHtmlEditor } from "./raw-html-editor"; 
+import { AiAssistant } from "./ai-assistant"; 
 import { draftingApi } from "../api/drafting-api";
 
-// [QUAN TRỌNG] Import hàm merge để xử lý dữ liệu khi lưu
+// Libs
 import { parseHtmlToEditorData, mergeHtmlFromEditorData } from "../lib/html-processor";
 
 interface DraftingFlowProps {
@@ -38,13 +39,16 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
   const [step, setStep] = useState<Step>("SELECT");
   const [editorMode, setEditorMode] = useState<EditorMode>("RICH_TEXT");
   
-  // "Source of Truth" - Chứa toàn bộ HTML (bao gồm cả HEAD, STYLE, BODY)
+  // [MỚI] State điều khiển Sidebar AI
+  const [isAiOpen, setIsAiOpen] = useState(false);
+
+  // "Source of Truth"
   const [fullHtmlContent, setFullHtmlContent] = useState("");
   
   // Data State
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
-  const [isLoadingDraft, setIsLoadingDraft] = useState(false); // [FIX] Thêm state này
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // --- 1. LOAD TEMPLATES ---
@@ -63,22 +67,19 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     fetchTemplates();
   }, [toast]);
 
-  // --- 2. LOGIC CHUYỂN ĐỔI DỮ LIỆU ---
-  // Tách HTML thành { originalCss, editorCss, bodyContent }
+  // --- 2. LOGIC TÁCH DỮ LIỆU ---
   const parsedData = useMemo(() => {
     return parseHtmlToEditorData(fullHtmlContent);
   }, [fullHtmlContent]);
 
   // --- HANDLERS ---
   
-  // Chọn Template (Tạo mới)
   const handleSelectTemplate = (content: string) => {
     setFullHtmlContent(content);
     setStep("EDITOR");
     setEditorMode("RICH_TEXT");
   };
 
-  // [FIX] Load Draft (Tiếp tục bản cũ)
   const handleLoadDraft = async () => {
     setIsLoadingDraft(true);
     try {
@@ -99,17 +100,15 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     }
   };
 
-  // Quay lại màn hình chọn
   const handleBackToSelect = () => {
     setStep("SELECT");
   };
 
-  // Lưu bản nháp (API) - Hàm cấp thấp, nhận vào Full HTML
   const executeSaveApi = async (contentToSave: string) => {
     setIsSaving(true);
     try {
       await draftingApi.saveDraft(taskId, contentToSave);
-      setFullHtmlContent(contentToSave); // Update Source of Truth
+      setFullHtmlContent(contentToSave);
       toast({ title: "Đã lưu bản nháp", description: "Nội dung đã được đồng bộ." });
     } catch (error) {
       console.error(error);
@@ -119,21 +118,16 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     }
   };
 
-  // [QUAN TRỌNG] Xử lý khi Rich Text bấm Lưu
-  // Vì RichText chỉ trả về Body, ta phải trộn với Original CSS
   const handleRichTextSave = (newBody: string) => {
       const cssToUse = parsedData.originalCss || "";
       const mergedHtml = mergeHtmlFromEditorData(cssToUse, newBody);
       executeSaveApi(mergedHtml);
   };
 
-  // Xử lý khi Raw HTML bấm Lưu
-  // Raw HTML trả về Full HTML luôn, nên lưu thẳng
   const handleRawHtmlSave = (newFullHtml: string) => {
       executeSaveApi(newFullHtml);
   };
 
-  // Chuyển chế độ Editor
   const toggleEditorMode = () => {
     if (editorMode === "RICH_TEXT") {
         setEditorMode("RAW_HTML");
@@ -142,27 +136,30 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     }
   };
 
+  // [MỚI] Hàm xử lý khi AI trả về nội dung mới
+  const handleAiApplyChanges = (newHtml: string) => {
+     setFullHtmlContent(newHtml);
+     toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!" });
+  };
+
   // --- RENDER ---
   
-  // 1. MÀN HÌNH CHỌN MẪU
   if (step === "SELECT") {
     return (
       <TemplateSelector 
         templates={templates} 
         isLoading={isLoadingTemplates} 
         onSelect={handleSelectTemplate}
-        // [FIX] Truyền thêm props cho tính năng Load Draft
         onLoadDraft={handleLoadDraft}
         isLoadingDraft={isLoadingDraft}
       />
     );
   }
 
-  // 2. MÀN HÌNH SOẠN THẢO
   return (
-    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
-        {/* HEADER ĐIỀU HƯỚNG & CHUYỂN MODE */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg border shadow-sm">
+    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300 relative">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg border shadow-sm sticky top-0 z-20">
             <div>
                 <h3 className="font-bold text-slate-800">Soạn thảo: {taskName}</h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1">
@@ -171,12 +168,20 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
             </div>
 
             <div className="flex items-center gap-2">
+                {/* [MỚI] Nút AI nằm cạnh các nút chức năng khác */}
+                <Button 
+                    size="sm" 
+                    onClick={() => setIsAiOpen(true)} // Mở Sidebar
+                    className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm border border-purple-500"
+                >
+                    <Sparkles className="w-4 h-4" /> AI Trợ lý
+                </Button>
+
                 <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={toggleEditorMode}
                     className="gap-2 text-slate-600 hover:text-blue-600 border-slate-200"
-                    title="Chuyển đổi giữa giao diện Word và Code HTML"
                 >
                     {editorMode === "RICH_TEXT" ? (
                         <><FileCode className="w-4 h-4" /> Sửa HTML</>
@@ -187,7 +192,7 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
             </div>
         </div>
 
-        {/* CẢNH BÁO KHI CHUYỂN MODE */}
+        {/* WARNING */}
         <Alert className="bg-blue-50 border-blue-100 py-2">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-xs text-blue-700 ml-2">
@@ -195,30 +200,31 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
             </AlertDescription>
         </Alert>
 
-        {/* KHUNG EDITOR CHÍNH */}
+        {/* EDITOR */}
         {editorMode === "RICH_TEXT" ? (
             <RichTextEditor 
-                initialContent={parsedData.bodyContent} // Chỉ truyền Body
-                
-                // [FIX] Sửa 'css' thành 'parsedData.editorCss' để khớp type
-                css={parsedData.editorCss}                   
-                
+                initialContent={parsedData.bodyContent}
+                css={parsedData.editorCss} 
                 onBack={handleBackToSelect}
-                
-                // [FIX] Dùng hàm handleRichTextSave để trộn dữ liệu
-                onSave={handleRichTextSave}               
-                
+                onSave={handleRichTextSave}
                 isSaving={isSaving}
             />
         ) : (
-            // Component này bạn giữ nguyên logic cũ hoặc cập nhật theo DraftingEditor.tsx nếu cần
             <RawHtmlEditor 
-                initialContent={fullHtmlContent}       // Truyền Full HTML
+                initialContent={fullHtmlContent}
                 onBack={handleBackToSelect}
-                onSave={handleRawHtmlSave}             // Hàm save thẳng
+                onSave={handleRawHtmlSave}
                 isSaving={isSaving}
             />
         )}
+
+        {/* [MỚI] AI ASSISTANT - Đã truyền đủ props */}
+        <AiAssistant 
+            isOpen={isAiOpen} 
+            onClose={() => setIsAiOpen(false)}
+            currentHtml={fullHtmlContent}
+            onApplyChanges={handleAiApplyChanges}
+        />
     </div>
   );
 };

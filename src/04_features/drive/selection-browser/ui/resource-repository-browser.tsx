@@ -40,7 +40,7 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
   // Ref để tránh fetch lại nhiều lần
   const fetchTargetCalled = useRef(false);
 
-  // --- LOGIC 1: LỌC FOLDER & AUTO-SELECT (Giữ nguyên) ---
+  // --- LOGIC 1: LỌC FOLDER & AUTO-SELECT ---
   useEffect(() => {
     let filtered: DriveItem[] = [];
     if (task.tag) {
@@ -56,7 +56,7 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.tag]);
 
-  // --- LOGIC 2 (MỚI): TỰ ĐỘNG LẤY TARGET ID NẾU THIẾU ---
+  // --- LOGIC 2: TỰ ĐỘNG LẤY TARGET ID NẾU THIẾU ---
   useEffect(() => {
     // Nếu cha đã truyền hoặc đã fetch rồi thì thôi
     if (preloadedTargetId || localTargetId || fetchTargetCalled.current || !task.biddingProjectId) return;
@@ -84,7 +84,7 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
     fetchTargetIdFallback();
   }, [preloadedTargetId, localTargetId, task.biddingProjectId]);
 
-  // --- LOGIC 3: LOAD FILE (Giữ nguyên) ---
+  // --- LOGIC 3: LOAD FILE ---
   const handleSelectFolder = async (folderId: string) => {
     if (folderId === selectedFolderId && sourceFiles.length > 0) return;
     setSelectedFolderId(folderId);
@@ -100,32 +100,43 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
     }
   };
 
-  // --- LOGIC 4: CLONE FILE (Sửa lại để dùng localTargetId) ---
+  // --- LOGIC 4: CLONE FILE (FIXED) ---
   const handleCloneFile = async (file: DriveItem) => {
+    console.log("🖱️ User clicked Clone:", file.name); // Debug log
+
     // Ưu tiên dùng của cha (preloaded), nếu không có thì dùng của mình (local)
     const finalTargetId = preloadedTargetId || localTargetId;
 
+    console.log("🎯 Target ID to clone:", finalTargetId); // Debug log
+
     if (!finalTargetId) {
-      return toast({ variant: "destructive", description: "Lỗi: Không tìm thấy thư mục đích để lưu file." });
+      return toast({ variant: "destructive", description: "Lỗi: Không tìm thấy thư mục đích để lưu file. Vui lòng thử lại sau giây lát." });
     }
 
     try {
       setCloningId(file.id);
+      
+      // Gọi API Clone
       await driveApi.cloneFile({
         sourceFileId: file.id,
         targetFolderId: finalTargetId
       });
 
       toast({ title: "Thành công", description: `Đã lấy file "${file.name}" về hồ sơ.` });
-      onSuccess(); 
+      
+      // Gọi callback để cha reload lại list file
+      if (onSuccess) {
+          onSuccess();
+      }
     } catch (error) {
+      console.error("❌ Clone Error:", error);
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể copy file này." });
     } finally {
       setCloningId(null);
     }
   };
 
-  // --- RENDER (Giữ nguyên) ---
+  // --- RENDER ---
   return (
     <div className="flex h-full border-t bg-white">
       {/* CỘT TRÁI */}
@@ -191,10 +202,15 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
                          <p className="text-sm text-gray-700 truncate font-medium group-hover:text-blue-700">{file.name}</p>
                        </div>
                     </div>
+                    
+                    {/* NÚT CLONE - QUAN TRỌNG */}
                     <Button 
                       size="sm" variant="outline"
-                      onClick={() => handleCloneFile(file)}
-                      disabled={cloningId === file.id}
+                      onClick={(e) => {
+                          e.stopPropagation(); // Ngăn sự kiện nổi bọt nếu có
+                          handleCloneFile(file);
+                      }}
+                      disabled={cloningId === file.id} // Disable nút khi đang clone file này
                       className="h-8 text-xs border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-white"
                     >
                       {cloningId === file.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Chọn"}
