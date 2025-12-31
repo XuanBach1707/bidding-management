@@ -1,0 +1,1 @@
+export { BiddingHistoryPage } from "./ui/bidding-history-page";

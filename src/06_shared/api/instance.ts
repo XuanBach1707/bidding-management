@@ -3,7 +3,7 @@ import camelcaseKeys from 'camelcase-keys';
 import snakecaseKeys from 'snakecase-keys';
 import { authStorage } from '@/shared/lib/auth'; 
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://26.118.131.110:8000/";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://26.112.109.171:8000/";
 const SKIP_TRANSFORM_HEADER = 'x-no-transform';
 
 // Mở rộng type để chứa cờ nội bộ
