@@ -1,6 +1,6 @@
 import React from "react";
 import { format } from "date-fns";
-import { Trash2, FileText, CheckCircle2, Calendar as CalendarIcon } from "lucide-react"; // Đã bỏ Plus icon
+import { Trash2, FileText, CheckCircle2, Calendar as CalendarIcon } from "lucide-react"; 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -65,7 +65,6 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
       <>
         {/* 1. Organization (Col-4) */}
         <div className="col-span-4 flex flex-col gap-1.5">
-            {/* [FIX] Chỉ hiện dropdown chọn Phòng/Ban cho PARENT */}
             {isParent ? (
                 <>
                     <Select value={selectedBoardId ? String(selectedBoardId) : undefined} onValueChange={(val) => onBoardChange(task.id, val)}>
@@ -91,14 +90,13 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
                     </Select>
                 </>
             ) : (
-                // Với Sub-task: Hiển thị placeholder hoặc để trống
                 <div className="h-full flex items-center pl-2">
                     <span className="text-[10px] text-slate-300 italic">Theo phân công mục cha</span>
                 </div>
             )}
         </div>
 
-        {/* 2. Deadline (Col-2) - Khả dụng cho cả Parent và Child */}
+        {/* 2. Deadline (Col-2) - [UPDATED] Block Past Dates */}
         <div className="col-span-2 pt-0.5">
             <Popover>
                 <PopoverTrigger asChild>
@@ -120,6 +118,8 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
                     mode="single" 
                     selected={task.deadline} 
                     onSelect={(date) => onUpdateTask(task.id, "deadline", date)} 
+                    // [UPDATED] Chặn ngày quá khứ
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     initialFocus 
                   />
                 </PopoverContent>
@@ -129,10 +129,8 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
         {/* 3. Action (Col-1) */}
         <div className="col-span-1 flex justify-center pt-0.5">
           {isParent ? (
-            // [FIX] Ẩn hoàn toàn nút Add Subtask ở Parent
             <div className="h-7 w-7" />
           ) : (
-            // Subtask vẫn cho xóa (nếu thừa)
             <Button variant="ghost" size="icon" onClick={() => onRemoveTask(task.id)} className="h-7 w-7 text-slate-300 hover:text-red-500 rounded-full">
                 <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -157,7 +155,6 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
         <div key={sub.id} className="grid grid-cols-12 gap-4 p-2 items-start hover:bg-slate-50 border-l-4 border-l-transparent transition-colors">
           <div className="col-span-5 flex items-center gap-2 pl-8 pt-1">
             <span className="text-xs font-medium text-slate-400 mt-1.5">{index + 1}.{subIndex + 1}</span>
-            {/* Input tên sub-task vẫn cho sửa */}
             <Input value={sub.name} onChange={(e) => onUpdateTask(sub.id, "name", e.target.value)} placeholder="Tên công việc..." className="h-8 text-sm border-transparent bg-transparent focus:bg-white px-2 w-full" />
           </div>
           {renderRightSideContent(sub, false)}

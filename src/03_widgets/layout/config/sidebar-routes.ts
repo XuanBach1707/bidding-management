@@ -15,6 +15,7 @@ import {
   CheckSquare,
   PlayCircle,
   ShieldCheck,
+  UserCog, // [MỚI] Thêm icon quản trị user
   type LucideIcon 
 } from "lucide-react";
 
@@ -82,12 +83,19 @@ export const sidebarRoutes: SidebarRoute[] = [
     title: "Kho Tài nguyên",
     icon: Database,
     children: [
-      { title: "Hồ sơ Nhân sự", href: "/resources/human", icon: Users },
+      { title: "Hồ sơ Nhân sự", href: "/resources/human", icon: Users }, // Icon Users giữ nguyên cho hồ sơ
       { title: "Máy móc thiết bị", href: "/resources/equipment", icon: Truck },
       { title: "Hồ sơ Pháp lý", href: "/resources/legal", icon: Scale },
       { title: "Hồ sơ Tài chính", href: "/resources/finance", icon: Landmark },
       { title: "Hợp đồng tương tự", href: "/resources/contracts", icon: FileText },
     ],
+  },
+  // --- [MỚI] Màn hình Quản lý tài khoản User ---
+  {
+    title: "Quản trị người dùng",
+    href: "/users",
+    icon: UserCog, // Dùng icon UserCog để khác biệt với hồ sơ nhân sự
+    roles: ["ADMIN", "MANAGER"], // Chỉ Admin/Manager được vào
   },
   {
     title: "Phân quyền (ABAC)", 

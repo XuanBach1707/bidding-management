@@ -16,11 +16,6 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
   useEffect(() => {
     const fetchDocuments = async () => {
       // 1. Validate Input
-      if (!task.tag) {
-        setErrorMsg("Công việc này chưa được gán Tag (Loại hồ sơ).");
-        setLoading(false);
-        return;
-      }
       if (!task.biddingProjectId) {
         setErrorMsg("Công việc không thuộc dự án nào.");
         setLoading(false);
@@ -31,28 +26,34 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
         setLoading(true);
         setErrorMsg(null);
 
-        // 2. Step 1: Lấy danh sách Folder của Project
-        // API: GET /bidding-projects/folder/{projectId}/me
+        // --- STEP 1: Lấy danh sách Folder ở Root ---
         const projectFoldersRes = await driveApi.getProjectFolders(task.biddingProjectId);
-        
-        // 3. Step 2: Tìm Folder tương ứng với Tag của Task
-        // Lưu ý: So sánh tag từ API DriveItem với task.tag
-        const targetFolder = projectFoldersRes.data.find(
-          (f) => f.tag === task.tag && f.type === "FOLDER"
-        );
+        const rootItems = projectFoldersRes.data || [];
 
-        if (!targetFolder) {
-           setErrorMsg(`Không tìm thấy thư mục hồ sơ cho loại: ${task.tag}`);
-           return;
+        const folders = rootItems.filter(item => item.type === "FOLDER");
+        
+        // Khởi tạo mảng file (lấy file ở root trước nếu có)
+        let collectedFiles: DriveItem[] = rootItems.filter(item => item.type === "FILE");
+
+        // --- STEP 2: Gọi tuần tự từng Folder để lấy file ---
+        // Dùng for...of để await lần lượt, tránh spam request cùng lúc
+        if (folders.length > 0) {
+          for (const folder of folders) {
+            try {
+              const res = await driveApi.getFolderDetail(folder.id);
+              const filesInThisFolder = (res.data || []).filter(i => i.type === "FILE");
+              
+              // Cộng dồn vào danh sách
+              collectedFiles = [...collectedFiles, ...filesInThisFolder];
+            } catch (err) {
+              console.warn(`Không thể lấy file trong folder: ${folder.name}`, err);
+              // Nếu 1 folder lỗi thì bỏ qua, vẫn chạy tiếp folder sau
+              continue; 
+            }
+          }
         }
 
-        // 4. Step 3: Lấy danh sách file trong Folder đó
-        // API: GET /drive/folder/{folderId}
-        const filesRes = await driveApi.getFolderDetail(targetFolder.id);
-        
-        // Chỉ lấy FILE, bỏ qua folder con (nếu có)
-        const onlyFiles = filesRes.data.filter(i => i.type === "FILE");
-        setFiles(onlyFiles);
+        setFiles(collectedFiles);
 
       } catch (error) {
         console.error("Lỗi tải tài liệu:", error);
@@ -63,7 +64,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
     };
 
     fetchDocuments();
-  }, [task.id, task.tag, task.biddingProjectId]);
+  }, [task.id, task.biddingProjectId]);
 
   // --- RENDER STATES ---
 
@@ -71,7 +72,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-gray-500">
         <Loader2 className="w-8 h-8 animate-spin mb-2" />
-        <span className="text-sm">Đang đồng bộ tài liệu...</span>
+        <span className="text-sm">Đang quét tài liệu (Lần lượt)...</span>
       </div>
     );
   }
@@ -89,7 +90,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-gray-400">
         <FolderSearch className="w-10 h-10 mb-2 opacity-50" />
-        <p className="text-sm">Thư mục hồ sơ trống.</p>
+        <p className="text-sm">Không tìm thấy file nào trong các thư mục.</p>
       </div>
     );
   }
@@ -98,7 +99,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
     <div className="space-y-3">
       <div className="flex items-center justify-between pb-2 border-b">
         <h3 className="text-sm font-bold text-gray-700 uppercase">
-          Hồ sơ: {task.tag} ({files.length})
+          Tất cả tài liệu ({files.length})
         </h3>
       </div>
       <div className="grid grid-cols-1 gap-2">

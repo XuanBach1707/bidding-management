@@ -1,14 +1,21 @@
 import { useState } from "react";
+import { format } from "date-fns"; // Import format ngày
+import { Calendar as CalendarIcon } from "lucide-react"; // Import Icon
 import { TaskType } from "@/entities/task";
 import { AssigneeSelect } from "@/features/select-assignee";
 import { useCreateSubtask } from "../model/use-create-subtask";
+
+// Import các component UI của Shadcn
+import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
+import { Calendar } from "@/shared/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 
 interface QuickSubtaskFormProps {
   parentId: number;
   biddingProjectId: number;
   parentUnitId: number;
   onSuccess: () => void;
-  // Đã xóa onOpenDetail vì không còn dùng ở đây nữa
 }
 
 export const QuickSubtaskForm = ({
@@ -21,7 +28,9 @@ export const QuickSubtaskForm = ({
   const [taskName, setTaskName] = useState("");
   const [taskType, setTaskType] = useState<TaskType>("DRAFTING");
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
-  const [deadline, setDeadline] = useState("");
+  
+  // [SỬA] Đổi state deadline sang kiểu Date | undefined để dùng với Calendar
+  const [deadline, setDeadline] = useState<Date | undefined>(undefined);
 
   const { createSubtask, isSubmitting } = useCreateSubtask({
     parentId,
@@ -31,7 +40,7 @@ export const QuickSubtaskForm = ({
       // Reset form sau khi tạo thành công
       setTaskName("");
       setAssigneeId(null);
-      setDeadline("");
+      setDeadline(undefined); // Reset về undefined
       onSuccess();
     }
   });
@@ -47,7 +56,8 @@ export const QuickSubtaskForm = ({
       taskName,
       taskType,
       assigneeId,
-      deadline
+      // [SỬA] Convert Date object sang string khi gửi API
+      deadline: deadline ? deadline.toISOString() : "" 
     });
   };
 
@@ -72,7 +82,7 @@ export const QuickSubtaskForm = ({
         <select
           value={taskType}
           onChange={(e) => setTaskType(e.target.value as TaskType)}
-          className="w-full text-xs border rounded px-2 py-1 bg-white h-8 outline-none"
+          className="w-full text-xs border rounded px-2 py-1 bg-white h-8 outline-none focus:border-blue-500"
           disabled={isSubmitting}
         >
           <option value="DRAFTING">✍️ Soạn thảo</option>
@@ -80,32 +90,56 @@ export const QuickSubtaskForm = ({
         </select>
       </div>
 
-      {/* Select Assignee (Feature Select Assignee) */}
+      {/* Select Assignee */}
       <div className="w-[180px]">
         <AssigneeSelect
           unitId={parentUnitId}
           value={assigneeId}
           onChange={setAssigneeId}
-          className="h-8 text-xs"
+          className="h-8 text-xs bg-white"
           placeholder="-- Chọn NV --"
           disabled={isSubmitting}
         />
       </div>
 
-      {/* Date Picker */}
-      <input
-        type="date"
-        className="w-[130px] text-xs border rounded px-2 py-1 h-8 bg-white outline-none"
-        value={deadline}
-        onChange={(e) => setDeadline(e.target.value)}
-        disabled={isSubmitting}
-      />
+      {/* [SỬA] Date Picker với Calendar của Shadcn */}
+      <div className="w-[130px]">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full h-8 px-2 text-xs justify-start text-left font-normal bg-white border-gray-200",
+                !deadline && "text-muted-foreground"
+              )}
+              disabled={isSubmitting}
+            >
+              <CalendarIcon className="mr-2 h-3 w-3 text-gray-400" />
+              {deadline ? (
+                format(deadline, "dd/MM/yyyy")
+              ) : (
+                <span className="text-gray-400">Hạn chót</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={deadline}
+              onSelect={setDeadline}
+              // 👇 CHẶN NGÀY QUÁ KHỨ Ở ĐÂY
+              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {/* Action Button (Enter) */}
       <button
         onClick={handleSubmit}
         disabled={isSubmitting || !taskName.trim()}
-        className="bg-blue-600 text-white p-1.5 rounded hover:bg-blue-700 disabled:opacity-50"
+        className="bg-blue-600 text-white p-1.5 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
         title="Tạo nhanh (Enter)"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

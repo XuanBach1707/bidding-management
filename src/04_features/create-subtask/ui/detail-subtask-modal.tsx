@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns"; // Import format date
+import { Calendar as CalendarIcon } from "lucide-react"; // Import icon
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { 
   taskApi, 
   Task, 
-  // Import Types & Enums chuẩn từ file types bạn gửi
   TaskType, 
   TaskPriority, 
   TaskStatus,
@@ -12,6 +13,12 @@ import {
 import { AssigneeSelect } from "@/features/select-assignee";
 import { TaskCommentSection } from "@/features/task-comment";
 import { useCreateSubtask } from "../model/use-create-subtask";
+
+// Import UI Shadcn
+import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
+import { Calendar } from "@/shared/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 
 interface DetailSubtaskModalProps {
   isOpen: boolean;
@@ -31,17 +38,18 @@ export const DetailSubtaskModal = ({
   // --- FORM STATE ---
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
-  // Sử dụng Enum chuẩn cho giá trị mặc định
   const [taskType, setTaskType] = useState<TaskType>("DRAFTING");
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [status, setStatus] = useState<TaskStatus>("OPEN");
   
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
-  const [deadline, setDeadline] = useState("");
+  
+  // [SỬA] Đổi state deadline sang kiểu Date | undefined
+  const [deadline, setDeadline] = useState<Date | undefined>(undefined);
 
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Logic Create (Hook cũ)
+  // Logic Create
   const { createSubtask, isSubmitting } = useCreateSubtask({
     parentId,
     biddingProjectId,
@@ -59,18 +67,17 @@ export const DetailSubtaskModal = ({
       setTaskName(existingTask.taskName || "");
       setDescription(existingTask.description || "");
       
-      // Cast type an toàn từ response về Enum
       setTaskType((existingTask.taskType as TaskType) || "DRAFTING");
       setPriority((existingTask.priority as TaskPriority) || "MEDIUM");
       setStatus((existingTask.status as TaskStatus) || "OPEN");
 
+      // [SỬA] Convert string deadline từ API sang Date object
       if (existingTask.deadline) {
-        setDeadline(existingTask.deadline.split("T")[0]);
+        setDeadline(new Date(existingTask.deadline));
       } else {
-        setDeadline("");
+        setDeadline(undefined);
       }
 
-      // Lấy người được gán đầu tiên (nếu có)
       const firstAssign = existingTask.assignments?.[0];
       setAssigneeId(firstAssign?.assignedUserId || existingTask.assigneeId || null);
 
@@ -86,7 +93,7 @@ export const DetailSubtaskModal = ({
     setPriority("MEDIUM");
     setStatus("OPEN");
     setAssigneeId(null);
-    setDeadline("");
+    setDeadline(undefined);
   };
 
   // --- ACTION: UPDATE ---
@@ -95,30 +102,29 @@ export const DetailSubtaskModal = ({
 
     setIsUpdating(true);
     try {
-      // 1. Cấu trúc Assignments theo Schema
       const assignmentsPayload = assigneeId 
         ? [
             {
               assignedUnitId: parentUnitId,
               assignedUserId: assigneeId,
-              assignmentType: "MAIN",        // Khớp AssignmentTypeEnum
-              requiredRole: "SPECIALIST",    // Khớp UserRoleEnum
+              assignmentType: "MAIN",
+              requiredRole: "SPECIALIST",
               requiredMinSecurity: 2,
               isAccepted: false
             }
           ]
-        : []; // Rỗng = Xóa assignment cũ
+        : [];
 
-      // 2. Payload chuẩn theo UpdateTaskDto
       const payload: Partial<CreateTaskDto> = {
         taskName,
         description,
         taskType,
         priority,
         status,
-        deadline: deadline ? new Date(deadline).toISOString() : undefined,
-        assigneeId: assigneeId, // Cập nhật cả field lẻ này cho chắc
-        assignments: assignmentsPayload as any, // Ép kiểu vì assignments trong DTO là array object
+        // [SỬA] Convert Date -> ISO String
+        deadline: deadline ? deadline.toISOString() : undefined,
+        assigneeId: assigneeId, 
+        assignments: assignmentsPayload as any, 
       };
 
       await taskApi.update(existingTask.id, payload);
@@ -135,15 +141,14 @@ export const DetailSubtaskModal = ({
   };
 
   const handleCreate = () => {
-    // Gọi hook createSubtask (đã có từ trước)
-    // Lưu ý: Hook này cũng cần cập nhật để truyền đúng TaskType enum
     createSubtask({
       taskName,
       description,
       taskType,
       assigneeId,
       priority,
-      deadline
+      // [SỬA] Convert Date -> ISO String
+      deadline: deadline ? deadline.toISOString() : "" 
     });
   };
 
@@ -192,7 +197,7 @@ export const DetailSubtaskModal = ({
           {/* SIDEBAR SETTINGS */}
           <div className="w-[300px] space-y-4 border-l pl-6 shrink-0">
             
-            {/* Status (Dùng Enum Value) */}
+            {/* Status */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">TRẠNG THÁI</label>
               <select
@@ -221,7 +226,7 @@ export const DetailSubtaskModal = ({
               />
             </div>
 
-            {/* Priority (Dùng Enum Value) */}
+            {/* Priority */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">ĐỘ ƯU TIÊN</label>
               <select 
@@ -235,18 +240,40 @@ export const DetailSubtaskModal = ({
               </select>
             </div>
 
-            {/* Deadline */}
+            {/* [SỬA] Deadline với Calendar Popover */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">HẠN CHÓT</label>
-              <input 
-                type="date" 
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full border rounded p-2 text-sm" 
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full pl-3 text-left font-normal border-gray-200",
+                      !deadline && "text-muted-foreground"
+                    )}
+                  >
+                    {deadline ? (
+                      format(deadline, "dd/MM/yyyy")
+                    ) : (
+                      <span>Chọn ngày...</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={deadline}
+                    onSelect={setDeadline}
+                    // 👇 CHẶN NGÀY QUÁ KHỨ
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* Task Type (Dùng Enum Value) */}
+            {/* Task Type */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">LOẠI CÔNG VIỆC</label>
               <select 
