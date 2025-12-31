@@ -4,13 +4,7 @@ import { z } from "zod";
 // 1. COMMON SCHEMAS & UTILS
 // =============================================================================
 
-export interface BaseResponse<T> {
-  success: boolean;
-  status: number;
-  message?: string | null;
-  data: T;
-}
-
+// Schema phản hồi cơ bản (Outer Envelope)
 export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
     success: z.boolean(),
@@ -19,9 +13,23 @@ export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
     data: dataSchema,
   });
 
+// Schema cho Metadata phân trang (nằm trong object data)
+export const PaginationMetaSchema = z.object({
+  total: z.number().optional().default(0),
+  page: z.number().optional().default(1),
+  size: z.number().optional().default(10),
+  pages: z.number().optional().default(0),
+});
+
+// Helper tạo Schema cho list có phân trang: { items: T[], total, page... }
+export const createPaginatedListSchema = <T extends z.ZodTypeAny>(itemSchema: T) => 
+  z.object({
+    items: z.array(itemSchema),
+  }).merge(PaginationMetaSchema);
+
 export interface GetBiddingPackagesParams {
-  skip?: number;
-  limit?: number;
+  page?: number;
+  size?: number;
   search?: string;
 }
 
@@ -96,10 +104,10 @@ export const BiddingFileSchema = z.object({
 });
 
 // =============================================================================
-// 3. AI ANALYSIS ENTITIES (MỚI)
+// 3. AI ANALYSIS ENTITIES
 // =============================================================================
 
-// 3.1. Thông tin chung (General Info) - MỚI
+// 3.1. Thông tin chung (General Info)
 export const BidGeneralInfoSchema = z.object({
   hsmtId: z.number(),
   maTbmt: z.string(),
@@ -138,15 +146,11 @@ export const BidFinancialReqSchema = z.object({
   id: z.number(),
   hsmtId: z.number(),
   createdAt: z.string(),
-
-  // Admin Requirements
   bidValidityDays: z.number().optional().nullable(),
   bidSecurityValue: z.string().optional().nullable(),
   bidSecurityDuration: z.number().optional().nullable(),
   submissionFee: z.string().optional().nullable(),
   contractDurationText: z.string().optional().nullable(),
-
-  // Financial Requirements
   reqRevenueAvg: z.string().optional().nullable(),
   reqWorkingCapital: z.string().optional().nullable(),
   reqSimilarContractQty: z.number().optional().nullable(),
@@ -156,7 +160,7 @@ export const BidFinancialReqSchema = z.object({
 
 // 3.5. Object Tổng hợp (Root AI Object)
 export const BidAiExtractDataSchema = z.object({
-  generalInfo: BidGeneralInfoSchema.optional().nullable(), // Đã thêm
+  generalInfo: BidGeneralInfoSchema.optional().nullable(),
   financial: BidFinancialReqSchema.nullable().optional(),
   personnel: z.array(BidPersonnelReqSchema).default([]),
   equipment: z.array(BidEquipmentReqSchema).default([]),
@@ -166,7 +170,7 @@ export const BidAiExtractDataSchema = z.object({
 // 4. EXPORT TYPES (TYPE INFERENCE)
 // =============================================================================
 
-// Main Types
+// Main Entity Types
 export type BiddingPackage = z.infer<typeof BiddingPackageSchema>;
 export type BiddingFile = z.infer<typeof BiddingFileSchema>;
 
@@ -177,8 +181,20 @@ export type BidEquipmentReq = z.infer<typeof BidEquipmentReqSchema>;
 export type BidFinancialReq = z.infer<typeof BidFinancialReqSchema>;
 export type BidAiExtractData = z.infer<typeof BidAiExtractDataSchema>;
 
-// API Response Types
-export type BiddingPackageListResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingPackageSchema>>>>;
+// --- API RESPONSE TYPES ---
+
+// 1. List Response (Có phân trang items + meta)
+// Sử dụng helper createPaginatedListSchema
+export const BiddingPackagePaginatedSchema = createPaginatedListSchema(BiddingPackageSchema);
+export type BiddingPackagePaginatedData = z.infer<typeof BiddingPackagePaginatedSchema>;
+
+export type BiddingPackageListResponse = z.infer<ReturnType<typeof BaseResponseSchema<typeof BiddingPackagePaginatedSchema>>>;
+
+// 2. Detail Response (Trả về 1 object item)
 export type BiddingPackageDetailResponse = z.infer<ReturnType<typeof BaseResponseSchema<typeof BiddingPackageSchema>>>;
+
+// 3. Files Response (Trả về mảng files - thường không phân trang hoặc chỉ là mảng)
 export type BiddingPackageFilesResponse = z.infer<ReturnType<typeof BaseResponseSchema<z.ZodArray<typeof BiddingFileSchema>>>>;
+
+// 4. AI Response
 export type BidAiExtractResponse = z.infer<ReturnType<typeof BaseResponseSchema<typeof BidAiExtractDataSchema>>>;

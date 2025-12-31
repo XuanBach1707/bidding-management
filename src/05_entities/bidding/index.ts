@@ -31,3 +31,4 @@ export {
 // 3. Export UI Components
 export { BiddingCard } from "./ui/bidding-card";
 export { BiddingCardSkeleton } from "./ui/bidding-card-skeleton";
+export { useBiddingList } from "./api/use-bidding-list";
