@@ -1,76 +1,87 @@
+"use client";
+
 import { useState, useEffect, useCallback } from "react";
-// Import đúng từ file bạn đã có
 import { driveApi } from "@/entities/drive/api/drive-api";
 import { DriveItem, DriveItemType } from "@/entities/drive/model/types";
+import { useDebounce } from "@/shared/lib/hooks/use-debounce"; // Đảm bảo đường dẫn này đúng
 
 export interface BreadcrumbItem {
-  id: string | null; // null đại diện cho Root
+  id: string | null; // null = Root
   name: string;
 }
 
 export const useDriveBrowser = () => {
-  // 1. State điều hướng
-  // null = Đang ở Root (API getRootProjects)
-  // string = Đang ở Folder con (API getFolderDetail)
+  // --- 1. STATE ĐIỀU HƯỚNG ---
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  
-  // Breadcrumb: Mặc định luôn có nút "Home"
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
     { id: null, name: "Tất cả dự án" }
   ]);
 
-  // 2. Data State
+  // --- 2. STATE TÌM KIẾM ---
+  const [searchTerm, setSearchTerm] = useState("");
+  // Chờ 500ms sau khi gõ mới gọi API để tránh spam
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); 
+
+  // --- 3. DATA STATE ---
   const [items, setItems] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 3. Hàm gọi API
+  // --- 4. LOGIC GỌI API (CORE) ---
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       let response;
-      
-      if (!currentFolderId) {
-        // CASE 1: Gọi Root
-        response = await driveApi.getRootProjects();
-      } else {
-        // CASE 2: Gọi Chi tiết Folder
-        response = await driveApi.getFolderDetail(currentFolderId);
+
+      // [PHÂN LUỒNG] Nếu có từ khóa -> Gọi API Search
+      if (debouncedSearchTerm) {
+        // Truyền currentFolderId để giới hạn phạm vi tìm kiếm (Scope)
+        response = await driveApi.searchRepo(debouncedSearchTerm, currentFolderId);
+      } 
+      // Nếu không -> Gọi API Duyệt thư mục bình thường
+      else {
+        if (!currentFolderId) {
+          response = await driveApi.getRootProjects();
+        } else {
+          response = await driveApi.getFolderDetail(currentFolderId);
+        }
       }
 
-      // Interceptor của bạn đã camelCase hóa dữ liệu, ta chỉ việc dùng
       if (response && response.data) {
         setItems(response.data);
       } else {
         setItems([]);
       }
     } catch (err: any) {
-      console.error("Lỗi tải dữ liệu Drive:", err);
-      setError("Không thể truy cập thư mục này.");
+      console.error("Drive Error:", err);
+      setError("Không thể tải dữ liệu.");
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [currentFolderId]);
+  }, [currentFolderId, debouncedSearchTerm]);
 
-  // Gọi fetch khi ID thay đổi
+  // Trigger gọi lại khi: ID thay đổi HOẶC Từ khóa tìm kiếm thay đổi
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // 4. Hành động User
+  // --- 5. ACTIONS ---
 
   const handleItemClick = (item: DriveItem) => {
-    // Check type: Có thể là Enum DriveItemType.FOLDER hoặc string "FOLDER"
     const isFolder = item.type === DriveItemType.FOLDER || item.type === "FOLDER";
 
     if (isFolder) {
-      // 1. Đi vào Folder
+      // Khi click vào Folder:
+      // 1. Xóa từ khóa tìm kiếm (để quay về chế độ duyệt file bình thường)
+      if (searchTerm) setSearchTerm("");
+      
+      // 2. Cập nhật ID và Breadcrumb
       setCurrentFolderId(item.id);
       setBreadcrumbs((prev) => [...prev, { id: item.id, name: item.name }]);
     } else {
-      // 2. Mở File (Tab mới)
+      // Khi click vào File -> Mở tab mới
       if (item.link) {
         window.open(item.link, "_blank");
       }
@@ -78,13 +89,18 @@ export const useDriveBrowser = () => {
   };
 
   const handleBreadcrumbClick = (item: BreadcrumbItem, index: number) => {
-    if (item.id === currentFolderId) return; // Click vào chính nó thì thôi
+    // Logic: Nếu đang đứng ở đó rồi và không tìm kiếm gì cả thì thôi
+    if (item.id === currentFolderId && !searchTerm) return;
 
-    // Quay xe về ID cũ
+    // Reset tìm kiếm khi điều hướng
+    setSearchTerm("");
+    
+    // Quay về folder cũ
     setCurrentFolderId(item.id);
-    // Cắt đuôi Breadcrumb thừa
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
   };
+
+  const clearSearch = () => setSearchTerm("");
 
   return {
     items,
@@ -92,6 +108,11 @@ export const useDriveBrowser = () => {
     error,
     breadcrumbs,
     currentFolderId,
+    // Search props
+    searchTerm,
+    setSearchTerm,
+    clearSearch,
+    // Actions
     handleItemClick,
     handleBreadcrumbClick,
     refresh: fetchData

@@ -9,22 +9,23 @@ import {
   ChevronRight, 
   RefreshCw, 
   LayoutGrid,
-  Home
+  Home,
+  Search, 
+  X,
+  FolderOpen // [MỚI] Icon cho thư mục cha
 } from "lucide-react"; 
 import { useDriveBrowser } from "../model/use-drive-browser";
 import { DriveItemType } from "@/entities/drive/model/types";
-import { cn } from "@/shared/lib/utils"; // Giả sử bạn có util này
+import { cn } from "@/shared/lib/utils"; 
 
-// --- HELPER: Render Icon chuẩn SharePoint/Office ---
+// --- HELPER: Render Icon ---
 const DriveIcon = ({ type, name }: { type: string; name: string }) => {
   const isFolder = type === DriveItemType.FOLDER || type === "FOLDER";
   
   if (isFolder) {
-    // Icon Folder màu vàng đặc trưng
     return <Folder className="w-5 h-5 text-yellow-500 fill-yellow-500" />;
   }
 
-  // Detect file extension
   const ext = name.split(".").pop()?.toLowerCase();
   
   if (["doc", "docx"].includes(ext || "")) return <FileText className="w-5 h-5 text-blue-600" />;
@@ -41,49 +42,83 @@ export const DriveBrowser = () => {
     loading,
     error,
     breadcrumbs,
+    // Props cũ
     handleItemClick,
     handleBreadcrumbClick,
-    refresh
+    refresh,
+    // Props cho Search
+    searchTerm,
+    setSearchTerm,
+    clearSearch
   } = useDriveBrowser();
 
   return (
     <div className="w-full h-[600px] flex flex-col bg-white border border-slate-200 rounded-lg shadow-sm font-sans text-sm">
       
-      {/* --- HEADER: BREADCRUMB --- */}
-      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10 rounded-t-lg">
-        <div className="flex items-center flex-wrap gap-1 text-slate-600">
+      {/* --- HEADER --- */}
+      <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10 rounded-t-lg gap-4">
+        
+        {/* 1. Breadcrumbs (Bên trái) */}
+        <div className="flex items-center flex-wrap gap-1 text-slate-600 flex-1 overflow-hidden">
           {breadcrumbs.map((crumb, index) => {
             const isLast = index === breadcrumbs.length - 1;
             return (
               <React.Fragment key={crumb.id || "root"}>
-                {index > 0 && <ChevronRight className="w-4 h-4 text-slate-400 mx-1" />}
+                {index > 0 && <ChevronRight className="w-4 h-4 text-slate-400 mx-1 flex-shrink-0" />}
                 
                 <button
                   onClick={() => handleBreadcrumbClick(crumb, index)}
-                  disabled={isLast}
+                  // Nếu đang search thì cho phép click breadcrumb cuối để reset search
+                  disabled={isLast && !searchTerm} 
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded transition-colors",
-                    isLast 
+                    "flex items-center gap-1 px-2 py-1 rounded transition-colors truncate max-w-[150px]",
+                    (isLast && !searchTerm)
                       ? "font-semibold text-slate-900 cursor-default" 
                       : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
                   )}
+                  title={crumb.name}
                 >
                   {index === 0 && <Home className="w-4 h-4 mr-1"/>}
-                  <span className="max-w-[200px] truncate">{crumb.name}</span>
+                  <span className="truncate">{crumb.name}</span>
                 </button>
               </React.Fragment>
             );
           })}
         </div>
 
-        <button 
-          onClick={refresh} 
-          disabled={loading}
-          className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
-          title="Làm mới"
-        >
-          <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-        </button>
+        {/* 2. Search & Refresh (Bên phải) */}
+        <div className="flex items-center gap-3">
+          {/* SEARCH INPUT */}
+          <div className="relative group">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <input 
+              type="text"
+              placeholder="Tìm trong thư mục này..." 
+              className="w-64 pl-9 pr-8 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-slate-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button 
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="h-5 w-[1px] bg-slate-200"></div>
+
+          <button 
+            onClick={refresh} 
+            disabled={loading}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+            title="Làm mới"
+          >
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+          </button>
+        </div>
       </div>
 
       {/* --- CONTENT TABLE --- */}
@@ -91,22 +126,27 @@ export const DriveBrowser = () => {
         {error ? (
           <div className="flex flex-col items-center justify-center h-full text-red-500 gap-2">
             <span>{error}</span>
-            <button onClick={refresh} className="underline text-xs">Thử lại</button>
+            <button onClick={refresh} className="underline text-xs hover:text-red-700">Thử lại</button>
           </div>
         ) : (
           <table className="w-full text-left border-collapse">
-            <thead className="bg-white sticky top-0 z-0 text-slate-500 text-xs uppercase font-medium border-b border-slate-100 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+            <thead className="bg-white sticky top-0 z-0 text-slate-500 text-xs uppercase font-medium border-b border-slate-100 shadow-sm">
               <tr>
                 <th className="px-6 py-3 font-semibold w-[55%]">Tên</th>
                 <th className="px-6 py-3 font-semibold w-[15%]">Loại</th>
-                <th className="px-6 py-3 font-semibold w-[15%]">Tag</th>
-                <th className="px-6 py-3 font-semibold w-[15%]">Quyền</th>
+                
+                {/* [CẬP NHẬT] Header thay đổi động: Tag <-> Vị trí */}
+                <th className="px-6 py-3 font-semibold w-[20%]">
+                    {searchTerm ? "Vị trí thư mục" : "Tag"}
+                </th>
+
+                <th className="px-6 py-3 font-semibold w-[10%]">Quyền</th>
               </tr>
             </thead>
             
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading && items.length === 0 ? (
-                // SKELETON LOADER
+                // SKELETON LOADING
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     <td className="px-6 py-4"><div className="h-4 bg-slate-100 rounded w-1/2 animate-pulse" /></td>
@@ -126,9 +166,17 @@ export const DriveBrowser = () => {
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-3">
                         <DriveIcon type={item.type} name={item.name} />
-                        <span className="font-medium text-slate-700 group-hover:text-blue-700 truncate max-w-[350px]" title={item.name}>
-                          {item.name}
-                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-slate-700 group-hover:text-blue-700 truncate max-w-[350px]" title={item.name}>
+                            {item.name}
+                          </span>
+                          {/* Hint nhỏ khi đang search */}
+                          {searchTerm && (
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              Kết quả tìm kiếm
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -137,14 +185,25 @@ export const DriveBrowser = () => {
                        {(item.type === DriveItemType.FOLDER || item.type === "FOLDER") ? "Thư mục" : "Tệp tin"}
                     </td>
 
-                    {/* 3. Tag (Dựa theo Types bạn đưa) */}
+                    {/* 3. [CẬP NHẬT] Vị trí (Khi Search) hoặc Tag (Khi Browse) */}
                     <td className="px-6 py-3">
-                      {item.tag ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 border border-gray-200">
-                          {item.tag}
-                        </span>
+                      {searchTerm ? (
+                        // CASE SEARCH: Hiển thị tên thư mục cha
+                        <div className="flex items-center gap-1.5 text-slate-500" title="Thư mục chứa file này">
+                            <FolderOpen className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="text-xs truncate max-w-[150px] font-medium">
+                                {item.parentName || "Không xác định"}
+                            </span>
+                        </div>
                       ) : (
-                        <span className="text-slate-300 text-xs">-</span>
+                        // CASE NORMAL: Hiển thị Tag
+                        item.tag ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 border border-gray-200">
+                            {item.tag}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 text-xs">-</span>
+                        )
                       )}
                     </td>
 
@@ -163,8 +222,18 @@ export const DriveBrowser = () => {
                 <tr>
                   <td colSpan={4}>
                     <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                      <LayoutGrid className="w-12 h-12 mb-3 text-slate-200 stroke-1" />
-                      <span>Thư mục trống</span>
+                      {searchTerm ? (
+                        <>
+                           <Search className="w-10 h-10 mb-3 text-slate-300" />
+                           <span>Không tìm thấy kết quả nào cho <strong className="text-slate-600">"{searchTerm}"</strong></span>
+                           <button onClick={clearSearch} className="mt-2 text-xs text-blue-600 hover:underline">Xóa tìm kiếm</button>
+                        </>
+                      ) : (
+                        <>
+                          <LayoutGrid className="w-12 h-12 mb-3 text-slate-200 stroke-1" />
+                          <span>Thư mục trống</span>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
