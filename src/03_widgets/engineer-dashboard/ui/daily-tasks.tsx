@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { CheckSquare, Plus, Calendar, Clock, AlertCircle, Edit3, Trash2 } from "lucide-react";
+import { CheckSquare, Calendar, Clock, AlertCircle, Edit3, Trash2 } from "lucide-react"; // Đã bỏ 'Plus'
 
 // Shadcn & Shared
 import { Card } from "@/shared/ui/card";
@@ -74,9 +74,7 @@ export const DailyTasksWidget = () => {
               {tasks.filter(t => ["ASSIGNED", "IN_PROGRESS"].includes(t.status)).length} công việc cần hoàn thành
             </p>
           </div>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 gap-1 shadow-sm shadow-blue-200 text-white">
-            <Plus className="w-4 h-4" /> Tạo mới
-          </Button>
+          {/* Đã xóa nút Tạo Mới ở đây */}
         </div>
         
         {/* Filters */}
@@ -141,40 +139,40 @@ export const DailyTasksWidget = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 mt-2">
-                       {/* Project Code (Lấy tạm ID hoặc Name) */}
-                       {task.biddingProjectId && (
-                         <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                           DA-{task.biddingProjectId}
-                         </span>
-                       )}
+                        {/* Project Code (Lấy tạm ID hoặc Name) */}
+                        {task.biddingProjectId && (
+                          <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            DA-{task.biddingProjectId}
+                          </span>
+                        )}
 
-                       {/* Priority Badge */}
-                       {!isDone && (
-                         <span className={cn(
-                           "text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1",
-                           priority.color
-                         )}>
-                           {task.priority === "HIGH" && <AlertCircle className="w-3 h-3" />}
-                           {priority.label}
-                         </span>
-                       )}
+                        {/* Priority Badge */}
+                        {!isDone && (
+                          <span className={cn(
+                            "text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1",
+                            priority.color
+                          )}>
+                            {task.priority === "HIGH" && <AlertCircle className="w-3 h-3" />}
+                            {priority.label}
+                          </span>
+                        )}
 
-                       {/* Deadline */}
-                       {deadlineDate && (
-                         <span className={cn(
-                           "text-xs font-medium flex items-center gap-1",
-                           isOverdue ? "text-red-500" : isDone ? "text-green-600" : "text-slate-500"
-                         )}>
-                           {isDone ? (
-                             "Đã xong"
-                           ) : (
-                             <>
-                               <Clock className="w-3 h-3" />
-                               {format(deadlineDate, "dd/MM HH:mm", { locale: vi })}
-                             </>
-                           )}
-                         </span>
-                       )}
+                        {/* Deadline */}
+                        {deadlineDate && (
+                          <span className={cn(
+                            "text-xs font-medium flex items-center gap-1",
+                            isOverdue ? "text-red-500" : isDone ? "text-green-600" : "text-slate-500"
+                          )}>
+                            {isDone ? (
+                              "Đã xong"
+                            ) : (
+                              <>
+                                <Clock className="w-3 h-3" />
+                                {format(deadlineDate, "dd/MM HH:mm", { locale: vi })}
+                              </>
+                            )}
+                          </span>
+                        )}
                     </div>
                   </div>
                </div>
