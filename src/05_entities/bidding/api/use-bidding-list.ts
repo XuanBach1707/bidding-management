@@ -25,7 +25,6 @@ interface UseBiddingListReturn {
   handleChangeFilter: (key: string, value: string) => void;
 }
 
-// Params khởi tạo vẫn dùng page/size cho thân thiện với UI
 interface InitialParams {
   page?: number;
   size?: number;
@@ -35,7 +34,6 @@ interface InitialParams {
 export const useBiddingList = (
   initialParams: InitialParams = { page: 1, size: 9, search: '' }
 ): UseBiddingListReturn => {
-  // State quản lý
   const [items, setItems] = useState<BiddingPackage[]>([]);
   const [meta, setMeta] = useState({
     total: 0,
@@ -48,39 +46,76 @@ export const useBiddingList = (
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- LOGIC GỌI API ---
   const fetchData = useCallback(async (page: number, size: number, search: string, currentFilters: Record<string, string>) => {
     setLoading(true);
     setError(null);
     try {
-      // 1. TÍNH TOÁN SKIP & LIMIT
       const limit = size; 
       const skip = (page - 1) * size; 
+      const statusParam = currentFilters['status'];
 
-      // 2. GỌI API với param limit/skip
-      const body = await http.get<any, BiddingPackageListResponse>('/bidding-packages', {
-        params: {
-          limit, // Gửi limit = 9
-          skip,  // Gửi skip = 0, 9, 18...
-          search: search || undefined,
-          ...currentFilters, 
+      // [LOGIC MỚI]: Xử lý gọi nhiều API nếu status có dấu phẩy
+      let responseData: { items: BiddingPackage[], total: number } = { items: [], total: 0 };
+
+      if (statusParam && statusParam.includes(',')) {
+        // 1. Tách các status: "NEW,INTERESTED" -> ["NEW", "INTERESTED"]
+        const statuses = statusParam.split(',').map(s => s.trim());
+        
+        // 2. Gọi song song (Parallel Requests)
+        const promises = statuses.map(status => {
+           // Tạo bản sao filter nhưng ghi đè status đơn lẻ
+           const singleFilter = { ...currentFilters, status };
+           return http.get<any, BiddingPackageListResponse>('/bidding-packages', {
+              params: { limit, skip, search: search || undefined, ...singleFilter }
+           });
+        });
+
+        const responses = await Promise.all(promises);
+
+        // 3. Gộp kết quả
+        // Lưu ý: Việc gộp này có thể khiến số lượng item hiển thị > size (VD: 9 + 9 = 18 item)
+        // Nhưng với nghiệp vụ cần xem hết thì chấp nhận được.
+        let combinedItems: BiddingPackage[] = [];
+        let combinedTotal = 0;
+
+        for (const res of responses) {
+           if (res.success && res.data) {
+              const parsed = BiddingPackagePaginatedSchema.safeParse(res.data);
+              if (parsed.success) {
+                 combinedItems = [...combinedItems, ...parsed.data.items];
+                 combinedTotal += parsed.data.total;
+              }
+           }
         }
+        
+        // (Tùy chọn) Sort lại theo ngày tạo nếu cần thiết để danh sách merged trông hợp lý
+        // combinedItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        responseData = { items: combinedItems, total: combinedTotal };
+
+      } else {
+        // [LOGIC CŨ]: Gọi 1 API bình thường
+        const body = await http.get<any, BiddingPackageListResponse>('/bidding-packages', {
+          params: { limit, skip, search: search || undefined, ...currentFilters }
+        });
+
+        if (!body.success) throw new Error(body.message || "Không thể tải dữ liệu.");
+        
+        const parseResult = BiddingPackagePaginatedSchema.safeParse(body.data);
+        if (parseResult.success) {
+           responseData = parseResult.data;
+        }
+      }
+
+      // Cập nhật State
+      setItems(responseData.items);
+      setMeta({ 
+        total: responseData.total, 
+        pages: Math.ceil(responseData.total / size), 
+        page, 
+        size 
       });
 
-      if (!body.success) {
-        throw new Error(body.message || "Không thể tải dữ liệu.");
-      }
-
-      const parseResult = BiddingPackagePaginatedSchema.safeParse(body.data);
-
-      if (parseResult.success) {
-        const { items, total, pages } = parseResult.data;
-        setItems(items);
-        setMeta({ total, pages, page, size });
-      } else {
-        console.error("Zod Error:", parseResult.error);
-        setItems([]);
-      }
     } catch (err: any) {
       console.error("Fetch Error:", err);
       setError(err.message || "Lỗi kết nối.");
@@ -90,27 +125,21 @@ export const useBiddingList = (
     }
   }, []);
 
-  // --- EFFECTS & ACTIONS ---
-
   useEffect(() => {
     fetchData(meta.page, meta.size, searchQuery, filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
   const changePage = (newPage: number) => {
-    if (newPage > 0 && newPage <= (meta.pages || 1)) {
-      fetchData(newPage, meta.size, searchQuery, filters);
-    }
+    if (newPage > 0) fetchData(newPage, meta.size, searchQuery, filters);
   };
 
   const changeSize = (newSize: number) => {
-    // Reset về trang 1 khi đổi size
     fetchData(1, newSize, searchQuery, filters);
   };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    // Reset về trang 1 (skip = 0) khi search
     fetchData(1, meta.size, query, filters);
   };
 

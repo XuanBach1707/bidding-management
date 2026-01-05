@@ -12,11 +12,15 @@ import {
   BiddingCardSkeleton 
 } from "@/entities/bidding";
 
+// 1. [QUAN TRỌNG] Đưa config ra ngoài để giữ nguyên tham chiếu bộ nhớ (Reference Equality)
+// Tránh việc hook useBiddingList hiểu lầm là params thay đổi mỗi lần render
+const INITIAL_PARAMS = { page: 1, size: 9 };
+
 export const BiddingList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
 
-  // 1. Khởi tạo Hook với size = 9
+  // 2. Sử dụng biến constant đã khai báo bên ngoài
   const { 
     items, 
     meta, 
@@ -25,15 +29,24 @@ export const BiddingList = () => {
     changePage, 
     handleSearch, 
     handleChangeFilter 
-  } = useBiddingList({ page: 1, size: 9 });
+  } = useBiddingList(INITIAL_PARAMS);
 
   useEffect(() => {
     handleSearch(debouncedSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
+  // 3. [SỬA LOGIC] Gửi đa trạng thái khi chọn tab "Chờ xử lý"
   const handleTabChange = (value: string) => {
-    const statusParam = value === "pending" ? "NEW" : "BIDDING";
+    let statusParam = "";
+
+    if (value === "pending") {
+      // Backend cần hỗ trợ nhận dấu phẩy cho trường hợp này
+      statusParam = "NEW,INTERESTED"; 
+    } else {
+      statusParam = "BIDDING";
+    }
+
     handleChangeFilter("status", statusParam); 
   };
 
@@ -62,7 +75,7 @@ export const BiddingList = () => {
         {/* Nội dung danh sách */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
           {loading ? (
-            // 2. Render đúng 9 skeleton (hoặc dùng meta.size)
+            // Render Skeleton khi đang tải
             Array.from({ length: 9 }).map((_, i) => <BiddingCardSkeleton key={i} />)
           ) : items.length > 0 ? (
             items.map((item) => <BiddingCard key={item.hsmtId} data={item} />)

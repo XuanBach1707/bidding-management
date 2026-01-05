@@ -21,7 +21,7 @@ export const LoginPage = () => {
         
         {/* Footer của trang (nếu có) */}
         <div className="text-center text-sm text-slate-500">
-          &copy; 2025 PC1 Corp. All rights reserved.
+          &copy; 2026 PC1 Corp. All rights reserved.
         </div>
       </div>
     </div>
