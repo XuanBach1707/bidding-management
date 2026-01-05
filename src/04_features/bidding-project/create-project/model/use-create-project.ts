@@ -4,7 +4,7 @@ import { organizationApi, OrganizationUnit } from "@/entities/organization";
 import { biddingProjectApi } from "@/entities/bidding-project";
 import { taskApi, TaskAssignment, TaskTag } from "@/entities/task"; 
 import { driveApi, DriveItem } from "@/entities/drive"; 
-import { TempTask, DEFAULT_PROJECT_STRUCTURE } from "./create-project.model";
+import { TempTask, DEFAULT_PROJECT_STRUCTURE, DriveStructureItem, InitProjectResponse } from "./create-project.model";
 
 interface UseCreateProjectProps {
   isOpen: boolean;
@@ -72,9 +72,10 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     }
   };
 
-  // --- LOGIC DRIVE AUTO-FETCH (CHỈ ĐỂ HIỂN THỊ TRƯỚC FILE MẪU) ---
+  // --- LOGIC DRIVE AUTO-FETCH ---
   const fetchAutoDocuments = useCallback(async (currentTasks: TempTask[]) => {
     try {
+      console.log("🔍 Đang tìm tài liệu mẫu từ Drive...");
       const legalTask = currentTasks.find(t => t.tag === "LEGAL");
       const financeTask = currentTasks.find(t => t.tag === "FINANCE");
       if (!legalTask && !financeTask) return; 
@@ -106,6 +107,8 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
       }
 
       const totalFiles = Object.values(updates).reduce((acc, f) => acc + f.length, 0);
+      console.log(`✅ Tìm thấy tổng cộng ${totalFiles} file mẫu.`);
+      
       if (totalFiles > 0) {
         setTasks(prev => prev.map(t => {
           if (updates[t.id]) return { ...t, files: updates[t.id] };
@@ -131,7 +134,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
     }
   }, [isOpen, defaultName, toast, fetchAutoDocuments]);
 
-  // --- HELPER ACTIONS (Giữ nguyên) ---
+  // --- HELPER ACTIONS ---
   const handleBoardChange = async (taskId: string, boardIdStr: string) => {
     const boardId = Number(boardIdStr);
     await loadDepartments(boardId);
@@ -153,8 +156,10 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
   const removeTask = (id: string) => setTasks((prev) => prev.filter((t) => t.id !== id));
   const updateTask = (id: string, field: keyof TempTask, value: any) => setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
 
-  // --- SUBMIT [UPDATED: CLONE FILES] ---
+  // --- SUBMIT: CLONE FILES & CREATE PROJECT ---
   const handleSubmit = async () => {
+    console.group("🚀 START SUBMIT PROCESS");
+    
     if (!projectName.trim()) return toast({ variant: "destructive", description: "Vui lòng nhập tên dự án" });
     setIsSubmitting(true);
     
@@ -163,53 +168,85 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
 
     try {
       // 1. Tạo Project trong DB
+      console.time("Create Project DB");
       const projectRes = await biddingProjectApi.create({ 
         name: projectName, status: "New", sourcePackageId: hsmtId 
       });
+      console.timeEnd("Create Project DB");
       const newProjectId = projectRes.id;
+      console.log(`✅ Project Created with ID: ${newProjectId}`);
 
       // 2. Init Drive & Lấy cấu trúc Folder mới
-      let driveStructureLog: any[] = [];
+      let driveStructureLog: DriveStructureItem[] = [];
       if (newProjectId) {
          try { 
-             const initRes = await driveApi.initProject({ projectId: newProjectId });
-             // Lưu lại cấu trúc folder vừa tạo để tìm đích đến copy file
-             if (initRes && initRes.drive_data && initRes.drive_data.structure_log) {
-                 driveStructureLog = initRes.drive_data.structure_log;
+             console.log("⏳ Calling Init Drive API...");
+             const initRes: InitProjectResponse = await driveApi.initProject({ projectId: newProjectId });
+             console.log("📡 Init Response (CamelCase):", initRes);
+             
+             // [FIX] Sử dụng camelCase để khớp với Interceptor
+             if (initRes && initRes.driveData && Array.isArray(initRes.driveData.structureLog)) {
+                 driveStructureLog = initRes.driveData.structureLog;
+                 console.log(`✅ Drive Structure Log Loaded: ${driveStructureLog.length} items`);
+             } else {
+                 console.warn("⚠️ Warning: Structure Log not found or empty in response!");
+                 console.log("👉 Response keys:", Object.keys(initRes || {}));
              }
-         } catch (e) { console.error("Drive init error:", e); }
+         } catch (e) { 
+             console.error("❌ Drive init error:", e);
+             toast({ variant: "destructive", title: "Lỗi Drive", description: "Không thể khởi tạo cấu trúc thư mục." });
+         }
       }
 
-      // Helper: Clone file từ source -> target folder mới
+      // --- HELPER: CLONE FILES LOGIC (WITH LOGS) ---
       const processFilesForTask = async (task: TempTask): Promise<string[]> => {
-          // Nếu không có file mẫu hoặc không có cấu trúc folder mới -> trả về rỗng
-          if (!task.files || task.files.length === 0 || driveStructureLog.length === 0) return [];
+          if (!task.files || task.files.length === 0) {
+              return [];
+          }
           
-          // Tìm Folder đích dựa trên Tag (Ví dụ: Tag LEGAL -> Folder LEGAL)
-          const targetFolder = driveStructureLog.find(f => f.tag === task.tag && f.type === "CHILD");
+          console.group(`📂 CLONE FILES FOR: ${task.name} (${task.tag})`);
+          console.log(`Files count: ${task.files.length}`);
+
+          if (driveStructureLog.length === 0) {
+             console.error("❌ Error: driveStructureLog is empty. Cannot find target folder.");
+             console.groupEnd();
+             return [];
+          }
+          
+          // MAP: Tìm folder đích dựa trên TAG
+          const targetFolder = driveStructureLog.find(f => f.tag === task.tag);
           
           if (!targetFolder) {
-              console.warn(`Không tìm thấy folder đích cho tag ${task.tag}`);
+              console.warn(`⚠️ Warning: Tag "${task.tag}" found in Task but NOT FOUND in Drive Structure.`);
+              console.log("👉 Available Folder Tags:", driveStructureLog.map(d => d.tag));
+              console.groupEnd();
               return [];
           }
 
+          console.log(`✅ Target Folder Found: [${targetFolder.name}] (ID: ${targetFolder.id})`);
+
           const newFileLinks: string[] = [];
           
-          // Thực hiện Copy từng file
           for (const file of task.files) {
               try {
-                  const copyRes = await driveApi.copyFile({
-                      fileId: file.id,
-                      targetFolderId: targetFolder.id,
-                      newName: file.name // Giữ nguyên tên
+                  console.log(`... Cloning file: ${file.name} (Source: ${file.id})`);
+                  
+                  // Gọi API Clone với Params camelCase (Interceptor sẽ lo vụ snake_case)
+                  const copyRes = await driveApi.cloneFile({
+                      sourceFileId: file.id,       
+                      targetFolderId: targetFolder.id 
                   });
+
+                  console.log("✅ Clone Success:", copyRes);
+
                   if (copyRes && copyRes.webViewLink) {
                       newFileLinks.push(copyRes.webViewLink);
                   }
               } catch (err) {
-                  console.error(`Lỗi copy file ${file.name}`, err);
+                  console.error(`❌ Clone Failed: ${file.name}`, err);
               }
           }
+          console.groupEnd();
           return newFileLinks;
       };
 
@@ -218,7 +255,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
 
       for (const p of parentTasks) {
         try {
-          // [ACTION] Clone file nếu có
+          // [ACTION] Clone file vào folder đích
           const clonedLinks = await processFilesForTask(p);
           const hasFiles = clonedLinks.length > 0;
 
@@ -233,12 +270,11 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
             tag: p.tag, 
             parentTaskId: null,
             assignments: p.assignments, 
-            // [FIX] Sử dụng link file mới đã clone (không bao giờ null)
             attachmentUrl: clonedLinks 
           });
           idMap[p.id] = res.id;
         } catch (err) {
-          console.error(`Lỗi tạo Parent Task: ${p.name}`, err);
+          console.error(`❌ Lỗi tạo Parent Task: ${p.name}`, err);
           errorCount++;
         }
       }
@@ -251,7 +287,7 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           const realParentId = s.parentId ? idMap[s.parentId] : null;
           if (!realParentId) continue;
           
-          // [ACTION] Clone file cho subtask (nếu có, VD: HSPL, BCTC)
+          // [ACTION] Clone file cho subtask
           const clonedLinks = await processFilesForTask(s);
           const hasFiles = clonedLinks.length > 0;
 
@@ -266,25 +302,28 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
             tag: s.tag,
             parentTaskId: realParentId,
             assignments: s.assignments, 
-            // [FIX] Sử dụng link file mới
             attachmentUrl: clonedLinks
           });
 
         } catch (err: any) {
-          console.error(`Lỗi tạo Sub Task: ${s.name}`, err);
+          console.error(`❌ Lỗi tạo Sub Task: ${s.name}`, err);
           errorCount++;
         }
       }
       
       if (errorCount > 0) {
-        toast({ title: "Hoàn tất có lỗi", description: `Có ${errorCount} công việc lỗi.`, variant: "destructive" });
+        toast({ title: "Hoàn tất có cảnh báo", description: `Có ${errorCount} công việc chưa tạo được.`, variant: "destructive" });
       } else {
-        toast({ title: "Thành công", description: "Dự án và file hồ sơ đã được khởi tạo." });
+        toast({ title: "Thành công", description: "Dự án đã được khởi tạo và đồng bộ hồ sơ." });
       }
+      
+      console.groupEnd(); // End Main Group
       onClose();
 
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Lỗi nghiêm trọng", description: error?.message || "Có lỗi xảy ra" });
+      console.error("❌ FATAL ERROR:", error);
+      toast({ variant: "destructive", title: "Lỗi hệ thống", description: error?.message || "Có lỗi xảy ra" });
+      console.groupEnd();
     } finally {
       setIsSubmitting(false);
     }

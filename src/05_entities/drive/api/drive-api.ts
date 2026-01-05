@@ -44,15 +44,27 @@ export const driveApi = {
   },
 
   /**
-   * 5. [QUAN TRỌNG] Copy file (Clone)
+   * 5. [QUAN TRỌNG] Clone file
    * POST /drive/clone-file
-   * [Fix] Gọi đúng endpoint "/clone-file" của Backend nhưng dùng JSON body
+   * * [FIX LỖI 400]: 
+   * - Không dùng FormData.
+   * - Gửi Object thuần -> Axios tự set Content-Type: application/json.
+   * - Interceptor sẽ tự đổi sourceFileId -> source_file_id.
    */
-  copyFile: (data: { fileId: string; targetFolderId: string; newName?: string }): Promise<any> => {
-    return http.post("/drive/clone-file", data);
+  cloneFile: (payload: { sourceFileId: string; targetFolderId: string }): Promise<any> => {
+    return http.post("/drive/clone-file", payload);
   },
 
-  // --- CÁC API CŨ/KHÁC (Giữ lại để tương thích ngược) ---
+  // --- CÁC API CŨ/KHÁC (Giữ lại để tương thích ngược nếu cần) ---
+
+  // Hàm này có thể thừa nếu đã dùng cloneFile ở trên, nhưng giữ lại nếu logic cũ còn dùng
+  copyFile: (data: { fileId: string; targetFolderId: string; newName?: string }): Promise<any> => {
+    return http.post("/drive/clone-file", {
+        sourceFileId: data.fileId,
+        targetFolderId: data.targetFolderId
+        // newName logic chưa thấy ở hook, nhưng nếu cần thì thêm vào đây
+    });
+  },
 
   getProjectFolders: (projectId: number | string): Promise<DriveResponse & { currentFolderId: string }> => {
     return http.get(`/bidding-projects/folder/${projectId}/me`);
@@ -64,13 +76,5 @@ export const driveApi = {
         project_id: projectId 
       }
     });
-  },
-
-  // Hàm cloneFile cũ (dùng FormData) - Có thể giữ lại nếu hệ thống cũ còn dùng
-  cloneFile: (payload: { sourceFileId: string; targetFolderId: string }): Promise<any> => {
-    const formData = new FormData();
-    formData.append('source_file_id', payload.sourceFileId);
-    formData.append('target_folder_id', payload.targetFolderId);
-    return http.post("/drive/clone-file", formData);
   }
 };

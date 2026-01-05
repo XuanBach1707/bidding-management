@@ -66,10 +66,24 @@ http.interceptors.request.use(
         delete config.headers['Content-Type'];
     }
 
+    // Nếu data đã là URLSearchParams (đã chuẩn form) thì bỏ qua transform để tránh lỗi
+    if (config.data instanceof URLSearchParams) {
+        return customConfig;
+    }
+
     // 3. Chuyển đổi dữ liệu gửi đi (Chỉ khi không có cờ chặn VÀ không phải FormData)
-    // Lưu ý: Logic cũ của bạn đã có check !(config.data instanceof FormData), rất tốt.
     if (config.data && !(config.data instanceof FormData) && !customConfig._skipTransform) {
-      config.data = snakecaseKeys(config.data, { deep: true });
+      // Bước A: Chuyển toàn bộ Key sang snake_case (camelCase -> snake_case)
+      const snakedData = snakecaseKeys(config.data, { deep: true });
+
+      // Bước B: Kiểm tra Content-Type để xử lý body phù hợp
+      // Nếu header là x-www-form-urlencoded, ta phải stringify object thành chuỗi "key=value&..."
+      if (config.headers?.['Content-Type'] === 'application/x-www-form-urlencoded') {
+          config.data = new URLSearchParams(snakedData).toString();
+      } else {
+          // Mặc định (JSON)
+          config.data = snakedData;
+      }
     }
 
     return customConfig;
