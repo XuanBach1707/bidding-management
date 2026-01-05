@@ -1,9 +1,7 @@
 import { http } from "@/shared/api"; 
 import { 
   DriveResponse, 
-  InitDriveProjectDto, 
-  CloneFileDto,
-  DriveSearchResponse 
+  DriveSearchResponse,
 } from "../model/types"; 
 
 export const driveApi = {
@@ -24,15 +22,12 @@ export const driveApi = {
   },
 
   /**
-   * 3. [MỚI] Tìm kiếm trong kho (Search Repo)
+   * 3. Tìm kiếm trong kho (Search Repo)
    * GET /drive/search-repo
-   * Params: query (required), folder_id (optional)
    */
   searchRepo: (keyword: string, folderId?: string | null): Promise<DriveSearchResponse> => {
     return http.get("/drive/search-repo", {
       params: {
-        // Lưu ý: Key là 'query' hay 'quere' tùy thuộc vào Backend của bạn.
-        // Theo JSON mẫu bạn gửi thì response trả về 'query', nên tôi dùng 'query'.
         query: keyword, 
         folder_id: folderId || undefined, 
       }
@@ -40,26 +35,29 @@ export const driveApi = {
   },
 
   /**
-   * 4. Khởi tạo folder dự án (Cũ)
+   * 4. Khởi tạo folder dự án
+   * POST /drive/init-project
+   * [Note] Gửi JSON body { projectId: number }
    */
-  initProject: (payload: InitDriveProjectDto): Promise<any> => {
-      const formData = new FormData();
-      formData.append('project_id', String(payload.projectId));
-      return http.post("/drive/init-project", formData);
+  initProject: (payload: { projectId: number }): Promise<any> => {
+      return http.post("/drive/init-project", payload);
   },
 
-  // --- [CÁC API CHO WORKSPACE / SELECTION] ---
-
   /**
-   * 5. [SELECTION STEP 1] Lấy danh sách folder nguồn
+   * 5. [QUAN TRỌNG] Copy file (Clone)
+   * POST /drive/clone-file
+   * [Fix] Gọi đúng endpoint "/clone-file" của Backend nhưng dùng JSON body
    */
+  copyFile: (data: { fileId: string; targetFolderId: string; newName?: string }): Promise<any> => {
+    return http.post("/drive/clone-file", data);
+  },
+
+  // --- CÁC API CŨ/KHÁC (Giữ lại để tương thích ngược) ---
+
   getProjectFolders: (projectId: number | string): Promise<DriveResponse & { currentFolderId: string }> => {
     return http.get(`/bidding-projects/folder/${projectId}/me`);
   },
 
-  /**
-   * 6. [SELECTION STEP 3] Lấy Target Folder ID
-   */
   getTargetFolder: (projectFolderId: string, projectId: number | string): Promise<{ targetFolderId: string }> => {
     return http.get(`/drive/project/${projectFolderId}/me/target-folder`, {
       params: { 
@@ -68,14 +66,11 @@ export const driveApi = {
     });
   },
 
-  /**
-   * 7. [SELECTION STEP 4] Clone File
-   */
-  cloneFile: (payload: CloneFileDto): Promise<any> => {
+  // Hàm cloneFile cũ (dùng FormData) - Có thể giữ lại nếu hệ thống cũ còn dùng
+  cloneFile: (payload: { sourceFileId: string; targetFolderId: string }): Promise<any> => {
     const formData = new FormData();
     formData.append('source_file_id', payload.sourceFileId);
     formData.append('target_folder_id', payload.targetFolderId);
-    
     return http.post("/drive/clone-file", formData);
   }
 };

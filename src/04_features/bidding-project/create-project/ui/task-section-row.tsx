@@ -36,7 +36,8 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
   const renderRightSideContent = (task: TempTask | undefined, isParent: boolean) => {
     if (!task) return null;
 
-    // CASE 1: CÓ FILE TỰ ĐỘNG
+    // --- CASE 1: CÓ FILE TỰ ĐỘNG (HSPL, BCTC...) ---
+    // Sẽ hiển thị file thay vì form nhập liệu
     if (task.files && task.files.length > 0) {
       return (
         <div className="col-span-7 flex items-center gap-2 overflow-x-auto py-1">
@@ -46,7 +47,7 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
           </div>
           <div className="flex gap-2 flex-wrap">
             {task.files.map((file) => (
-              <a key={file.id} href={file.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded text-[11px] hover:border-purple-300 transition-colors">
+              <a key={file.id} href={file.webViewLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded text-[11px] hover:border-purple-300 transition-colors">
                 <FileText className="w-3 h-3 text-red-500" />
                 <span className="max-w-[100px] truncate">{file.name}</span>
               </a>
@@ -56,16 +57,20 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
       );
     }
 
-    // CASE 2: FORM NHẬP LIỆU
+    // --- CASE 2: FORM NHẬP LIỆU ---
     const selectedBoardId = task.selectedBoardId;
     const assignedUnitId = task.assignments[0]?.assignedUnitId;
     const availableDepartments = selectedBoardId ? (departmentsCache[selectedBoardId] || []) : [];
+
+    // Logic Group: Task cha có subtask con đi kèm
+    const isGroup = isParent && subTasks.length > 0;
+    const isAssignable = !isGroup;
 
     return (
       <>
         {/* 1. Organization (Col-4) */}
         <div className="col-span-4 flex flex-col gap-1.5">
-            {isParent ? (
+            {isAssignable ? (
                 <>
                     <Select value={selectedBoardId ? String(selectedBoardId) : undefined} onValueChange={(val) => onBoardChange(task.id, val)}>
                     <SelectTrigger className="h-7 text-[11px] border-slate-200 bg-white px-2 focus:ring-0">
@@ -90,40 +95,47 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
                     </Select>
                 </>
             ) : (
-                <div className="h-full flex items-center pl-2">
-                    <span className="text-[10px] text-slate-300 italic">Theo phân công mục cha</span>
+                <div className="h-full flex items-center pl-2 bg-slate-50 rounded border border-dashed border-slate-200">
+                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Nhóm công việc</span>
                 </div>
             )}
         </div>
 
-        {/* 2. Deadline (Col-2) - [UPDATED] Block Past Dates */}
+        {/* 2. Deadline (Col-2) */}
         <div className="col-span-2 pt-0.5">
-            <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className={cn(
-                        "h-8 w-full justify-start text-xs px-2 hover:bg-slate-100", 
-                        "border border-slate-200 bg-white", 
-                        !task.deadline && "text-slate-400"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5 text-slate-500" />
-                    {task.deadline ? format(task.deadline, "dd/MM/yyyy") : "Hạn chót..."}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[9999]" align="end">
-                  <Calendar 
-                    mode="single" 
-                    selected={task.deadline} 
-                    onSelect={(date) => onUpdateTask(task.id, "deadline", date)} 
-                    // [UPDATED] Chặn ngày quá khứ
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    initialFocus 
-                  />
-                </PopoverContent>
-            </Popover>
+            {/* [SỬA ĐỔI] Nếu là Group thì KHÔNG hiển thị Deadline */}
+            {!isGroup ? (
+                <Popover>
+                    <PopoverTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={cn(
+                            "h-8 w-full justify-start text-xs px-2 hover:bg-slate-100", 
+                            "border border-slate-200 bg-white", 
+                            !task.deadline && "text-slate-400"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5 text-slate-500" />
+                        {task.deadline ? format(task.deadline, "dd/MM/yyyy") : "Hạn chót..."}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-[9999]" align="end">
+                    <Calendar 
+                        mode="single" 
+                        selected={task.deadline} 
+                        onSelect={(date) => onUpdateTask(task.id, "deadline", date)} 
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus 
+                    />
+                    </PopoverContent>
+                </Popover>
+            ) : (
+                // Placeholder cho Group
+                <div className="h-8 w-full flex items-center justify-center">
+                   <span className="text-[10px] text-slate-300">--</span>
+                </div>
+            )}
         </div>
 
         {/* 3. Action (Col-1) */}

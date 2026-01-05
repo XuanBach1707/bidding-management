@@ -10,13 +10,13 @@ import {
   TaskTypeEnum 
 } from "./schemas";
 
-// 1. Export Enum Value
+// 1. Export Enum Value (Để dùng trong code logic)
 export const AssignmentType = AssignmentTypeEnum.enum; 
 export const TaskPriority = TaskPriorityEnum.enum;
 export const TaskTag = TaskTagEnum.enum;
 export const TaskType = TaskTypeEnum.enum; 
 
-// 2. Types inferred
+// 2. Types inferred (Tự động cập nhật theo schema)
 export type CreateTaskDto = z.infer<typeof CreateTaskSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusEnum>;
 export type TaskPriority = z.infer<typeof TaskPriorityEnum>;
@@ -53,5 +53,5 @@ export interface Task extends Omit<CreateTaskDto, 'assignments'> {
   progress?: number; 
   hasFile?: boolean;
   projectName?: string; 
-  // attachmentUrl sẽ tự động là string[] nhờ CreateTaskDto
+  // attachmentUrl đã có trong CreateTaskDto
 }

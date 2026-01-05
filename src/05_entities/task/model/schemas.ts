@@ -25,6 +25,7 @@ export const TaskStatusEnum = z.enum([
 
 export const TaskPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
 
+// [CẬP NHẬT] Thêm các tag mới vào Enum
 export const TaskTagEnum = z.enum([
   "LEGAL",    // Hồ sơ pháp lý
   "FINANCE",  // Hồ sơ tài chính
@@ -32,7 +33,10 @@ export const TaskTagEnum = z.enum([
   "CONTRACT", // Hồ sơ hợp đồng tương tự
   "DEVICE",   // Hồ sơ máy móc thiết bị
   "HR",       // Hồ sơ nhân sự
-  "OTHER"     // Hồ sơ khác
+  "OTHER",    // Hồ sơ khác
+  "DBTC",     // Bảo lãnh dự thầu, Cam kết tín dụng
+  "VT",       // Vật tư
+  "GIA"       // Giá
 ]);
 
 export const TaskTypeEnum = z.enum([
@@ -71,7 +75,7 @@ export const CreateTaskSchema = z.object({
   reviewerId: z.number().nullable().optional(),
   templateId: z.number().nullable().optional(),
   
-  // [CẬP NHẬT] Sửa thành mảng chuỗi
+  // Mảng chuỗi (URL file đính kèm)
   attachmentUrl: z.array(z.string()).default([]),
 
   assignments: z.array(TaskAssignmentSchema).default([]),

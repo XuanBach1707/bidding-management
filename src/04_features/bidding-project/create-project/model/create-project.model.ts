@@ -1,6 +1,4 @@
-// widgets/create-project-modal/model/create-project.model.ts
-
-import { TaskAssignment, TaskTag } from "@/entities/task"; // Import thêm TaskTag
+import { TaskAssignment, TaskTag } from "@/entities/task"; 
 import { DriveItem } from "@/entities/drive";
 
 export interface TempTask {
@@ -14,48 +12,49 @@ export interface TempTask {
   
   selectedBoardId?: number; 
   
-  // [MỚI] Trường tag để hệ thống tự xử lý ngầm
-  tag: TaskTag; 
+  // Tag: null = Group (chỉ là thư mục chứa), Có giá trị = Task cụ thể
+  tag: TaskTag | null; 
 
-  // [MỚI] Chứa danh sách file tự động lấy từ Drive
+  // Chứa danh sách file tự động lấy từ Drive
   files?: DriveItem[]; 
+  
+  // Dùng để định nghĩa cấu trúc ban đầu, sau đó sẽ được làm phẳng (flatten) trong hook
+  subTasks?: TempTask[];
 }
 
-export const FIXED_SECTIONS = [
-  { 
-    id: "fixed_1", 
-    name: "Hồ sơ pháp lý", 
-    keywords: ["Pháp chế", "Hành chính", "Tổng hợp", "Pháp lý"],
-    tag: "LEGAL" as TaskTag 
+// CẤU TRÚC MỚI: DẠNG CÂY (NESTED) KHỚP VỚI DRIVE
+export const DEFAULT_PROJECT_STRUCTURE = [
+  {
+    name: " HSPL, BCTC, HDTT, TTLD",
+    tag: null, // Group
+    subTasks: [
+      { name: "Hồ sơ pháp lý", tag: "LEGAL" as TaskTag },
+      { name: "Báo cáo tài chính", tag: "FINANCE" as TaskTag },
+      { name: "Hợp đồng tương tự", tag: "CONTRACT" as TaskTag },
+    ]
   },
-  { 
-    id: "fixed_2", 
-    name: "Hồ sơ nhân sự", 
-    keywords: ["Nhân sự", "Tổ chức"],
-    tag: "HR" as TaskTag 
+  {
+    name: " Bảo lãnh dự thầu, CKTD",
+    tag: "DBTC" as TaskTag, // Parent độc lập
+    subTasks: []
   },
-  { 
-    id: "fixed_3", 
-    name: "Biện pháp thi công", 
-    keywords: ["Kỹ thuật", "Thi công", "Dự án"],
-    tag: "TECH" as TaskTag 
+  {
+    name: " Biện pháp thi công ",
+    tag: null, // Group
+    subTasks: [
+      { name: "Nhân sự ", tag: "HR" as TaskTag },
+      { name: "Máy móc ", tag: "DEVICE" as TaskTag },
+      { name: "BPTC", tag: "TECH" as TaskTag },
+    ]
   },
-  { 
-    id: "fixed_4", 
-    name: "Hồ sơ tài chính", 
-    keywords: ["Tài chính", "Kế toán"],
-    tag: "FINANCE" as TaskTag 
+  {
+    name: " Hồ sơ Vật tư",
+    tag: "VT" as TaskTag, // Parent độc lập
+    subTasks: []
   },
-  { 
-    id: "fixed_5", 
-    name: "Hồ sơ máy móc", 
-    keywords: ["Vật tư", "Thiết bị", "Cơ giới"],
-    tag: "DEVICE" as TaskTag 
-  },
-  { 
-    id: "fixed_6", 
-    name: "Hồ sơ hợp đồng & Tương tự", 
-    keywords: ["Đấu thầu", "Kinh doanh"],
-    tag: "CONTRACT" as TaskTag 
-  },
+  {
+    name: " Hồ sơ Giá",
+    tag: "GIA" as TaskTag, // Parent độc lập
+    subTasks: []
+  }
 ];

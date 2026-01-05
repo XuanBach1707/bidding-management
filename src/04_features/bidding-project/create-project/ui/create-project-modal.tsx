@@ -5,7 +5,7 @@ import { LayoutList, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/shared/ui/dialog";
-import { FIXED_SECTIONS } from "../model/create-project.model";
+// [FIX] Bỏ import FIXED_SECTIONS vì đã xóa ở model
 import { useCreateProject } from "../model/use-create-project";
 import { TaskSectionRow } from "./task-section-row";
 
@@ -23,6 +23,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = (props) => 
     handleBoardChange, handleDepartmentChange,
     addSubTask, removeTask, updateTask, handleSubmit,
   } = useCreateProject(props);
+
+  // [LOGIC MỚI] Lấy danh sách các Task cha (Section) để render
+  // Vì tasks bây giờ là danh sách phẳng chứa cả cha và con
+  const parentTasks = tasks.filter(t => t.parentId === null);
 
   return (
     <Dialog open={props.isOpen} onOpenChange={props.onClose}>
@@ -43,32 +47,30 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = (props) => 
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            {/* [UPDATED] Header Grid khớp với Row */}
             <div className="grid grid-cols-12 gap-4 bg-slate-100/80 p-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b">
               <div className="col-span-5 pl-4">Hạng mục công việc (WBS)</div>
               <div className="col-span-4">Phòng ban phụ trách</div>
-              {/* <div className="col-span-2">Người thực hiện</div> -> ĐÃ BỎ */}
               <div className="col-span-2">Deadline</div>
               <div className="col-span-1 text-center">#</div>
             </div>
 
             <div className="divide-y divide-slate-100">
-              {FIXED_SECTIONS.map((section, index) => {
-                const parentTask = tasks.find((t) => t.id === section.id);
-                const subTasks = tasks.filter((t) => t.parentId === section.id);
+              {/* [FIX] Duyệt qua danh sách Task cha thay vì FIXED_SECTIONS */}
+              {parentTasks.map((parentTask, index) => {
+                // Lấy task con tương ứng của cha này
+                const subTasks = tasks.filter((t) => t.parentId === parentTask.id);
 
                 return (
                   <TaskSectionRow
-                    key={section.id}
+                    key={parentTask.id}
                     index={index}
-                    sectionId={section.id}
-                    sectionName={section.name}
+                    sectionId={parentTask.id}
+                    sectionName={parentTask.name}
                     parentTask={parentTask}
                     subTasks={subTasks}
                     
                     boards={boards}
                     departmentsCache={departmentsCache}
-                    // membersCache={membersCache} // [REMOVED]
                     
                     onBoardChange={handleBoardChange}
                     onDepartmentChange={handleDepartmentChange}
