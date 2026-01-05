@@ -1,10 +1,13 @@
-import {    DashboardPage } from '@/pages/dashboard';
-// Metadata cho SEO (Next.js support)
+// app/(dashboard)/dashboard/page.tsx
+
+// Import từ Public API của layer 01_app
+import { DashboardSwitcher } from "@/01_app/dashboard"; 
+
 export const metadata = {
-  title: 'Dashboard Nghiệp vụ | PMS Construction',
-  description: 'Trang dashboard nghiệp vụ quản lý gói thầu',
+  title: 'Dashboard | PMS Construction',
+  description: 'Hệ thống quản lý dự án & đấu thầu',
 };
-export default function Route() {
-  // Router chỉ việc render Page
-  return <DashboardPage />;
+
+export default function DashboardRoute() {
+  return <DashboardSwitcher />;
 }

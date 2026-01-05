@@ -1,8 +1,16 @@
+"use client";
+
 import { useEffect, useState, useMemo } from "react";
 import { 
   Plus, FileText, ChevronRight, ArrowLeft, Save, 
-  Loader2, Code, MonitorPlay, FileType, History, Sparkles 
+  Loader2, Code, MonitorPlay, FileType, History, Sparkles,
+  FileDown // [MỚI] Icon Export
 } from "lucide-react";
+
+// [MỚI] Import thư viện export Client-side
+// Nhớ chạy lệnh: npm install html-docx-js-typescript file-saver
+import { asBlob } from "html-docx-js-typescript";
+import { saveAs } from "file-saver";
 
 // Shared UI
 import { Button } from "@/shared/ui/button";
@@ -31,7 +39,7 @@ type Step = "SELECT" | "EDITOR";
 type EditorMode = "RICH_TEXT" | "RAW_HTML"; 
 type ViewMode = "PREVIEW" | "CODE";         
 
-// --- HELPER ---
+// --- HELPER 1: Inject Script cho Preview ---
 const injectPreviewScript = (htmlContent: string) => {
   const script = `
     <script>
@@ -55,6 +63,28 @@ const injectPreviewScript = (htmlContent: string) => {
   return htmlContent + script;
 };
 
+// --- HELPER 2: Wrap HTML cho Word (Fix font & layout cơ bản) ---
+const wrapHtmlForWord = (htmlContent: string) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+        td, th { border: 1px solid black; padding: 5px; }
+        .page-break { page-break-after: always; }
+        img { max-width: 100%; height: auto; }
+      </style>
+    </head>
+    <body>
+      ${htmlContent}
+    </body>
+    </html>
+  `;
+};
+
 // --- MAIN COMPONENT ---
 export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   const { toast } = useToast();
@@ -70,6 +100,7 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false); // [MỚI] State export
 
   // State điều khiển Sidebar AI
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -148,6 +179,32 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   const handleAiApplyChanges = (newHtml: string) => {
      setFullHtmlContent(newHtml);
      toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!" });
+  };
+
+  // --- [MỚI] HANDLE EXPORT WORD ---
+  const handleExportDocx = async () => {
+    setIsExporting(true);
+    try {
+      // 1. Chuẩn bị HTML
+      const htmlString = wrapHtmlForWord(fullHtmlContent);
+
+      // 2. Convert sang Blob
+      const blob = await asBlob(htmlString, {
+        orientation: 'portrait',
+        margins: { top: 720, right: 720, bottom: 720, left: 720 }, // ~ 0.5 inch margins
+      });
+
+      // 3. Save file
+      const fileName = `${task.taskName || "Tai-lieu-HS"}.docx`;
+      saveAs(blob as Blob, fileName);
+
+      toast({ title: "Thành công", description: "Đã tải xuống file Word." });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể xuất file Word. Vui lòng thử lại." });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // --- RENDER 1: SELECT (Giữ nguyên) ---
@@ -276,6 +333,18 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
                         className={`gap-2 shadow-sm transition-all ${isAiOpen ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
                     >
                         <Sparkles className="w-4 h-4" /> AI Trợ lý
+                    </Button>
+
+                    {/* [MỚI] NÚT EXPORT WORD */}
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={handleExportDocx} 
+                      disabled={isExporting}
+                      className="gap-2 text-blue-700 border-blue-200 hover:bg-blue-50"
+                    >
+                       {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                       Xuất Word
                     </Button>
 
                     {editorMode === "RAW_HTML" && (

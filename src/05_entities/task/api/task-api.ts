@@ -9,7 +9,7 @@ export const taskApi = {
     return http.get(`/tasks/project/${projectId}`);
   },
 
-  // 2. Lấy task của tôi (Giữ nguyên hoặc xóa tùy bạn, nhưng cứ để đấy dùng sau)
+  // 2. Lấy task của tôi
   getMyTasks: (): Promise<Task[]> => {
     return http.get("/tasks/user/me");
   },
@@ -33,21 +33,22 @@ export const taskApi = {
   },
 
   /**
-   * [MỚI] Cập nhật trạng thái Task (Tab Thông tin chung)
+   * [MỚI] Cập nhật trạng thái Task
    * PATCH /tasks/{id}/status
    */
   updateStatus: (id: number, status: string): Promise<any> => {
     return http.patch(`/tasks/${id}/status`, null, { 
-      params: { status } // API yêu cầu param 'status' (query param)
+      params: { status } 
     });
-    // LƯU Ý: Nếu API yêu cầu status trong BODY thì đổi thành:
-    // return http.patch(`/tasks/${id}/status`, { status });
-    // Dựa trên mô tả "param cần task_id và status", thường là Query Param hoặc Body. 
-    // Tôi để Query Param trước, nếu sai thì sửa thành Body nhé.
   },
 
   // 5. Xóa
   delete: (id: number): Promise<any> => {
     return http.delete(`/tasks/${id}`);
+  },
+
+  // [BỔ SUNG] Hàm lấy chi tiết Task (Sửa lỗi property 'getDetail' does not exist)
+  getDetail: (id: number): Promise<Task> => {
+    return http.get(`/tasks/${id}`);
   }
 };
