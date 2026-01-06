@@ -1,47 +1,63 @@
 import { z } from "zod";
 
-// 1. Schema cho File/Folder trong kho (Độc lập với Drive Entity)
+// ==========================================
+// 1. RESOURCE DRIVE (File/Folder)
+// ==========================================
 export const resourceItemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  // Type trả về từ API thường là "FOLDER" hoặc "FILE"
-  type: z.string(), 
-  link: z.string().url().optional(), // Có thể null hoặc undefined
+  type: z.string(), // "FOLDER" | "FILE"
+  link: z.string().url().optional().nullable(),
   access: z.string().optional(),
-  
-  // Các trường bổ sung nếu cần hiển thị icon/mimetype
   mimeType: z.string().optional().nullable(),
-  
-  // Parent info (để làm breadcrumb sau này nếu API trả về)
   parentId: z.string().optional().nullable(),
 });
 
-// 2. Schema cho Response từ API getFolderDetail
 export const resourceFolderResponseSchema = z.object({
-  current_folder_id: z.string().optional(),
-  total_items: z.number().optional(),
+  currentFolderId: z.string().optional(), // Interceptor đã convert snake_case -> camelCase
+  totalItems: z.number().optional(),
   data: z.array(resourceItemSchema),
 });
 
-// 3. Schema cho Thống kê (Dashboard Stats)
-// Vì API trả về ít, ta define schema khớp với thực tế + trường optional để mock
 export const resourceStatsSchema = z.object({
-  // Mapping từ total_repo_files
-  totalFiles: z.number().default(0), 
+  totalFiles: z.number().default(0),
+  totalSizeLabel: z.string().optional(),
+  filesChangePercentage: z.number().optional(),
+});
+
+// ==========================================
+// 2. BIDDING HISTORY (Lịch sử dự án)
+// ==========================================
+
+// Schema cho từng dự án trong danh sách
+export const biddingHistoryItemSchema = z.object({
+  hsmtId: z.number(),
+  maTbmt: z.string(),
+  tenDuAn: z.string(),
+  chuDauTu: z.string(),
+  linhVuc: z.string().optional().nullable(),
+  nam: z.number(),
   
-  // Các field UI cần nhưng API chưa có (để Optional)
-  totalSizeLabel: z.string().optional(), // VD: "45.2 GB"
-  filesChangePercentage: z.number().optional(), // VD: 12 (%)
+  // [QUAN TRỌNG] Field mới mapping từ folder_id
+  // Để optional/nullable đề phòng dữ liệu cũ chưa có liên kết
+  folderId: z.string().optional().nullable(), 
 });
 
-// 4. Schema cho Năm (Dùng cho Dropdown lịch sử)
-export const yearFolderSchema = z.object({
-  id: z.string(),
-  year: z.number(), // Đã ép kiểu từ string name sang number
+// Schema cho Response trả về danh sách dự án (có phân trang)
+export const biddingHistoryResponseSchema = z.object({
+  items: z.array(biddingHistoryItemSchema),
+  total: z.number(),
+  page: z.number(),
+  size: z.number(),
+  pages: z.number(),
 });
 
-export const projectFilterSchema = z.object({
+// ==========================================
+// 3. FILTERS (Bộ lọc)
+// ==========================================
+
+// Schema cho API /bidding-packages/history/filters
+export const historyFilterOptionsSchema = z.object({
   years: z.array(z.number()),
   investors: z.array(z.string()),
-  sectors: z.array(z.string()), // Lĩnh vực: Xây lắp, Tư vấn, Thiết kế...
 });

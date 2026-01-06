@@ -2,30 +2,46 @@ import { z } from "zod";
 import { 
   resourceItemSchema, 
   resourceStatsSchema, 
-  yearFolderSchema,
-  resourceFolderResponseSchema 
+  resourceFolderResponseSchema,
+  biddingHistoryItemSchema,
+  biddingHistoryResponseSchema,
+  historyFilterOptionsSchema
 } from "./schema";
+
+// ==========================================
+// 1. RESOURCE TYPES
+// ==========================================
 
 // Type cho Item (File/Folder)
 export type ResourceItem = z.infer<typeof resourceItemSchema>;
 
-// Type cho Response Folder (Đã qua CamelCase của Interceptor)
-// Lưu ý: Interceptor biến snake_case thành camelCase
-export interface ResourceFolderResponse {
-  currentFolderId?: string; // API: current_folder_id -> Interceptor: currentFolderId
-  totalItems?: number;      // API: total_items
-  data: ResourceItem[];
-}
+// Type cho Response Folder
+export type ResourceFolderResponse = z.infer<typeof resourceFolderResponseSchema>;
 
-// Type riêng cho Response của API Stats (khi API trả về)
-export interface ApiStatsResponse {
-  totalRepoFiles?: number;      // API: total_repo_files -> Interceptor: totalRepoFiles
-  currentFolderFiles?: number;  // API: current_folder_files -> Interceptor: currentFolderFiles
-  folderId?: string;
-}
-
-// Type cho Stats (Sau khi FE chế biến để dùng ở UI)
+// Type cho Stats (UI)
 export type ResourceStats = z.infer<typeof resourceStatsSchema>;
 
-// Type cho Năm
-export type YearFolder = z.infer<typeof yearFolderSchema>;
+// ==========================================
+// 2. BIDDING HISTORY TYPES
+// ==========================================
+
+// Type cho 1 dòng dự án (Dùng cho Table)
+export type BiddingHistoryItem = z.infer<typeof biddingHistoryItemSchema>;
+
+// Type cho Response API Lịch sử (Dùng cho API return)
+export type BiddingHistoryResponse = z.infer<typeof biddingHistoryResponseSchema>;
+
+// Type cho Options Bộ lọc (Dùng cho Sidebar)
+export type HistoryFilterOptions = z.infer<typeof historyFilterOptionsSchema>;
+
+// ==========================================
+// 3. LEGACY / MANUAL TYPES (Nếu còn dùng)
+// ==========================================
+
+// Type riêng cho Response của API Stats gốc (trước khi map sang UI)
+// Giữ lại nếu bạn cần hứng raw data từ BE trước khi convert
+export interface ApiStatsResponse {
+  totalRepoFiles?: number;      // API: total_repo_files -> Interceptor
+  currentFolderFiles?: number;  // API: current_folder_files -> Interceptor
+  folderId?: string;
+}
