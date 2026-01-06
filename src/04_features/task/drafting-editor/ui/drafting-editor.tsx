@@ -4,15 +4,12 @@ import { useEffect, useState, useMemo } from "react";
 import { 
   Plus, FileText, ChevronRight, ArrowLeft, Save, 
   Loader2, Code, MonitorPlay, FileType, History, Sparkles,
-  FileDown // [MỚI] Icon Export
+  FileDown 
 } from "lucide-react";
 
-// [MỚI] Import thư viện export Client-side
-// Nhớ chạy lệnh: npm install html-docx-js-typescript file-saver
 import { asBlob } from "html-docx-js-typescript";
 import { saveAs } from "file-saver";
 
-// Shared UI
 import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
 import { Badge } from "@/shared/ui/badge";
@@ -20,24 +17,22 @@ import { useToast } from "@/shared/lib/hooks/use-toast";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"; 
 
-// Entities & API
 import { Task } from "@/entities/task";
 import { Template, templateApi } from "@/entities/template";
 import { draftingApi } from "../api/drafting-api";
 
-// Libs & Components
 import { parseHtmlToEditorData, mergeHtmlFromEditorData } from "../lib/html-processor"; 
 import { RichTextEditor } from "./rich-text-editor"; 
 import { AiAssistant } from "./ai-assistant"; 
 
-// --- TYPES ---
 interface DraftingEditorProps {
   task: Task;
+  isReadOnly?: boolean; // [MỚI] Prop để bật chế độ xem
 }
 
 type Step = "SELECT" | "EDITOR";
 type EditorMode = "RICH_TEXT" | "RAW_HTML"; 
-type ViewMode = "PREVIEW" | "CODE";         
+type ViewMode = "PREVIEW" | "CODE";        
 
 // --- HELPER 1: Inject Script cho Preview ---
 const injectPreviewScript = (htmlContent: string) => {
@@ -63,7 +58,7 @@ const injectPreviewScript = (htmlContent: string) => {
   return htmlContent + script;
 };
 
-// --- HELPER 2: Wrap HTML cho Word (Fix font & layout cơ bản) ---
+// --- HELPER 2: Wrap HTML cho Word ---
 const wrapHtmlForWord = (htmlContent: string) => {
   return `
     <!DOCTYPE html>
@@ -86,11 +81,12 @@ const wrapHtmlForWord = (htmlContent: string) => {
 };
 
 // --- MAIN COMPONENT ---
-export const DraftingEditor = ({ task }: DraftingEditorProps) => {
+export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps) => {
   const { toast } = useToast();
   
   // --- STATE ---
-  const [step, setStep] = useState<Step>("SELECT");
+  // Nếu là ReadOnly -> Vào thẳng Editor, bỏ qua bước Select
+  const [step, setStep] = useState<Step>(isReadOnly ? "EDITOR" : "SELECT");
   const [editorMode, setEditorMode] = useState<EditorMode>("RICH_TEXT"); 
   const [viewMode, setViewMode] = useState<ViewMode>("CODE");
   
@@ -100,9 +96,8 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false); // [MỚI] State export
+  const [isExporting, setIsExporting] = useState(false); 
 
-  // State điều khiển Sidebar AI
   const [isAiOpen, setIsAiOpen] = useState(false);
 
   // --- LOGIC ---
@@ -111,20 +106,41 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   }, [fullHtmlContent]);
 
   // --- EFFECT ---
+  // 1. Tự động load draft khi ở chế độ ReadOnly
   useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        setIsLoadingTemplates(true);
-        const data = await templateApi.getList();
-        setTemplates(data);
-      } catch (error) {
-        toast({ variant: "destructive", title: "Lỗi", description: "Không tải được danh sách mẫu." });
-      } finally {
-        setIsLoadingTemplates(false);
-      }
-    };
-    fetchTemplates();
-  }, [toast]);
+    if (isReadOnly && step === "EDITOR") {
+        const autoLoad = async () => {
+            setIsLoadingDraft(true);
+            try {
+                const content = await draftingApi.loadDraft(task.id);
+                if (content) setFullHtmlContent(content);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLoadingDraft(false);
+            }
+        };
+        autoLoad();
+    }
+  }, [isReadOnly, step, task.id]);
+
+  // 2. Load templates (Chỉ khi không phải ReadOnly)
+  useEffect(() => {
+    if (!isReadOnly && step === "SELECT") {
+        const fetchTemplates = async () => {
+        try {
+            setIsLoadingTemplates(true);
+            const data = await templateApi.getList();
+            setTemplates(data);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Lỗi", description: "Không tải được danh sách mẫu." });
+        } finally {
+            setIsLoadingTemplates(false);
+        }
+        };
+        fetchTemplates();
+    }
+  }, [isReadOnly, step, toast]);
 
   // --- HANDLERS ---
   const handleSelectTemplate = (tplContent: string) => {
@@ -139,7 +155,7 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
       const content = await draftingApi.loadDraft(task.id);
       
       if (!content) {
-        toast({ variant: "default", title: "Thông báo", description: "Chưa có bản nháp nào được lưu cho công việc này." });
+        toast({ variant: "default", title: "Thông báo", description: "Chưa có bản nháp nào được lưu." });
         return;
       }
 
@@ -157,6 +173,8 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   };
 
   const handleSaveApi = async (contentToSave: string) => {
+    if (isReadOnly) return; // Chặn save
+
     setIsSaving(true);
     try {
       await draftingApi.saveDraft(task.id, contentToSave);
@@ -171,44 +189,40 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
   };
 
   const handleRichTextSave = (newBody: string) => {
+      if (isReadOnly) return; // Chặn save
       const cssToUse = parsedData.originalCss || "";
       const mergedHtml = mergeHtmlFromEditorData(cssToUse, newBody);
       handleSaveApi(mergedHtml);
   };
 
   const handleAiApplyChanges = (newHtml: string) => {
-     setFullHtmlContent(newHtml);
-     toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!" });
+      if (isReadOnly) return; // Chặn AI apply
+      setFullHtmlContent(newHtml);
+      toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!" });
   };
 
-  // --- [MỚI] HANDLE EXPORT WORD ---
   const handleExportDocx = async () => {
     setIsExporting(true);
     try {
-      // 1. Chuẩn bị HTML
       const htmlString = wrapHtmlForWord(fullHtmlContent);
-
-      // 2. Convert sang Blob
       const blob = await asBlob(htmlString, {
         orientation: 'portrait',
-        margins: { top: 720, right: 720, bottom: 720, left: 720 }, // ~ 0.5 inch margins
+        margins: { top: 720, right: 720, bottom: 720, left: 720 },
       });
-
-      // 3. Save file
       const fileName = `${task.taskName || "Tai-lieu-HS"}.docx`;
       saveAs(blob as Blob, fileName);
-
       toast({ title: "Thành công", description: "Đã tải xuống file Word." });
     } catch (error) {
       console.error("Export error:", error);
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể xuất file Word. Vui lòng thử lại." });
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể xuất file Word." });
     } finally {
       setIsExporting(false);
     }
   };
 
-  // --- RENDER 1: SELECT (Giữ nguyên) ---
-  if (step === "SELECT") {
+  // --- RENDER 1: SELECT ---
+  // Nếu là ReadOnly thì không bao giờ vào bước này (đã set ở useState)
+  if (step === "SELECT" && !isReadOnly) {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         <div>
@@ -269,9 +283,8 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-2">Tiếp tục công việc</h3>
                   <p className="text-slate-500 max-w-md mb-6 text-sm">
-                    Hệ thống sẽ tải lại nội dung bản nháp gần nhất mà bạn đã lưu (bao gồm cả định dạng và hình ảnh).
+                    Hệ thống sẽ tải lại nội dung bản nháp gần nhất mà bạn đã lưu.
                   </p>
-                  
                   <Button 
                     size="lg" 
                     onClick={handleLoadDraft} 
@@ -290,20 +303,23 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
 
   // --- RENDER 2: EDITOR ---
   return (
-    <div className="relative"> {/* Wrapper chính */}
-        
-        {/* [QUAN TRỌNG] Wrapper này sẽ bị đẩy sang trái khi Sidebar mở */}
+    <div className="relative">
         <div 
             className="max-w-6xl mx-auto animate-in slide-in-from-bottom-2 duration-300 transition-all ease-in-out"
-            style={{ marginRight: isAiOpen ? "400px" : "0" }} // Logic đẩy màn hình
+            style={{ marginRight: isAiOpen ? "400px" : "0" }}
         >
             {/* HEADER & TOOLBAR */}
             <div className="flex items-center justify-between mb-4 bg-white p-2 rounded-lg border shadow-sm sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setStep("SELECT")} className="text-slate-600 gap-2 hover:text-slate-900">
-                        <ArrowLeft className="w-4 h-4" /> Chọn mẫu khác
-                    </Button>
-                    <div className="h-4 w-[1px] bg-slate-200 mx-2"></div>
+                    {/* [MỚI] Ẩn nút Back nếu ReadOnly */}
+                    {!isReadOnly && (
+                        <>
+                            <Button variant="ghost" size="sm" onClick={() => setStep("SELECT")} className="text-slate-600 gap-2 hover:text-slate-900">
+                                <ArrowLeft className="w-4 h-4" /> Chọn mẫu khác
+                            </Button>
+                            <div className="h-4 w-[1px] bg-slate-200 mx-2"></div>
+                        </>
+                    )}
                     
                     <div className="flex bg-slate-100 p-1 rounded-md">
                         <button 
@@ -325,17 +341,18 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    {/* Nút bật tắt AI */}
-                    <Button 
-                        size="sm" 
-                        variant={isAiOpen ? "secondary" : "default"}
-                        onClick={() => setIsAiOpen(!isAiOpen)} 
-                        className={`gap-2 shadow-sm transition-all ${isAiOpen ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
-                    >
-                        <Sparkles className="w-4 h-4" /> AI Trợ lý
-                    </Button>
+                    {/* [MỚI] Ẩn nút AI nếu ReadOnly */}
+                    {!isReadOnly && (
+                        <Button 
+                            size="sm" 
+                            variant={isAiOpen ? "secondary" : "default"}
+                            onClick={() => setIsAiOpen(!isAiOpen)} 
+                            className={`gap-2 shadow-sm transition-all ${isAiOpen ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                        >
+                            <Sparkles className="w-4 h-4" /> AI Trợ lý
+                        </Button>
+                    )}
 
-                    {/* [MỚI] NÚT EXPORT WORD */}
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -343,11 +360,12 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
                       disabled={isExporting}
                       className="gap-2 text-blue-700 border-blue-200 hover:bg-blue-50"
                     >
-                       {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-                       Xuất Word
+                        {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                        Xuất Word
                     </Button>
 
-                    {editorMode === "RAW_HTML" && (
+                    {/* [MỚI] Ẩn nút Lưu nếu ReadOnly */}
+                    {!isReadOnly && editorMode === "RAW_HTML" && (
                         <Button size="sm" onClick={() => handleSaveApi(fullHtmlContent)} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 gap-2 min-w-[100px]">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             {isSaving ? "Đang lưu..." : "Lưu lại"}
@@ -359,20 +377,29 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
             {/* --- AREA 1: RICH TEXT EDITOR --- */}
             {editorMode === "RICH_TEXT" && (
                 <>
-                    <Alert className="bg-blue-50 border-blue-100 py-2 mb-4">
-                        <AlertDescription className="text-xs text-blue-700">
-                        Đang soạn thảo trực quan. Bấm <strong>Lưu lại</strong> để cập nhật thay đổi.
-                        </AlertDescription>
-                    </Alert>
+                    {/* Ẩn Alert hướng dẫn soạn thảo nếu ReadOnly */}
+                    {!isReadOnly && (
+                        <Alert className="bg-blue-50 border-blue-100 py-2 mb-4">
+                            <AlertDescription className="text-xs text-blue-700">
+                            Đang soạn thảo trực quan. Bấm <strong>Lưu lại</strong> để cập nhật thay đổi.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     
                     <div className="bg-white border rounded-lg shadow-sm overflow-hidden min-h-[600px]">
-                        <RichTextEditor 
-                        initialContent={parsedData.bodyContent} 
-                        css={parsedData.editorCss}             
-                        onBack={() => setStep("SELECT")}
-                        onSave={handleRichTextSave}             
-                        isSaving={isSaving}
-                        />
+                        {/* Lưu ý: Nếu RichTextEditor chưa hỗ trợ prop disabled/readOnly,
+                            bạn có thể bọc nó trong 1 div có style {{ pointerEvents: "none", opacity: 0.8 }}
+                            nhưng tốt nhất là sửa RichTextEditor để nhận prop. */}
+                        <div style={isReadOnly ? { pointerEvents: "none" } : {}}>
+                            <RichTextEditor 
+                                initialContent={parsedData.bodyContent} 
+                                css={parsedData.editorCss}             
+                                onBack={() => setStep("SELECT")}
+                                onSave={handleRichTextSave}             
+                                isSaving={isSaving}
+                                // Giả sử RichTextEditor của bạn chưa có prop readOnly, ta dùng CSS pointer-events để chặn click
+                            />
+                        </div>
                     </div>
                 </>
             )}
@@ -404,6 +431,7 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
                             value={fullHtmlContent}
                             onChange={(e) => setFullHtmlContent(e.target.value)}
                             spellCheck={false}
+                            disabled={isReadOnly} // [MỚI] Disable textarea
                         />
                     ) : (
                         <div className="w-full h-full bg-slate-100 flex justify-center overflow-auto p-8">
@@ -419,13 +447,15 @@ export const DraftingEditor = ({ task }: DraftingEditorProps) => {
             )}
         </div>
 
-        {/* AI SIDEBAR (Nằm ngoài div wrapper để không bị margin-right đẩy đi) */}
-        <AiAssistant 
-            isOpen={isAiOpen} 
-            onClose={() => setIsAiOpen(false)} 
-            currentHtml={fullHtmlContent}
-            onApplyChanges={handleAiApplyChanges}
-        />
+        {/* AI SIDEBAR: Ẩn luôn nếu ReadOnly */}
+        {!isReadOnly && (
+            <AiAssistant 
+                isOpen={isAiOpen} 
+                onClose={() => setIsAiOpen(false)} 
+                currentHtml={fullHtmlContent}
+                onApplyChanges={handleAiApplyChanges}
+            />
+        )}
     </div>
   );
 };

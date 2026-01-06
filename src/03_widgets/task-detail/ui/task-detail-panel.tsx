@@ -7,16 +7,26 @@ import { DocumentsTab } from "./tabs/documents-tab";
 
 interface TaskDetailPanelProps {
   task: Task | null;
-  onRefresh: () => void; // <--- [MỚI] Nhận hàm refresh từ cha
+  onRefresh: () => void;
+  // [MỚI] Thêm prop này để nhận biết đang ở chế độ duyệt hay chế độ làm việc
+  isReviewMode?: boolean; 
 }
 
-export const TaskDetailPanel = ({ task, onRefresh }: TaskDetailPanelProps) => {
+export const TaskDetailPanel = ({ 
+  task, 
+  onRefresh, 
+  isReviewMode = false // Mặc định là false (chế độ nhân viên)
+}: TaskDetailPanelProps) => {
+
   if (!task) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400 bg-white">
         <div className="text-center">
-          <p className="text-lg font-medium">Chưa chọn nhiệm vụ nào</p>
-          <p className="text-sm">Vui lòng chọn một công việc từ danh sách bên trái.</p>
+          {/* [UI Tinh chỉnh] Thay đổi câu thông báo tùy ngữ cảnh */}
+          <p className="text-lg font-medium">
+             {isReviewMode ? "Chưa chọn hồ sơ duyệt" : "Chưa chọn nhiệm vụ nào"}
+          </p>
+          <p className="text-sm">Vui lòng chọn một mục từ danh sách bên trái.</p>
         </div>
       </div>
     );
@@ -69,16 +79,30 @@ export const TaskDetailPanel = ({ task, onRefresh }: TaskDetailPanelProps) => {
 
       {/* --- CONTENT BODY --- */}
       <div className="flex-1 overflow-hidden bg-gray-50">
+        
         <TabsContent value="general" className="h-full overflow-y-auto p-6 m-0 focus-visible:outline-none">
-          {/* [QUAN TRỌNG] Truyền onRefresh xuống GeneralTab */}
-          <GeneralTab task={task} onRefresh={onRefresh} />
+          {/* [QUAN TRỌNG] Truyền isReviewMode xuống GeneralTab */}
+          {/* Để kích hoạt nút Duyệt/Từ chối thay vì Gửi duyệt */}
+          <GeneralTab 
+            task={task} 
+            onRefresh={onRefresh} 
+            isReviewMode={isReviewMode} 
+          />
         </TabsContent>
         
         <TabsContent value="workspace" className="h-full overflow-y-auto p-6 m-0 focus-visible:outline-none">
-          <WorkspaceTab task={task} />
+          {/* [QUAN TRỌNG] Truyền isReviewMode xuống WorkspaceTab */}
+          {/* Để kích hoạt chế độ ReadOnly cho Editor và SelectionBrowser */}
+          <WorkspaceTab 
+            task={task} 
+            isReviewMode={isReviewMode} 
+          />
         </TabsContent>
         
         <TabsContent value="documents" className="h-full overflow-y-auto p-6 m-0 focus-visible:outline-none">
+          {/* DocumentsTab thường là view file nên có thể chưa cần isReviewMode, 
+              trừ khi bạn muốn chặn nút "Upload/Xóa file" trong đó. 
+              Tạm thời ta giữ nguyên. */}
           <DocumentsTab task={task} />
         </TabsContent>
       </div>

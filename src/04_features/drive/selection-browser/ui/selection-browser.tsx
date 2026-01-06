@@ -5,14 +5,15 @@ import { driveApi, DriveItem } from "@/entities/drive";
 import { requirementApi, RequirementItem, PersonnelReq, EquipmentReq } from "@/entities/requirement";
 import { biddingProjectApi } from "@/entities/bidding-project";
 import { Button } from "@/shared/ui/button";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/shared/ui/dialog"; // Import thêm DialogTitle
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/shared/ui/dialog"; 
 import { ResourceRepositoryBrowser } from "./resource-repository-browser"; 
 
 interface SelectionBrowserProps {
   task: Task;
+  isReadOnly?: boolean; // [MỚI] Thêm prop này
 }
 
-export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
+export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserProps) => {
   // --- STATE ---
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [projectFiles, setProjectFiles] = useState<DriveItem[]>([]);
@@ -22,44 +23,26 @@ export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- LOGIC 1: LOAD YÊU CẦU (CỘT TRÁI) ---
+  // --- LOGIC 1: LOAD YÊU CẦU (Giữ nguyên) ---
   useEffect(() => {
     const fetchReqs = async () => {
-      // [DEBUG LOG] Kiểm tra đầu vào
-      console.log("🚀 [SelectionBrowser] Bắt đầu fetchReqs với:", { 
-        taskId: task.id,
-        biddingProjectId: task.biddingProjectId, 
-        tag: task.tag 
-      });
+      // ... (Code fetchReqs giữ nguyên y hệt cũ)
+      console.log("🚀 [SelectionBrowser] Bắt đầu fetchReqs...", { taskId: task.id });
 
-      if (!task.biddingProjectId) {
-        console.warn("❌ [SelectionBrowser] Thiếu biddingProjectId -> Dừng fetch.");
-        return;
-      }
-      if (!task.tag) {
-        console.warn("❌ [SelectionBrowser] Thiếu TAG -> Dừng fetch.");
-        return;
-      }
+      if (!task.biddingProjectId || !task.tag) return;
 
       setLoadingReq(true);
       try {
-        // B1: Lấy hsmt_id
         const resPkg = await biddingProjectApi.getByProject(task.biddingProjectId);
         const hsmtId = resPkg.data?.hsmtId;
         
-        if (!hsmtId) {
-             console.error("❌ [SelectionBrowser] Không tìm thấy hsmtId trong response!");
-             return;
-        }
+        if (!hsmtId) return;
 
-        // B2: Lấy Requirements theo Tag
         let data: RequirementItem[] = [];
         if (task.tag === "HR") {
            data = await requirementApi.getPersonnel(hsmtId);
         } else if (task.tag === "DEVICE") {
            data = await requirementApi.getEquipment(hsmtId);
-        } else {
-           console.warn("⚠️ [SelectionBrowser] Tag không khớp HR hoặc DEVICE -> Không gọi API req.");
         }
         
         setRequirements(data);
@@ -74,25 +57,20 @@ export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
     fetchReqs();
   }, [task.biddingProjectId, task.tag]);
 
-  // --- LOGIC 2: LOAD FILE DỰ ÁN & TARGET ID (CỘT PHẢI) ---
+  // --- LOGIC 2: LOAD FILE DỰ ÁN (Giữ nguyên) ---
   const fetchProjectFiles = async () => {
     if (!task.biddingProjectId) return;
     setLoadingFiles(true);
     try {
-      // Logic cũ để lấy Target Folder ID
       const resResources = await driveApi.getProjectFolders(task.biddingProjectId);
       
       if (resResources.currentFolderId) {
-        // --- 🔪 CẮT KÝ TỰ LẠ TẠI ĐÂY ---
         const cleanId = resResources.currentFolderId.trim();
-        console.log(`🧹 [SelectionBrowser] Cleaned ID: "${cleanId}" (Length: ${cleanId.length})`);
-
         const resTarget = await driveApi.getTargetFolder(cleanId, task.biddingProjectId);
         
         const tId = resTarget.targetFolderId;
         setTargetFolderId(tId); 
 
-        // Load danh sách file hiện có trong folder đích
         if (tId) {
             const fileRes = await driveApi.getFolderDetail(tId);
             setProjectFiles(fileRes.data.filter(i => i.type === "FILE"));
@@ -113,7 +91,7 @@ export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
   return (
     <div className="flex h-[600px] gap-6 font-sans">
       
-      {/* CỘT TRÁI: YÊU CẦU */}
+      {/* CỘT TRÁI: YÊU CẦU (Chỉ xem -> Giữ nguyên) */}
       <div className="w-1/2 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden">
         <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
           <h3 className="font-bold text-gray-700 flex items-center gap-2">
@@ -141,7 +119,6 @@ export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
                       </h4>
                       <div className="text-xs text-gray-500 mt-1 space-y-1">
                          <p>Số lượng: <strong className="text-gray-900">{req.quantity}</strong></p>
-                         
                          {'qualificationReq' in req && (
                            <p className="line-clamp-2" title={req.qualificationReq}>Yêu cầu: {req.qualificationReq}</p>
                          )}
@@ -163,13 +140,11 @@ export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
       {/* CỘT PHẢI: KẾT QUẢ / FILE ĐÃ CHỌN */}
       <div className="w-1/2 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden border-dashed border-blue-200">
         
-        {/* Header Vùng chọn */}
         <div className="p-4 border-b flex justify-between items-center bg-blue-50/30">
            <h3 className="font-bold text-gray-700">Tài liệu dự thầu đã chọn</h3>
            {loadingFiles && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
         </div>
 
-        {/* Nội dung List File */}
         <div className="flex-1 overflow-y-auto p-4 flex flex-col">
            {projectFiles.length > 0 ? (
              <div className="space-y-2 w-full">
@@ -191,39 +166,41 @@ export const SelectionBrowser = ({ task }: SelectionBrowserProps) => {
                    <Plus className="w-8 h-8 text-gray-300" />
                 </div>
                 <p className="text-gray-500 text-sm">Chưa có tài liệu nào.</p>
-                <p className="text-xs text-gray-400">Chọn từ kho để thêm vào hồ sơ.</p>
+                {/* Ẩn dòng hướng dẫn nếu đang ReadOnly để đỡ gây hiểu nhầm */}
+                {!isReadOnly && <p className="text-xs text-gray-400">Chọn từ kho để thêm vào hồ sơ.</p>}
              </div>
            )}
         </div>
 
-        {/* Footer: Nút mở Modal */}
-        <div className="p-4 border-t bg-gray-50">
-           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-             <DialogTrigger asChild>
-               <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                 <Plus className="w-4 h-4 mr-2" />
-                 Chọn tài liệu từ Kho tài nguyên
-               </Button>
-             </DialogTrigger>
-             
-             <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0">
-                <div className="p-4 border-b">
-                   {/* (Đã sửa lỗi Accessibility): Dùng DialogTitle */}
-                   <DialogTitle className="text-lg font-bold text-gray-800">Kho tài nguyên chung</DialogTitle>
-                   <p className="text-sm text-gray-500">Chọn tài liệu mẫu để clone vào dự án</p>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                   <ResourceRepositoryBrowser 
-                      task={task} 
-                      preloadedTargetId={targetFolderId} 
-                      onSuccess={() => {
-                        fetchProjectFiles();
-                      }} 
-                   />
-                </div>
-             </DialogContent>
-           </Dialog>
-        </div>
+        {/* [QUAN TRỌNG] Footer: Ẩn nút thêm nếu ReadOnly */}
+        {!isReadOnly && (
+            <div className="p-4 border-t bg-gray-50">
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Chọn tài liệu từ Kho tài nguyên
+                    </Button>
+                </DialogTrigger>
+                
+                <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0">
+                    <div className="p-4 border-b">
+                        <DialogTitle className="text-lg font-bold text-gray-800">Kho tài nguyên chung</DialogTitle>
+                        <p className="text-sm text-gray-500">Chọn tài liệu mẫu để clone vào dự án</p>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                        <ResourceRepositoryBrowser 
+                            task={task} 
+                            preloadedTargetId={targetFolderId} 
+                            onSuccess={() => {
+                                fetchProjectFiles();
+                            }} 
+                        />
+                    </div>
+                </DialogContent>
+                </Dialog>
+            </div>
+        )}
       </div>
 
     </div>

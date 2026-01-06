@@ -16,7 +16,8 @@ import {
   PlayCircle,
   ShieldCheck,
   UserCog,
-  FolderClock, // [MỚI] Icon cho Kho dữ liệu thầu
+  FolderClock, 
+  ClipboardCheck, // [MỚI] Icon cho mục Duyệt bài
   type LucideIcon 
 } from "lucide-react";
 
@@ -66,12 +67,22 @@ export const sidebarRoutes: SidebarRoute[] = [
         href: "/bidding-projects-list",
         icon: PlayCircle 
       },
+      // --- KHU VỰC NHÂN VIÊN ---
       { 
         title: "Nhiệm vụ của tôi", 
         href: "/my-tasks",
         icon: CheckSquare,
-        // Chặn MANAGER và BID_MANAGER nhìn thấy mục này
-        roles: ["ADMIN", "SPECIALIST", "ENGINEER", "JKAN"] 
+        // [CẬP NHẬT] Chỉ ENGINEER và JKAN (Người làm) mới thấy
+        // Đã xóa SPECIALIST khỏi đây
+        roles: ["ADMIN", "ENGINEER", "JKAN"] 
+      },
+      // --- KHU VỰC QUẢN LÝ / REVIEWER ---
+      { 
+        title: "Duyệt bài", 
+        href: "/reviews",
+        icon: ClipboardCheck, // Icon phù hợp cho việc Review
+        // [MỚI] Chỉ SPECIALIST (Người duyệt) mới thấy
+        roles: ["ADMIN", "SPECIALIST"] 
       },
       { 
         title: "Nhiệm vụ dự án", 
@@ -89,7 +100,6 @@ export const sidebarRoutes: SidebarRoute[] = [
       { title: "Hồ sơ Pháp lý", href: "/resources/legal", icon: Scale },
       { title: "Hồ sơ Tài chính", href: "/resources/finance", icon: Landmark },
       { title: "Hợp đồng tương tự", href: "/resources/contracts", icon: FileText },
-      // [MỚI] Thêm mục Kho dữ liệu thầu (History Archive)
       { 
         title: "Kho dữ liệu thầu", 
         href: "/bidding-history", 

@@ -9,20 +9,30 @@ import {
   Bold, 
   Italic, 
   List, 
-  Link as LinkIcon, 
   Paperclip,
   Send,      
-  Loader2    
+  Loader2,
+  CheckCircle, // [MỚI] Icon Duyệt
+  XCircle      // [MỚI] Icon Từ chối
 } from "lucide-react";
 import { Task, TaskPriority, taskApi } from "@/entities/task";
 import { DiscussionThread } from "@/features/comment/discussion-thread";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button"; 
 import { useToast } from "@/shared/lib/hooks/use-toast"; 
+import { Textarea } from "@/shared/ui/textarea"; // [MỚI]
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/shared/ui/dialog"; // [MỚI]
 
 interface GeneralTabProps {
   task: Task;
-  onRefresh: () => void; // <--- [MỚI] Callback để reload data
+  onRefresh: () => void;
+  isReviewMode?: boolean; // <--- [MỚI] Cờ đánh dấu chế độ Duyệt
 }
 
 // Helper: Map Priority
@@ -42,40 +52,79 @@ const getStatusBadge = (status: string) => {
         case "IN_PROGRESS": return { label: "Đang thực hiện", bg: "bg-blue-100 text-blue-700 border-blue-200" };
         case "PENDING_REVIEW": return { label: "Chờ duyệt", bg: "bg-orange-100 text-orange-700 border-orange-200" };
         case "COMPLETED": return { label: "Hoàn thành", bg: "bg-green-100 text-green-700 border-green-200" };
+        case "REJECTED": return { label: "Đã từ chối", bg: "bg-red-100 text-red-700 border-red-200" }; // [MỚI] Thêm trạng thái Rejected
         default: return { label: status, bg: "bg-gray-100 text-gray-700" };
     }
 }
 
-export const GeneralTab = ({ task, onRefresh }: GeneralTabProps) => {
+export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTabProps) => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // State xử lý loading chung
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // State cho Dialog Từ chối
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const priorityInfo = getPriorityDisplay(task.priority);
   const statusInfo = getStatusBadge(task.status);
   
-  // Logic hiển thị Assignee (User hoặc Unit)
+  // Logic hiển thị Assignee
   const mainAssignment = task.assignments?.find(a => a.assignmentType === "MAIN");
   const assigneeName = mainAssignment?.user?.fullName 
     || mainAssignment?.unit?.unitName 
     || "Chưa phân công";
   const isUnitAssigned = !mainAssignment?.user && !!mainAssignment?.unit;
 
-  // --- HÀM GỬI DUYỆT ---
+  // --- 1. LOGIC NHÂN VIÊN: GỬI DUYỆT ---
   const handleSubmit = async () => {
     try {
-        setIsSubmitting(true);
-        // Gọi API submit
+        setIsProcessing(true);
         await taskApi.submit(task.id);
-        
         toast({ title: "Thành công", description: "Đã gửi yêu cầu duyệt.", className: "bg-green-600 text-white" });
-        
-        // Gọi callback để cha load lại dữ liệu
         onRefresh(); 
     } catch (error) {
         console.error(error);
         toast({ variant: "destructive", title: "Lỗi", description: "Không thể gửi báo cáo." });
     } finally {
-        setIsSubmitting(false);
+        setIsProcessing(false);
+    }
+  };
+
+  // --- 2. LOGIC QUẢN LÝ: DUYỆT BÀI ---
+  const handleApprove = async () => {
+    try {
+      setIsProcessing(true);
+      // Gọi API approve (status -> COMPLETED)
+      await taskApi.updateReviewStatus(task.id, "COMPLETED");
+      toast({ title: "Đã duyệt", description: "Công việc đã hoàn thành.", className: "bg-green-600 text-white" });
+      onRefresh();
+    } catch (error) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể duyệt bài." });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- 3. LOGIC QUẢN LÝ: TỪ CHỐI ---
+  const handleRejectConfirm = async () => {
+    if (!rejectReason.trim()) return toast({ variant: "destructive", description: "Vui lòng nhập lý do từ chối." });
+    
+    try {
+      setIsProcessing(true);
+      // Gọi API reject (status -> REJECTED hoặc IN_PROGRESS tùy BE, ở đây ta gửi REJECTED)
+      await taskApi.updateReviewStatus(task.id, "REJECTED");
+      // Có thể cần gọi thêm API comment để lưu lý do, nhưng tạm thời API status update chỉ nhận status
+      // Nếu API reject có body lý do riêng thì dùng hàm khác, ở đây ta giả định updateReviewStatus xử lý status trước.
+      
+      toast({ title: "Đã từ chối", description: "Đã yêu cầu chỉnh sửa." });
+      setIsRejectOpen(false);
+      onRefresh();
+    } catch (error) {
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể từ chối." });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -136,12 +185,15 @@ export const GeneralTab = ({ task, onRefresh }: GeneralTabProps) => {
                 </div>
             ) : null}
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 text-center hover:bg-gray-100 transition-colors cursor-pointer">
-                <CloudUpload className="w-8 h-8 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600">
-                    <span className="text-blue-600 font-semibold">Chọn file</span> hoặc kéo thả vào đây
-                </p>
-            </div>
+            {/* [QUAN TRỌNG] Ẩn vùng Upload nếu là Reviewer */}
+            {!isReviewMode && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 text-center hover:bg-gray-100 transition-colors cursor-pointer">
+                    <CloudUpload className="w-8 h-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600">
+                        <span className="text-blue-600 font-semibold">Chọn file</span> hoặc kéo thả vào đây
+                    </p>
+                </div>
+            )}
           </div>
 
           {/* 4. TRAO ĐỔI */}
@@ -158,40 +210,64 @@ export const GeneralTab = ({ task, onRefresh }: GeneralTabProps) => {
         {/* ================= CỘT PHẢI ================= */}
         <div className="lg:col-span-1 space-y-5">
           
-          {/* 1. TRẠNG THÁI & ACTION SUBMIT */}
+          {/* 1. TRẠNG THÁI & ACTIONS */}
           <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm space-y-4">
             <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
                 Trạng thái hiện tại
                 </label>
-                {/* [MỚI] Hiển thị Badge Read-only */}
                 <div className={cn("inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold border", statusInfo.bg)}>
                     {statusInfo.label}
                 </div>
             </div>
 
-            {/* [MỚI] NÚT GỬI DUYỆT: Chỉ hiện khi IN_PROGRESS */}
-            {task.status === "IN_PROGRESS" && (
+            {/* --- ACTION A: NHÂN VIÊN (GỬI DUYỆT) --- */}
+            {!isReviewMode && task.status === "IN_PROGRESS" && (
                 <div className="pt-2 border-t mt-3">
                     <Button 
                         onClick={handleSubmit} 
-                        disabled={isSubmitting}
+                        disabled={isProcessing}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition-all active:scale-95"
                     >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...
-                            </>
+                        {isProcessing ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang xử lý...</>
                         ) : (
-                            <>
-                                <Send className="w-4 h-4 mr-2" /> Gửi duyệt
-                            </>
+                            <><Send className="w-4 h-4 mr-2" /> Gửi duyệt</>
                         )}
                     </Button>
                     <p className="text-xs text-gray-400 mt-2 text-center">
                         Công việc sẽ chuyển sang trạng thái <strong>Chờ duyệt</strong>.
                     </p>
                 </div>
+            )}
+            
+            {/* --- ACTION B: QUẢN LÝ (DUYỆT / TỪ CHỐI) --- */}
+            {isReviewMode && task.status === "PENDING_REVIEW" && (
+                 <div className="pt-2 border-t mt-3 space-y-2">
+                    <Button 
+                        onClick={handleApprove} 
+                        disabled={isProcessing}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold shadow-sm"
+                    >
+                        {isProcessing ? <Loader2 className="animate-spin mr-2"/> : <CheckCircle className="mr-2 w-4 h-4"/>}
+                        Duyệt bài
+                    </Button>
+                    
+                    <Button 
+                        onClick={() => setIsRejectOpen(true)} 
+                        disabled={isProcessing}
+                        variant="outline"
+                        className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                    >
+                        <XCircle className="mr-2 w-4 h-4"/> Yêu cầu sửa lại
+                    </Button>
+                 </div>
+            )}
+
+            {isReviewMode && task.status === "COMPLETED" && (
+                 <div className="pt-2 border-t mt-3 text-center text-green-600 text-sm font-medium">
+                    <CheckCircle className="inline-block w-4 h-4 mr-1"/> Đã duyệt xong
+                 </div>
             )}
             
              {task.status === "OPEN" && (
@@ -254,6 +330,30 @@ export const GeneralTab = ({ task, onRefresh }: GeneralTabProps) => {
 
         </div>
       </div>
+
+      {/* DIALOG NHẬP LÝ DO TỪ CHỐI */}
+      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Yêu cầu chỉnh sửa</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+             <p className="text-sm text-gray-500 mb-2">Vui lòng nhập lý do hoặc nội dung cần chỉnh sửa:</p>
+             <Textarea 
+                value={rejectReason} 
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Ví dụ: Thiếu chữ ký trang 3..."
+                className="h-32"
+             />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>Hủy</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleRejectConfirm} disabled={isProcessing}>
+               {isProcessing ? "Đang gửi..." : "Gửi yêu cầu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
