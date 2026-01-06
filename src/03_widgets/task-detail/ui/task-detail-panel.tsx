@@ -7,9 +7,10 @@ import { DocumentsTab } from "./tabs/documents-tab";
 
 interface TaskDetailPanelProps {
   task: Task | null;
+  onRefresh: () => void; // <--- [MỚI] Nhận hàm refresh từ cha
 }
 
-export const TaskDetailPanel = ({ task }: TaskDetailPanelProps) => {
+export const TaskDetailPanel = ({ task, onRefresh }: TaskDetailPanelProps) => {
   if (!task) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400 bg-white">
@@ -24,7 +25,7 @@ export const TaskDetailPanel = ({ task }: TaskDetailPanelProps) => {
   return (
     <Tabs defaultValue="general" className="flex flex-col h-full bg-gray-50/50">
       
-      {/* --- HEADER: Chỉ chứa Project Context & Tabs Navigation --- */}
+      {/* --- HEADER --- */}
       <div className="bg-white border-b shrink-0">
         
         {/* 1. Project Breadcrumb */}
@@ -69,7 +70,8 @@ export const TaskDetailPanel = ({ task }: TaskDetailPanelProps) => {
       {/* --- CONTENT BODY --- */}
       <div className="flex-1 overflow-hidden bg-gray-50">
         <TabsContent value="general" className="h-full overflow-y-auto p-6 m-0 focus-visible:outline-none">
-          <GeneralTab task={task} />
+          {/* [QUAN TRỌNG] Truyền onRefresh xuống GeneralTab */}
+          <GeneralTab task={task} onRefresh={onRefresh} />
         </TabsContent>
         
         <TabsContent value="workspace" className="h-full overflow-y-auto p-6 m-0 focus-visible:outline-none">

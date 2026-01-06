@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cloneFileSchema, driveSearchResponseSchema } from "./schemas"; // Import schema mới
+import { cloneFileSchema, driveSearchResponseSchema } from "./schemas";
 
 export enum DriveItemType {
   FOLDER = "FOLDER",
@@ -17,12 +17,14 @@ export interface DriveItem {
   mimeType?: string;
   level?: number;
   
+  // [MỚI] Thêm dòng này để khớp với schema và sửa lỗi ở UI
+  webViewLink?: string;
+
   // Tag & Project Info
   tag?: string | null;            
   grantedByProject?: string | null;
 
   // [MỚI] Mảng ID cha (Dùng khi search để biết file nằm ở đâu)
-
   parentId?: string | null;   // API: parent_id
   parentName?: string | null; // API: parent_name
   parents?: string[];         // API: parents (mảng ID)
@@ -44,7 +46,6 @@ export interface DriveResponse {
 }
 
 // [MỚI] Type cho Response Search
-// (Sử dụng z.infer để đồng bộ hoàn toàn với Schema)
 export type DriveSearchResponse = z.infer<typeof driveSearchResponseSchema>;
 
 export interface InitDriveProjectDto {

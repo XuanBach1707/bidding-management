@@ -1,4 +1,4 @@
-import { http } from "@/shared/api";
+import { http } from "@/shared/api"; 
 import { CreateTaskDto, Task } from "../model/types";
 
 export type UpdateTaskDto = Partial<CreateTaskDto>;
@@ -14,12 +14,14 @@ export const taskApi = {
     return http.get("/tasks/user/me");
   },
 
-  /**
-   * [QUAN TRỌNG] Lấy danh sách task được giao ĐÍCH DANH (Màn hình My Workspace)
-   * GET /tasks/user/assigned
-   */
+  // Lấy danh sách task được giao (Sidebar)
   getAssignedTasks: (): Promise<Task[]> => {
     return http.get("/tasks/user/assigned");
+  },
+
+  // Lấy chi tiết Task
+  getDetail: (id: number): Promise<Task> => {
+    return http.get(`/tasks/${id}`);
   },
 
   // 3. Tạo task
@@ -27,28 +29,29 @@ export const taskApi = {
     return http.post("/tasks/", data);
   },
 
-  // 4. Update thông tin
+  // 4. Update thông tin chung
   update: (id: number, data: UpdateTaskDto): Promise<Task> => {
     return http.put(`/tasks/${id}`, data);
   },
 
-  /**
-   * [MỚI] Cập nhật trạng thái Task
-   * PATCH /tasks/{id}/status
-   */
+  // 5. Cập nhật trạng thái thủ công (Dành cho các case khác nếu cần)
   updateStatus: (id: number, status: string): Promise<any> => {
     return http.patch(`/tasks/${id}/status`, null, { 
       params: { status } 
     });
   },
 
-  // 5. Xóa
-  delete: (id: number): Promise<any> => {
-    return http.delete(`/tasks/${id}`);
+  /**
+   * [MỚI - QUAN TRỌNG] 
+   * Submit task để chuyển trạng thái từ IN_PROGRESS -> PENDING_REVIEW
+   * POST /tasks/{id}/submit
+   */
+  submit: (id: number): Promise<Task> => {
+    return http.post(`/tasks/${id}/submit`);
   },
 
-  // [BỔ SUNG] Hàm lấy chi tiết Task (Sửa lỗi property 'getDetail' does not exist)
-  getDetail: (id: number): Promise<Task> => {
-    return http.get(`/tasks/${id}`);
+  // 6. Xóa task
+  delete: (id: number): Promise<any> => {
+    return http.delete(`/tasks/${id}`);
   }
 };

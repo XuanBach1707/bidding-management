@@ -9,6 +9,7 @@ export const driveItemSchema = z.object({
   access: z.string(),
   mimeType: z.string().optional(),
   level: z.number().optional(),
+  webViewLink: z.string().url().optional(),
   
   // Các trường bổ sung
   tag: z.string().optional().nullable(), 
