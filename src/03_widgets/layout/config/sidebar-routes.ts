@@ -5,10 +5,10 @@ import {
   Database, 
   Settings, 
   FileText,
-  Users,
-  Truck,
-  Scale,
-  Landmark,
+  Users, // Có thể bỏ nếu không dùng nữa, hoặc cứ để đó
+  Truck, // Có thể bỏ
+  Scale, // Có thể bỏ
+  Landmark, // Có thể bỏ
   Bot,
   Filter,
   History,
@@ -17,7 +17,10 @@ import {
   ShieldCheck,
   UserCog,
   FolderClock, 
-  ClipboardCheck, // [MỚI] Icon cho mục Duyệt bài
+  ClipboardCheck,
+  // [MỚI] Thêm icon cho 3 menu mới
+  PieChart, 
+  FolderOpen,
   type LucideIcon 
 } from "lucide-react";
 
@@ -72,16 +75,15 @@ export const sidebarRoutes: SidebarRoute[] = [
         title: "Nhiệm vụ của tôi", 
         href: "/my-tasks",
         icon: CheckSquare,
-        // [CẬP NHẬT] Chỉ ENGINEER và JKAN (Người làm) mới thấy
-        // Đã xóa SPECIALIST khỏi đây
+        // Chỉ ENGINEER và JKAN (Người làm) mới thấy
         roles: ["ADMIN", "ENGINEER", "JKAN"] 
       },
       // --- KHU VỰC QUẢN LÝ / REVIEWER ---
       { 
         title: "Duyệt bài", 
         href: "/reviews",
-        icon: ClipboardCheck, // Icon phù hợp cho việc Review
-        // [MỚI] Chỉ SPECIALIST (Người duyệt) mới thấy
+        icon: ClipboardCheck,
+        // Chỉ SPECIALIST (Người duyệt) mới thấy
         roles: ["ADMIN", "SPECIALIST"] 
       },
       { 
@@ -91,18 +93,24 @@ export const sidebarRoutes: SidebarRoute[] = [
       },
     ],
   },
+  // [CẬP NHẬT] Module Kho Tài nguyên theo cấu trúc FSD mới
   {
     title: "Kho Tài nguyên",
     icon: Database,
     children: [
-      { title: "Hồ sơ Nhân sự", href: "/resources/human", icon: Users },
-      { title: "Máy móc thiết bị", href: "/resources/equipment", icon: Truck },
-      { title: "Hồ sơ Pháp lý", href: "/resources/legal", icon: Scale },
-      { title: "Hồ sơ Tài chính", href: "/resources/finance", icon: Landmark },
-      { title: "Hợp đồng tương tự", href: "/resources/contracts", icon: FileText },
       { 
-        title: "Kho dữ liệu thầu", 
-        href: "/bidding-history", 
+        title: "Tổng quan tài nguyên", 
+        href: "/resources/overview", // Trỏ vào Page 1
+        icon: PieChart 
+      },
+      { 
+        title: "Kho tài liệu chung", 
+        href: "/resources/repository", // Trỏ vào Page 2 (Chứa Grid Folder & List File)
+        icon: FolderOpen 
+      },
+      { 
+        title: "Lịch sử lưu trữ", 
+        href: "/resources/history", // Trỏ vào Page 3 (Dropdown năm)
         icon: FolderClock 
       },
     ],
