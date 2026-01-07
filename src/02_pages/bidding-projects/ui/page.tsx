@@ -214,8 +214,33 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     <Download className="w-4 h-4" /> Xuất báo cáo
                 </Button>
                 
-                <Button className="gap-2 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm shadow-blue-200">
-                    <CheckCircle2 className="w-4 h-4" /> Tổng hợp hồ sơ & Nộp
+                {/* Nút: Mở kho hồ sơ (Thay thế logic cũ) */}
+                <Button 
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm shadow-blue-200"
+                    onClick={() => {
+                        // Kiểm tra xem có ID thư mục không
+                        const folderId = project.driveFolderId || (project as any).drive_folder_id; // Fallback nếu mapper chưa chạy
+                        
+                        if (folderId) {
+                            // Mở link folder Google Drive trong tab mới
+                            window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
+                            
+                            toast({ 
+                                title: "Đang chuyển hướng", 
+                                description: "Đang mở kho lưu trữ trên Google Drive...",
+                                className: "bg-green-600 text-white border-none"
+                            });
+                        } else {
+                            toast({ 
+                                variant: "destructive", 
+                                title: "Không tìm thấy liên kết", 
+                                description: "Dự án này chưa được liên kết với thư mục Drive nào." 
+                            });
+                        }
+                    }}
+                >
+                    {/* Đổi icon thành ExternalLink hoặc FolderOpen cho đúng ngữ nghĩa */}
+                    <CheckCircle2 className="w-4 h-4" /> Tổng hợp hồ sơ & Tải
                 </Button>
 
                 <DropdownMenu>
