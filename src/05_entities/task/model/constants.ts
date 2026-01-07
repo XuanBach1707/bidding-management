@@ -36,7 +36,7 @@ export const TASK_PRIORITY_CONFIG: Record<z.infer<typeof TaskPriorityEnum>, { la
   LOW: { label: "Thấp", color: "text-slate-500 bg-slate-100 border-slate-200" },
 };
 
-// 3. Config cho Tag
+// 3. Config cho Tag (Đã sửa lỗi thiếu key)
 export const TASK_TAG_LABEL: Record<z.infer<typeof TaskTagEnum>, string> = {
   LEGAL: "Pháp lý",
   FINANCE: "Tài chính",
@@ -44,10 +44,15 @@ export const TASK_TAG_LABEL: Record<z.infer<typeof TaskTagEnum>, string> = {
   CONTRACT: "Hợp đồng",
   DEVICE: "Thiết bị",
   HR: "Nhân sự",
-  OTHER: "Khác"
+  OTHER: "Khác",
+  
+  // Các Key mới thêm vào Enum
+  DBTC: "Bảo lãnh / CKTD",
+  VT: "Vật tư",
+  GIA: "Hồ sơ Giá"
 };
 
-// 4. Config cho Type (Để hiển thị Icon nếu cần)
+// 4. Config cho Type
 export const TASK_TYPE_LABEL: Record<z.infer<typeof TaskTypeEnum>, string> = {
   AUTO: "Tự động",
   SELECTION: "Chọn lọc",

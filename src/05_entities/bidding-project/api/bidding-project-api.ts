@@ -1,5 +1,10 @@
 import { http } from "@/shared/api";
-import { BiddingProject, CreateBiddingProjectDto, BiddingPackage } from "../model/types";
+import { 
+  BiddingProject, 
+  CreateBiddingProjectDto, 
+  BiddingPackage,
+  ProjectPersonnel // [MỚI] Import thêm type này
+} from "../model/types";
 
 export const biddingProjectApi = {
   /**
@@ -37,7 +42,6 @@ export const biddingProjectApi = {
   /**
    * GET /bidding-packages/by-project/{projectId}
    * Lấy thông tin gói thầu E-HSMT liên kết với dự án
-   * (SỬA: Type trả về là BiddingPackage chuẩn camelCase)
    */
   getByProject: (projectId: number): Promise<{ data: BiddingPackage }> => {
     return http.get(`/bidding-packages/by-project/${projectId}`);
@@ -49,5 +53,14 @@ export const biddingProjectApi = {
    */
   delete: (id: number): Promise<void> => {
     return http.delete(`/bidding-projects/${id}/`) as Promise<void>;
-  }
+  },
+
+  /**
+   * [MỚI] GET /bidding-projects/{id}/personnel
+   * Lấy danh sách nhân sự (Thay thế cho màn Kanban cũ)
+   */
+  getPersonnel: async (projectId: number): Promise<ProjectPersonnel[]> => {
+    const res = await http.get(`/bidding-projects/${projectId}/personnel`);
+    return res as any; 
+  },
 };

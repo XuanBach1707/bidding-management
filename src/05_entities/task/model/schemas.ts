@@ -25,7 +25,7 @@ export const TaskStatusEnum = z.enum([
 
 export const TaskPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
 
-// [CẬP NHẬT] Thêm các tag mới vào Enum
+// [QUAN TRỌNG] Đã cập nhật đủ các Tag mới để khớp với Constants
 export const TaskTagEnum = z.enum([
   "LEGAL",    // Hồ sơ pháp lý
   "FINANCE",  // Hồ sơ tài chính
@@ -46,13 +46,27 @@ export const TaskTypeEnum = z.enum([
 ]);
 
 // --- SUB-SCHEMA: Task Assignment ---
+// [QUAN TRỌNG] Đã thêm user và unit để hứng dữ liệu tên nhân viên
 export const TaskAssignmentSchema = z.object({
+  assignmentId: z.number().optional(), // API trả về assignment_id
   assignedUnitId: z.number(), 
   requiredRole: UserRoleEnum.default("SPECIALIST"),
   requiredMinSecurity: z.number().default(2), 
   assignmentType: AssignmentTypeEnum.default("MAIN"),
   assignedUserId: z.number().nullable().optional(),
   isAccepted: z.boolean().default(false),
+
+  // Object User (Interceptor sẽ camelCase: full_name -> fullName)
+  user: z.object({
+    fullName: z.string().optional(),
+    email: z.string().optional(),
+    avatarUrl: z.string().optional(),
+  }).nullable().optional(),
+
+  // Object Unit (Interceptor: unit_name -> unitName)
+  unit: z.object({
+    unitName: z.string().optional(),
+  }).nullable().optional(),
 });
 
 // --- MAIN SCHEMA: Create Task ---

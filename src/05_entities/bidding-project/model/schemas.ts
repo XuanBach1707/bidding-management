@@ -1,16 +1,14 @@
 import { z } from "zod";
 
 // =============================================================================
-// 1. ZOD SCHEMA (VALIDATION)
+// ZOD SCHEMA (VALIDATION FORM TẠO MỚI)
 // =============================================================================
 export const createBiddingProjectSchema = z.object({
   name: z.string().min(5, "Tên dự án phải có ít nhất 5 ký tự"),
   
   status: z.string().optional(), 
   
-  // [SỬA LỖI] Thay vì truyền config vào trong, ta dùng chain method .min()
-  // Lý do: coerce.number() sẽ biến chuỗi rỗng "" thành 0. 
-  // .min(1) sẽ chặn được cả trường hợp chưa chọn (0) và trường hợp chọn sai.
+  // Dùng coerce.number().min(1) để ép kiểu và validate select box
   sourcePackageId: z.coerce.number()
     .min(1, "Vui lòng chọn gói thầu nguồn"), 
 });

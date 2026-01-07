@@ -1,9 +1,8 @@
 // 1. API Service
-// (Lưu ý: Tên file lúc nãy ta tạo là task.api.ts nên import từ task.api)
 export { taskApi } from "./api/task-api"; 
-export type { UpdateTaskDto } from "./api/task-api"; // [MỚI] Export thêm DTO Update
+export type { UpdateTaskDto } from "./api/task-api";
 
-// 2. Schemas & Enums (Dùng để validate hoặc định nghĩa schema form)
+// 2. Schemas & Enums (Dùng để validate)
 export {
   CreateTaskSchema,
   TaskAssignmentSchema,
@@ -13,23 +12,29 @@ export {
   TaskStatusEnum,
   TaskPriorityEnum,
   TaskTagEnum,
-  TaskTypeEnum        // <--- [MỚI] Schema Zod cho TaskType
+  TaskTypeEnum
 } from "./model/schemas";
 
-// 3. Values (Dùng làm hằng số, ví dụ: TaskType.DRAFTING)
+// 3. Constants & Configs (QUAN TRỌNG: Để dùng Label, Color ở UI)
+export { 
+  TASK_STATUS_CONFIG,
+  TASK_PRIORITY_CONFIG,
+  TASK_TAG_LABEL,
+  TASK_TYPE_LABEL
+} from "./model/constants"; 
+
+// 4. Enum Values (Dùng làm hằng số so sánh logic)
 export { 
   TaskPriority, 
   TaskTag,
-  TaskType,           // <--- [MỚI] Giá trị Enum cho Dropdown
-  AssignmentType      // <--- [FIX LỖI] Export object AssignmentType
+  TaskType,
+  AssignmentType 
 } from "./model/types";
 
-// 4. Interfaces & Types (Dùng để định nghĩa kiểu dữ liệu TS)
+// 5. Interfaces & Types (Kiểu dữ liệu TypeScript)
 export type {
   CreateTaskDto,
   TaskAssignment,
   TaskStatus,
   Task,
-  
-        // <--- [MỚI] Kiểu dữ liệu TaskType
 } from "./model/types";

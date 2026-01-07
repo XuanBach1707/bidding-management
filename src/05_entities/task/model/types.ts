@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { 
   CreateTaskSchema, 
-  TaskAssignmentSchema, 
+  TaskAssignmentSchema, // Import Schema vừa sửa
   TaskStatusEnum,
   AssignmentTypeEnum, 
   UserRoleEnum,
@@ -24,29 +24,13 @@ export type TaskTag = z.infer<typeof TaskTagEnum>;
 export type TaskType = z.infer<typeof TaskTypeEnum>;
 
 // 3. Entity Interfaces
-export interface TaskAssignment {
-  assignmentId: number;
-  assignedUnitId: number;
-  assignedUserId: number | null;
-  assignmentType: z.infer<typeof AssignmentTypeEnum>;
-  requiredRole: z.infer<typeof UserRoleEnum>;
-  requiredMinSecurity: number;
-  isAccepted: boolean;
-  
-  user?: {
-    fullName?: string;
-    email?: string;
-    avatarUrl?: string;
-  } | null;
 
-  unit?: {
-    unitName?: string;
-  } | null;
-}
+// [TỐI ƯU] Lấy type trực tiếp từ Schema để đảm bảo có field user và unit
+export type TaskAssignment = z.infer<typeof TaskAssignmentSchema>;
 
 export interface Task extends Omit<CreateTaskDto, 'assignments'> {
   id: number;
-  assignments: TaskAssignment[]; 
+  assignments: TaskAssignment[]; // Tự động nhận type có user, unit
   subTasks: Task[]; 
   createdAt?: string;
   updatedAt?: string;
