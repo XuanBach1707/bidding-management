@@ -4,35 +4,9 @@ import {
   ResourceStats, 
   ResourceFolderResponse, 
   ResourceItem,
+  HistoryFilterOptions,
+  BiddingHistoryResponse
 } from "../model/types";
-
-// ==========================================
-// ĐỊNH NGHĨA TYPE (CAMELCASE DO INTERCEPTOR)
-// ==========================================
-
-// 1. Type cho Lịch sử dự án
-export interface BiddingHistoryItem {
-  hsmtId: number;      // Backend: hsmt_id -> Interceptor -> Frontend: hsmtId
-  maTbmt: string;      // Backend: ma_tbmt -> maTbmt
-  tenDuAn: string;     // Backend: ten_du_an -> tenDuAn
-  chuDauTu: string;    // Backend: chu_dau_tu -> chuDauTu
-  linhVuc: string;     // Backend: linh_vuc -> linhVuc
-  nam: number;
-}
-
-export interface BiddingHistoryResponse {
-  items: BiddingHistoryItem[];
-  total: number;
-  page: number;
-  size: number;
-  pages: number;
-}
-
-// 2. Type cho Bộ lọc
-export interface HistoryFilterOptions {
-  years: number[];
-  investors: string[];
-}
 
 // ==========================================
 // API IMPLEMENTATION
@@ -44,19 +18,27 @@ export const resourceApi = {
    */
   getStats: async (): Promise<ResourceStats> => {
     try {
-      // Interceptor trả về body response đã camelCase
+      // Interceptor trả về body response đã camelCase:
+      // { totalRepoFiles: 34, breakdown: [...], ... }
       const res = await http.get("/drive/stats/count", {
-        params: { folder_id: RESOURCE_REPO_ROOT_ID } // Interceptor sẽ tự convert folder_id -> folder_id (nếu cấu hình) hoặc giữ nguyên tùy snakecase-keys
+        params: { folder_id: RESOURCE_REPO_ROOT_ID } 
       }) as any;
 
       return {
+        // Map totalRepoFiles -> totalFiles
         totalFiles: res?.totalRepoFiles || 0,
+        
+        // [QUAN TRỌNG] Map mảng breakdown để vẽ biểu đồ
+        breakdown: res?.breakdown || [],
+
+        // Các số liệu giả lập (Giữ lại vì API chưa trả về)
         totalSizeLabel: "45.2 GB", 
         filesChangePercentage: 12
       };
     } catch (error) {
       console.error("Resource Stats Error:", error);
-      return { totalFiles: 0 };
+      // Trả về object rỗng an toàn để không crash UI
+      return { totalFiles: 0, breakdown: [] };
     }
   },
 
@@ -64,7 +46,6 @@ export const resourceApi = {
    * 2. Lấy nội dung thư mục Drive
    */
   getFolderContent: async (folderId: string = RESOURCE_REPO_ROOT_ID): Promise<ResourceFolderResponse> => {
-    // Interceptor return: response.data (đã camelCase)
     return http.get(`/drive/folder/${folderId}`);
   },
 
@@ -79,12 +60,11 @@ export const resourceApi = {
       }
     }) as any;
     
-    // API cũ của bạn có thể trả về trực tiếp mảng hoặc object chứa data
     return res.data || [];
   },
 
   /**
-   * 4. Lấy danh sách Folder gốc
+   * 4. Lấy danh sách Folder gốc (History Years)
    */
   getHistoryYears: async (): Promise<ResourceItem[]> => {
     try {
@@ -98,19 +78,12 @@ export const resourceApi = {
   },
 
   /**
-   * 5. [MỚI] Lấy lịch sử năng lực dự án (Portfolio)
-   * API: GET /bidding-packages/history
+   * 5. Lấy lịch sử năng lực dự án (Portfolio)
    */
   getBiddingHistory: async (params?: any): Promise<BiddingHistoryResponse> => {
     try {
-      /* Flow dữ liệu:
-         1. API trả về: { "success": true, "data": { "items": [{ "hsmt_id": ... }] } }
-         2. Interceptor convert: { "success": true, "data": { "items": [{ "hsmtId": ... }] } }
-         3. Hàm này nhận 'res' là object ở bước 2.
-      */
       const res = await http.get("/bidding-packages/history", { params }) as any;
       
-      // Lấy dữ liệu từ property .data
       return res.data || { 
         items: [], 
         total: 0, 
@@ -125,17 +98,11 @@ export const resourceApi = {
   },
 
   /**
-   * 6. [MỚI] Lấy danh sách options cho bộ lọc
-   * API: GET /bidding-packages/history/filters
+   * 6. Lấy danh sách options cho bộ lọc
    */
   getHistoryFilters: async (): Promise<HistoryFilterOptions> => {
     try {
-      /*
-         API trả: { "success": true, "data": { "years": [...], "investors": [...] } }
-         Interceptor convert: "data" -> "data" (giữ nguyên vì deep check)
-      */
       const res = await http.get("/bidding-packages/history/filters") as any;
-      
       return res.data || { years: [], investors: [] };
     } catch (error) {
       console.error("Get History Filters Error:", error);

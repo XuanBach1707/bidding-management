@@ -4,7 +4,9 @@ export type {
     ResourceFolderResponse,
     ResourceStats,
     ApiStatsResponse,
-    // Các type mới cho Lịch sử thầu
+    // [MỚI] Type cho item biểu đồ
+    ResourceBreakdownItem,
+    // Các type cho Lịch sử thầu
     BiddingHistoryItem,
     BiddingHistoryResponse,
     HistoryFilterOptions
@@ -15,7 +17,9 @@ export {
     resourceItemSchema,
     resourceFolderResponseSchema,
     resourceStatsSchema,
-    // Các schema mới cho Lịch sử thầu
+    // [MỚI] Schema cho item biểu đồ
+    resourceBreakdownItemSchema,
+    // Các schema cho Lịch sử thầu
     biddingHistoryItemSchema,
     biddingHistoryResponseSchema,
     historyFilterOptionsSchema
@@ -27,6 +31,8 @@ export {
 } from "./model/constants";
 
 // 4. Export API Instance
+// [LƯU Ý] Kiểm tra lại tên file thực tế của bạn là 'resource-api' hay 'resource' 
+// (trong đoạn code trước tôi thấy bạn dùng tên file là resource.ts, nhưng ở đây bạn import resource-api)
 export { 
     resourceApi 
 } from "./api/resource-api";

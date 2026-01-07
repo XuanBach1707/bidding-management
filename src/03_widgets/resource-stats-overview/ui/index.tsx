@@ -10,12 +10,11 @@ import {
 import { ResourceKpiCards } from "./kpi-cards";
 import { StructureChart } from "./structure-chart";
 import { ActivityChart } from "./activity-chart";
-// [MỚI] Import component RecentFiles
 import { RecentFiles } from "./recent-files"; 
 
 export const ResourceStatsOverview = () => {
   const [stats, setStats] = useState<ResourceStats | null>(null);
-  const [recentFiles, setRecentFiles] = useState<ResourceItem[]>([]); // [MỚI] State lưu file
+  const [recentFiles, setRecentFiles] = useState<ResourceItem[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +22,6 @@ export const ResourceStatsOverview = () => {
       try {
         setIsLoading(true);
         
-        // Gọi song song 2 API để tiết kiệm thời gian
         const [statsData, folderData] = await Promise.all([
           resourceApi.getStats(),
           resourceApi.getFolderContent(RESOURCE_REPO_ROOT_ID)
@@ -31,7 +29,6 @@ export const ResourceStatsOverview = () => {
 
         setStats(statsData);
         
-        // Lọc chỉ lấy FILE (bỏ Folder) để hiển thị ở bảng "Tập tin gần đây"
         const onlyFiles = (folderData.data || []).filter(item => item.type !== "FOLDER");
         setRecentFiles(onlyFiles);
 
@@ -53,14 +50,18 @@ export const ResourceStatsOverview = () => {
       {/* 2. Phần biểu đồ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-           <StructureChart />
+           {/* [SỬA] Truyền dữ liệu thật vào đây */}
+           <StructureChart 
+              data={stats?.breakdown} 
+              isLoading={isLoading} 
+           />
         </div>
         <div className="lg:col-span-2">
            <ActivityChart />
         </div>
       </div>
 
-      {/* 3. [MỚI] Phần Tập tin gần đây -> Lấp chỗ trống phía dưới */}
+      {/* 3. Phần Tập tin gần đây */}
       <RecentFiles files={recentFiles} isLoading={isLoading} />
     </div>
   );
