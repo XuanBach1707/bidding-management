@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Task, taskApi } from "@/entities/task"; 
-import { TaskItem } from "./task-item"; // Tái sử dụng UI Item từ Entities
-import { Loader2, Search, CheckCircle } from "lucide-react"; // Import icon
+import { TaskItem } from "./task-item"; 
+import { Loader2, Search, CheckCircle } from "lucide-react"; 
 import { Input } from "@/shared/ui/input";
 
 interface ReviewTaskListProps {
@@ -21,9 +21,35 @@ export const ReviewTaskList = ({ onSelectTask, selectedTaskId }: ReviewTaskListP
     const fetchTasks = async () => {
       try {
         setLoading(true);
-        // [QUAN TRỌNG] Gọi API dành riêng cho Reviewer
-        const data = await taskApi.getReviewerList();
-        setTasks(data);
+        // Dữ liệu thô từ API (Dạng cây, lẫn lộn status)
+        const rawData = await taskApi.getReviewerList();
+        
+        // [LOGIC DỌN DẸP] Làm phẳng mảng và chỉ lấy PENDING_REVIEW
+        const cleanList: Task[] = [];
+
+        // Hàm đệ quy để duyệt cây
+        const flattenReviewTasks = (items: Task[]) => {
+          items.forEach(item => {
+            // 1. Kiểm tra chính nó: Nếu status là PENDING_REVIEW -> Lấy
+            // (Lưu ý: Interceptor đã chuyển status thành chữ hoa chưa? Check kỹ log, thường là hoa)
+            if (item.status === "PENDING_REVIEW") {
+              cleanList.push(item);
+            }
+
+            // 2. Nếu nó có con (subTasks) -> Đào tiếp vào trong
+            // Interceptor của bạn chuyển sub_tasks -> subTasks (camelCase)
+            if (item.subTasks && item.subTasks.length > 0) {
+              flattenReviewTasks(item.subTasks);
+            }
+          });
+        };
+
+        // Bắt đầu dọn dẹp
+        flattenReviewTasks(rawData);
+
+        // Set danh sách đã dọn dẹp vào state
+        setTasks(cleanList);
+
       } catch (error) {
         console.error("Lỗi tải danh sách duyệt:", error);
       } finally {
@@ -33,7 +59,7 @@ export const ReviewTaskList = ({ onSelectTask, selectedTaskId }: ReviewTaskListP
     fetchTasks();
   }, []);
 
-  // --- 2. Filter Client-side ---
+  // --- 2. Filter Client-side (Tìm kiếm trên danh sách đã dọn) ---
   const filteredTasks = tasks.filter(t => {
     const tName = t.taskName?.toLowerCase() || "";
     const pName = t.projectName?.toLowerCase() || "";
@@ -43,7 +69,7 @@ export const ReviewTaskList = ({ onSelectTask, selectedTaskId }: ReviewTaskListP
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
-      {/* Header màu CAM để phân biệt mode Duyệt */}
+      {/* ... (Phần Header giữ nguyên) ... */}
       <div className="p-4 border-b bg-orange-50 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-orange-800 flex items-center gap-2">
