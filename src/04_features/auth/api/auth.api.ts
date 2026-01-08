@@ -1,81 +1,66 @@
 import { z } from "zod";
+import { http, type ApiResponse } from "@/shared/api";
 
-// Import từ Public API
-import { 
-  http, 
-  UserSchema, 
-  type User, 
-  type ApiResponse 
-} from "@/shared/api"; 
-
-
-
-
+// [SỬA 1] Import User và UserSchema từ Entity thay vì Shared
+// Để đảm bảo data trả về khớp hoàn toàn với những gì AuthContext cần
+import { User, UserSchema } from "@/entities/user";
 
 // ----------------------------------------------------------------------
 // 1. ĐỊNH NGHĨA SCHEMA & TYPE
 // ----------------------------------------------------------------------
 
-// Request: Login
 export const LoginRequestSchema = z.object({
   email: z.string().email({ message: "Email không hợp lệ" }),
   password: z.string().min(1, { message: "Vui lòng nhập mật khẩu" }),
 });
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
-// Response: Login Data
 export const LoginResponseSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string().optional(),
   expiresIn: z.number().optional(), 
+  // [SỬA 2] Sử dụng UserSchema của Entity (có userId, securityClearance...)
   user: UserSchema, 
 });
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 // ----------------------------------------------------------------------
-// 2. SERVICE API (Đã sửa logic check lỗi)
+// 2. SERVICE API
 // ----------------------------------------------------------------------
 
 export const authApi = {
   /**
    * Đăng nhập
-   * POST /auth/login
    */
   login: async (data: LoginRequest) => {
-    // 1. Gọi API
-    // Interceptor của bạn đã trả về response.data (tức là cái body JSON {success, data...})
-    // Nên biến 'response' ở đây chính là ApiResponse<LoginResponse>
+    // ApiResponse<LoginResponse> sẽ dùng User chuẩn của Entity
     const response = await http.post<any, ApiResponse<LoginResponse>>(
       "/auth/login", 
       data
     );
     
-    // 2. [QUAN TRỌNG] Kiểm tra logic nghiệp vụ
-    // Dù HTTP Status là 200, nhưng success có thể là false (vd: sai pass)
     if (!response.success) {
         throw new Error(response.message || "Đăng nhập thất bại");
     }
 
-    // 3. Kiểm tra data null để an toàn tuyệt đối cho TypeScript
     if (!response.data) {
         throw new Error("Không nhận được dữ liệu từ hệ thống");
     }
 
-    // 4. Trả về data "sạch" (LoginResponse)
     return response.data; 
   },
 
   /**
    * Lấy Profile (khi F5)
-   * GET /auth/me
    */
-  getMe: async () => {
+  // [SỬA 3] Định nghĩa rõ kiểu trả về là Promise<User> (Entity User)
+  getMe: async (): Promise<User> => {
+    // Gọi API, ép kiểu response data về User chuẩn
     const response = await http.get<any, ApiResponse<User>>(
       "/auth/me"
     );
 
     if (!response.success) {
-        // Có thể ném lỗi để React Query retry hoặc redirect login
         throw new Error(response.message || "Không thể lấy thông tin người dùng");
     }
 
@@ -88,10 +73,8 @@ export const authApi = {
 
   /**
    * Đăng xuất
-   * POST /auth/logout
    */
   logout: async () => {
-    // Logout thì lỏng lẻo hơn, chỉ cần gọi lên server báo 1 tiếng
     return http.post<any, ApiResponse<any>>("/auth/logout");
   }
 };

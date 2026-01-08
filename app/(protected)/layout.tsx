@@ -1,5 +1,8 @@
+"use client";
+
 import AuthGuard from "@/features/auth/ui/auth-guard";
 import { Sidebar } from "@/widgets/layout/ui/sidebar";
+import { AuthProvider } from "@/features/auth/model/auth-context"; // [MỚI] Import Provider
 
 export default function DashboardLayout({
   children,
@@ -7,32 +10,30 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard>
-      {/* 1. CONTAINER CHA: Dùng Flex để dàn 2 cột ngang */}
-      {/* h-screen: Chiều cao bằng đúng màn hình */}
-      {/* overflow-hidden: Chặn thanh cuộn của cả trang (để cuộn riêng từng vùng) */}
-      <div className="flex h-screen w-full overflow-hidden bg-gray-100">
-        
-        {/* 2. CỘT TRÁI (SIDEBAR WRAPPER) */}
-        {/* w-[250px]: Chiều rộng cố định */}
-        {/* flex-shrink-0: Không cho phép bị co lại khi màn hình nhỏ */}
-        {/* border-r: Tạo đường kẻ ngăn cách */}
-        <aside className="w-[250px] flex-shrink-0 border-r bg-white">
-           {/* Sidebar của bạn nằm gọn trong này */}
-           <Sidebar />
-        </aside>
+    /* 1. Bọc AuthProvider ở ngoài cùng của Layout này.
+      Lý do: Sidebar (con của nó) dùng useAuth, nên cần Provider cung cấp context.
+    */
+    <AuthProvider>
+      {/* 2. Bọc AuthGuard để chặn người chưa đăng nhập.
+        Nếu chưa login -> Đá về trang login (không hiện nội dung bên trong).
+      */}
+      <AuthGuard>
+        <div className="flex h-screen w-full overflow-hidden bg-gray-100">
+          
+          {/* CỘT TRÁI (SIDEBAR) */}
+          <aside className="w-[250px] flex-shrink-0 border-r bg-white shadow-sm z-10">
+             <Sidebar />
+          </aside>
 
-        {/* 3. CỘT PHẢI (MAIN CONTENT) */}
-        {/* flex-1: Chiếm toàn bộ khoảng trắng còn lại */}
-        {/* overflow-y-auto: Nếu nội dung dài, thanh cuộn sẽ hiện Ở ĐÂY chứ không hiện ở body */}
-        <main className="flex-1 overflow-y-auto">
-           {/* Padding nội dung */}
-           <div className="p-8">
-               {children}
-           </div>
-        </main>
-        
-      </div>
-    </AuthGuard>
+          {/* CỘT PHẢI (MAIN CONTENT) */}
+          <main className="flex-1 overflow-y-auto bg-slate-50 relative">
+             <div className="p-8 min-h-full">
+                 {children}
+             </div>
+          </main>
+          
+        </div>
+      </AuthGuard>
+    </AuthProvider>
   );
 }
