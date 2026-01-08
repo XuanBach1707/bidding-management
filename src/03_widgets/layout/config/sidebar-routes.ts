@@ -4,11 +4,7 @@ import {
   Briefcase, 
   Database, 
   Settings, 
-  FileText,
-  Users, // Có thể bỏ nếu không dùng nữa, hoặc cứ để đó
-  Truck, // Có thể bỏ
-  Scale, // Có thể bỏ
-  Landmark, // Có thể bỏ
+  Users, 
   Bot,
   Filter,
   History,
@@ -32,16 +28,38 @@ export interface SidebarRoute {
   children?: SidebarRoute[];
 }
 
+// Định nghĩa Constant cho Role để tránh gõ sai (Typo)
+const ROLES = {
+  ADMIN: "ADMIN",
+  MANAGER: "MANAGER",          // Giám đốc / Quản lý chung
+  BID_MANAGER: "BID_MANAGER",  // Trưởng phòng thầu
+  SPECIALIST: "SPECIALIST",    // Trưởng phòng chuyên môn (Cập nhật quyền quản lý)
+  ENGINEER: "ENGINEER",        // Nhân viên kỹ thuật
+  JKAN: "JKAN",                // Role mới (Ngang hàng Engineer)
+};
+
 export const sidebarRoutes: SidebarRoute[] = [
+  // 1. TỔNG QUAN: Ai cũng được vào
   {
     title: "Tổng quan",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["ADMIN", "MANAGER", "BID_MANAGER", "SPECIALIST", "ENGINEER", "JKAN"],
+    roles: [
+      ROLES.ADMIN, 
+      ROLES.MANAGER, 
+      ROLES.BID_MANAGER, 
+      ROLES.SPECIALIST, 
+      ROLES.ENGINEER, 
+      ROLES.JKAN
+    ],
   },
+
+  // 2. CƠ HỘI ĐẤU THẦU: Chỉ dành cho cấp Quản lý & Admin
+  // (Engineer và JKAN không cần thấy mục này để đỡ rối)
   {
     title: "Cơ hội đấu thầu",
     icon: Search,
+    roles: [ROLES.ADMIN, ROLES.BID_MANAGER, ROLES.SPECIALIST], 
     children: [
       { 
         title: "Tra cứu gói thầu", 
@@ -57,80 +75,111 @@ export const sidebarRoutes: SidebarRoute[] = [
         title: "Cấu hình Bot", 
         href: "/bot-config", 
         icon: Bot,
-        roles: ["ADMIN"] 
+        roles: [ROLES.ADMIN] // Chỉ Admin chỉnh Bot
       },
     ],
   },
+
+  // 3. QUẢN LÝ DỰ ÁN
   {
     title: "Quản lý Dự án",
     icon: Briefcase,
+    roles: [
+      ROLES.ADMIN, 
+      ROLES.MANAGER, 
+      ROLES.BID_MANAGER, 
+      ROLES.SPECIALIST, 
+      ROLES.ENGINEER, 
+      ROLES.JKAN
+    ],
     children: [
       { 
         title: "Dự án đang chạy", 
         href: "/bidding-projects-list",
-        icon: PlayCircle 
+        icon: PlayCircle,
+        // Ai cũng xem được danh sách dự án
       },
-      // --- KHU VỰC NHÂN VIÊN ---
+      // --- KHU VỰC THỰC THI (NHÂN VIÊN) ---
       { 
         title: "Nhiệm vụ của tôi", 
         href: "/my-tasks",
         icon: CheckSquare,
-        // Chỉ ENGINEER và JKAN (Người làm) mới thấy
-        roles: ["ADMIN", "ENGINEER", "JKAN"] 
+        // Engineer, JKAN và cả Specialist (nếu trực tiếp làm) cần thấy
+        roles: [
+            ROLES.ADMIN, 
+            ROLES.SPECIALIST, 
+            ROLES.ENGINEER, 
+            ROLES.JKAN
+        ] 
       },
-      // --- KHU VỰC QUẢN LÝ / REVIEWER ---
+      // --- KHU VỰC QUẢN LÝ / DUYỆT BÀI ---
       { 
         title: "Duyệt bài", 
         href: "/reviews",
         icon: ClipboardCheck,
-        // Chỉ SPECIALIST (Người duyệt) mới thấy
-        roles: ["ADMIN", "SPECIALIST"] 
+// Chỉ những người có thẩm quyền duyệt (Specialist, Bid Manager, Admin)
+        roles: [ROLES.ADMIN, ROLES.BID_MANAGER, ROLES.SPECIALIST] 
       },
       { 
         title: "Nhiệm vụ dự án", 
         href: "/task-allocation",
-        icon: History 
+        icon: History,
+        // Chỉ cấp quản lý mới được vào phân công
+        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.BID_MANAGER, ROLES.SPECIALIST] 
       },
     ],
   },
-  // [CẬP NHẬT] Module Kho Tài nguyên theo cấu trúc FSD mới
+
+  // 4. KHO TÀI NGUYÊN: Public cho toàn bộ nhân sự
   {
     title: "Kho Tài nguyên",
     icon: Database,
+    roles: [
+      ROLES.ADMIN, 
+      ROLES.MANAGER, 
+      ROLES.BID_MANAGER, 
+      ROLES.SPECIALIST, 
+      ROLES.ENGINEER, 
+      ROLES.JKAN
+    ],
     children: [
       { 
         title: "Tổng quan tài nguyên", 
-        href: "/resources/overview", // Trỏ vào Page 1
+        href: "/resources/overview", 
         icon: PieChart 
       },
       { 
         title: "Kho tài liệu chung", 
-        href: "/resources/repository", // Trỏ vào Page 2 (Chứa Grid Folder & List File)
+        href: "/resources/repository", 
         icon: FolderOpen 
       },
       { 
         title: "Lịch sử lưu trữ", 
-        href: "/resources/history", // Trỏ vào Page 3 (Dropdown năm)
+        href: "/resources/history", 
         icon: FolderClock 
       },
     ],
   },
+
+  // 5. QUẢN TRỊ NGƯỜI DÙNG: Admin và Giám đốc (Manager)
   {
     title: "Quản trị người dùng",
     href: "/users",
-    icon: UserCog,
-    roles: ["ADMIN", "MANAGER"],
+    icon: Users, // Dùng icon Users chuẩn hơn UserCog cho danh sách
+    roles: [ROLES.ADMIN, ROLES.MANAGER],
   },
+
+  // 6. CẤU HÌNH HỆ THỐNG: Chỉ Admin
   {
     title: "Phân quyền (ABAC)", 
     icon: ShieldCheck,
     href: "/abac-config",
-    roles: ["ADMIN"],
+    roles: [ROLES.ADMIN],
   },
   {
     title: "Hệ thống",
     icon: Settings,
     href: "/settings",
-    roles: ["ADMIN"],
+    roles: [ROLES.ADMIN],
   },
 ];
