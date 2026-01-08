@@ -2,20 +2,19 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
 import { sidebarRoutes, SidebarRoute } from "../config/sidebar-routes";
-import { useAuth } from "@/features/auth/model/auth-context"; // [MỚI] Dùng hook Auth
-import { SidebarUserItem } from "./user-nav"; // [MỚI] Import cục User
+import { useAuth } from "@/features/auth/model/auth-context";
+import { SidebarUserItem } from "./user-nav";
 
 export function Sidebar() {
-  // [MỚI] Lấy userRole từ Auth Context thay vì tự parse localStorage
   const { user } = useAuth();
   const userRole = user?.role || null;
 
-  // Hàm lọc menu đệ quy dựa trên role
   const filteredMenu = useMemo(() => {
     if (!userRole) return [];
 
@@ -23,15 +22,12 @@ export function Sidebar() {
       return routes
         .filter((route) => {
           if (!route.roles) return true;
-          // route.roles chứa danh sách role được phép
-          // userRole (đã được Zod validate) phải nằm trong danh sách đó
           return route.roles.includes(userRole);
         })
         .map((route) => ({
           ...route,
           children: route.children ? filterFn(route.children) : undefined,
         }))
-        // Loại bỏ các mục cha nếu các mục con bị lọc hết (đối với nhóm menu)
         .filter((route) => {
             if (route.children && route.children.length === 0 && !route.href) return false;
             return true;
@@ -43,11 +39,30 @@ export function Sidebar() {
 
   return (
     <div className="flex h-full w-[250px] flex-col border-r bg-white shadow-sm">
-      {/* Header / Logo */}
-      <div className="flex h-16 items-center border-b px-6 shrink-0 bg-slate-50/50">
-        <div className="flex items-center gap-2">
-           <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">DT</div>
-           <span className="text-lg font-bold text-slate-800">Đấu Thầu Pro</span>
+
+      {/* HEADER / LOGO - ĐÃ SỬA: Không dùng Link, Logo to hơn */}
+      <div className="flex h-20 items-center border-b px-4 shrink-0 bg-white"> {/* Tăng chiều cao header lên h-20 */}
+        <div className="flex items-center gap-4 w-full"> {/* Tăng khoảng cách gap lên 4 */}
+           {/* Logo Ảnh */}
+           <div className="relative h-12 w-12 shrink-0"> {/* Tăng kích thước ảnh lên h-12 w-12 */}
+             <Image
+               src="/PC1_Logo.svg" // Đã đổi thành .svg
+               alt="PC1 Group Logo"
+               fill
+               className="object-contain"
+               priority
+             />
+           </div>
+
+           {/* Tên Hệ thống */}
+           <div className="flex flex-col justify-center">
+              <span className="text-base font-extrabold text-slate-900 leading-tight"> {/* Tăng cỡ chữ lên text-base */}
+                PC1 GROUP
+              </span>
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5"> {/* Tăng cỡ chữ phụ lên text-[11px] */}
+                Bidding Hub
+              </span>
+           </div>
         </div>
       </div>
 
@@ -58,7 +73,6 @@ export function Sidebar() {
                <SidebarItem key={index} route={route} />
             ))
         ) : (
-            // Skeleton loader khi chưa load xong role hoặc không có quyền
             <div className="space-y-3 p-2">
                 <div className="h-8 bg-slate-100 rounded animate-pulse" />
                 <div className="h-8 bg-slate-100 rounded animate-pulse" />
@@ -67,7 +81,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* [MỚI] FOOTER USER NAV - Luôn nằm đáy */}
+      {/* FOOTER USER NAV */}
       <div className="p-3 bg-slate-50 border-t shrink-0">
          <SidebarUserItem />
       </div>
@@ -76,10 +90,10 @@ export function Sidebar() {
 }
 
 // ----------------------------------------------------------------------
-// SUB COMPONENT: SIDEBAR ITEM (Giữ nguyên logic cũ của bạn)
+// SUB COMPONENT: SIDEBAR ITEM (Giữ nguyên không thay đổi)
 // ----------------------------------------------------------------------
-
 function SidebarItem({ route }: { route: SidebarRoute }) {
+  // ... (Code phần này giữ nguyên như cũ)
   const pathname = usePathname() || "";
   const [isOpen, setIsOpen] = useState(false);
 
@@ -87,7 +101,6 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
     ? (pathname === route.href || pathname.startsWith(`${route.href}/`)) 
     : false;
   
-  // Logic tự mở nếu con đang active
   const hasActiveChild = route.children?.some(
     (child) => child.href && pathname.startsWith(child.href)
   );
@@ -100,7 +113,6 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
 
   const Icon = route.icon;
 
-  // Render Parent Menu (Có con)
   if (route.children && route.children.length > 0) {
     return (
       <div className="mb-1">
@@ -135,7 +147,6 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
     );
   }
 
-  // Render Leaf Menu (Không con)
   return (
     <Link
       href={route.href || "#"}
