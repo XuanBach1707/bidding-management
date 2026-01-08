@@ -10,7 +10,15 @@ export const resourceItemSchema = z.object({
   link: z.string().url().optional().nullable(),
   access: z.string().optional(),
   mimeType: z.string().optional().nullable(),
+  
   parentId: z.string().optional().nullable(),
+  // [MỚI] Thêm trường tên thư mục cha
+  parentName: z.string().optional().nullable(), 
+
+  // [MỚI] Bổ sung các trường từ API trả về
+  updatedAt: z.string().optional(), // Map từ updated_at
+  tag: z.string().optional().nullable(), // Map từ tag
+  level: z.number().optional(), // Map từ level
 });
 
 export const resourceFolderResponseSchema = z.object({

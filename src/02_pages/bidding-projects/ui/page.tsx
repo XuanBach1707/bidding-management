@@ -12,7 +12,7 @@ import { taskApi } from '@/entities/task';
 // UI
 import { 
   ArrowLeft, Trash2, Calendar, Building, 
-  Download, CheckCircle2, AlertCircle, Clock, Info, MoreVertical,
+  CheckCircle2, Clock, Info, MoreVertical,
   PieChart 
 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -36,7 +36,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// [QUAN TRỌNG] Định nghĩa lại danh sách này để đồng bộ logic tính điểm
+// Danh sách task chỉ tính điểm (100%) khi có file
 const FILE_ONLY_TASKS = ["Hồ sơ pháp lý", "Hồ sơ tài chính"];
 
 export default function BiddingProjectDetailPage({ params }: PageProps) {
@@ -72,18 +72,15 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
     enabled: !!projectId,
   });
 
-  // --- 3. CALCULATE STATS (Đã sửa logic đồng bộ với bảng bên dưới) ---
+  // --- 3. CALCULATE STATS ---
   const stats = useMemo(() => {
-    if (!tasks || tasks.length === 0) return { progress: 0, timeLeft: "---", isUrgent: false, warnings: [] };
+    if (!tasks || tasks.length === 0) return { progress: 0, timeLeft: "---", isUrgent: false, timeBarPercent: 0 };
 
     // --- A. TÍNH TIẾN ĐỘ TỔNG THỂ ---
-    // Logic: Tính % của từng đầu mục cha, sau đó chia trung bình.
     const parentScores = tasks.map(parent => {
-        // 1. Nếu là Task Hồ sơ đặc biệt -> 100 điểm
         const isFileTask = FILE_ONLY_TASKS.some(t => parent.taskName.includes(t));
         if (isFileTask) return 100;
 
-        // 2. Nếu là Task thường -> Tính theo subtask
         const subTasks = parent.subTasks || [];
         if (subTasks.length === 0) return 0;
 
@@ -94,38 +91,45 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
     const totalScore = parentScores.reduce((a, b) => a + b, 0);
     const progressPercent = Math.round(totalScore / tasks.length);
 
-    // --- B. TÍNH THỜI GIAN & CẢNH BÁO ---
+    // --- B. TÍNH THỜI GIAN (LOGIC MỚI) ---
     const allTasksWithDeadline = tasks.flatMap(t => [t, ...(t.subTasks || [])]);
     
-    // Thời gian
     const futureDeadlines = allTasksWithDeadline
         .map(t => t.deadline ? new Date(t.deadline).getTime() : 0)
         .filter(d => d > Date.now());
     
     let timeLeftString = "---";
     let isUrgent = false;
+    let timeBarPercent = 100; // Mặc định đầy
 
     if (futureDeadlines.length > 0) {
         const minDeadline = Math.min(...futureDeadlines);
+        const now = Date.now();
+        const msLeft = minDeadline - now;
+        const daysLeft = msLeft / (1000 * 60 * 60 * 24); // Đổi ra số ngày
+
+        // Text hiển thị (VD: "còn 5 ngày")
         timeLeftString = formatDistanceToNow(new Date(minDeadline), { locale: vi });
-        // Còn dưới 2 ngày thì báo gấp
-        if (minDeadline - Date.now() < 2 * 24 * 60 * 60 * 1000) isUrgent = true;
+
+        // Logic thanh Bar:
+        if (daysLeft > 7) {
+            // Trên 7 ngày -> Luôn đầy vạch
+            timeBarPercent = 100;
+            isUrgent = false;
+        } else {
+            // Dưới 7 ngày -> Rút dần vạch (còn 7 ngày = 100%, 0 ngày = 0%)
+            timeBarPercent = Math.max(0, (daysLeft / 7) * 100);
+            isUrgent = true; // Đánh dấu gấp để đổi màu đỏ
+        }
+
     } else if (allTasksWithDeadline.some(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'COMPLETED')) {
+        // Trường hợp quá hạn
         timeLeftString = "Quá hạn";
         isUrgent = true;
+        timeBarPercent = 0; // Hết vạch
     }
 
-    // Cảnh báo (Loại bỏ warning của những task hồ sơ đã được coi là xong)
-    const warnings = allTasksWithDeadline.filter(t => {
-        // Nếu task cha nằm trong nhóm File Only -> Bỏ qua warning (vì coi như xong rồi)
-        const isFileTask = FILE_ONLY_TASKS.some(ft => t.taskName.includes(ft));
-        if (isFileTask) return false;
-
-        return t.status === 'REJECTED' || 
-               (t.deadline && new Date(t.deadline) < new Date() && t.status !== 'COMPLETED');
-    });
-
-    return { progress: progressPercent, timeLeft: timeLeftString, isUrgent, warnings };
+    return { progress: progressPercent, timeLeft: timeLeftString, isUrgent, timeBarPercent };
   }, [tasks]);
 
   // --- DELETE HANDLER ---
@@ -153,7 +157,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       
-      {/* HEADER SECTION (Fixed) */}
+      {/* HEADER SECTION */}
       <div className="bg-white border-b shadow-sm z-20 flex-shrink-0">
         <div className="px-6 py-4">
           
@@ -197,7 +201,6 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {/* ĐÃ SỬA Ở ĐÂY: Thêm ( || []) */}
                                 {(project.packages || []).map((pkg) => (
                                     <TableRow key={pkg.maTbmt}>
                                         <TableCell className="font-mono text-blue-600 font-bold">{pkg.maTbmt}</TableCell>
@@ -210,36 +213,21 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     </DialogContent>
                 </Dialog>
 
-                <Button variant="outline" className="gap-2 text-slate-600">
-                    <Download className="w-4 h-4" /> Xuất báo cáo
-                </Button>
+                {/* [ĐÃ XÓA] Nút "Xuất báo cáo" đã được bỏ đi theo yêu cầu */}
                 
-                {/* Nút: Mở kho hồ sơ (Thay thế logic cũ) */}
+                {/* Nút: Mở kho hồ sơ */}
                 <Button 
                     className="gap-2 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm shadow-blue-200"
                     onClick={() => {
-                        // Kiểm tra xem có ID thư mục không
-                        const folderId = project.driveFolderId || (project as any).drive_folder_id; // Fallback nếu mapper chưa chạy
-                        
+                        const folderId = project.driveFolderId || (project as any).drive_folder_id;
                         if (folderId) {
-                            // Mở link folder Google Drive trong tab mới
                             window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
-                            
-                            toast({ 
-                                title: "Đang chuyển hướng", 
-                                description: "Đang mở kho lưu trữ trên Google Drive...",
-                                className: "bg-green-600 text-white border-none"
-                            });
+                            toast({ title: "Đang chuyển hướng", description: "Đang mở kho lưu trữ trên Google Drive...", className: "bg-green-600 text-white border-none" });
                         } else {
-                            toast({ 
-                                variant: "destructive", 
-                                title: "Không tìm thấy liên kết", 
-                                description: "Dự án này chưa được liên kết với thư mục Drive nào." 
-                            });
+                            toast({ variant: "destructive", title: "Không tìm thấy liên kết", description: "Dự án này chưa được liên kết với thư mục Drive nào." });
                         }
                     }}
                 >
-                    {/* Đổi icon thành ExternalLink hoặc FolderOpen cho đúng ngữ nghĩa */}
                     <CheckCircle2 className="w-4 h-4" /> Tổng hợp hồ sơ & Tải
                 </Button>
 
@@ -270,22 +258,28 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Stats Grid (REAL DATA) */}
-          <div className="grid grid-cols-4 gap-4">
+          {/* Stats Grid */}
+          {/* [SỬA] Đổi grid-cols-4 thành grid-cols-2 vì đã bỏ cột Warning và Export */}
+          <div className="grid grid-cols-2 gap-4">
+             {/* 1. THỜI GIAN CÒN LẠI */}
              <div className="bg-white border rounded-xl p-3 px-4 shadow-sm flex flex-col justify-center">
                 <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Thời gian còn lại</h3>
                 <div className="flex items-center gap-2">
-                    <Clock className={cn("w-5 h-5", stats.isUrgent ? "text-red-500" : "text-orange-500")} />
+                    <Clock className={cn("w-5 h-5", stats.isUrgent ? "text-red-500" : "text-emerald-500")} />
                     <span className={cn("text-xl font-black", stats.isUrgent ? "text-red-600" : "text-slate-800")}>
                         {stats.timeLeft}
                     </span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-                    <div className={cn("h-1.5 rounded-full", stats.isUrgent ? "bg-red-500" : "bg-orange-500")} style={{ width: '70%' }}></div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                    {/* [LOGIC MỚI] width dựa vào timeBarPercent */}
+                    <div 
+                        className={cn("h-1.5 rounded-full transition-all duration-500", stats.isUrgent ? "bg-red-500" : "bg-emerald-500")} 
+                        style={{ width: `${stats.timeBarPercent}%` }}
+                    ></div>
                 </div>
              </div>
 
-             {/* TIẾN ĐỘ TỔNG THỂ (Đã được sửa) */}
+             {/* 2. TIẾN ĐỘ TỔNG THỂ */}
              <div className="bg-white border rounded-xl p-3 px-4 shadow-sm flex flex-col justify-center">
                 <div className="flex justify-between items-center mb-1">
                     <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tiến độ tổng thể</h3>
@@ -300,27 +294,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                 </div>
              </div>
 
-             <div className="col-span-2 bg-red-50 border border-red-100 rounded-xl p-3 px-4 shadow-sm flex flex-col justify-center overflow-y-auto">
-                <h3 className="text-[11px] font-bold text-red-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> Vấn đề cần xử lý ({stats.warnings.length})
-                </h3>
-                {stats.warnings.length > 0 ? (
-                    <div className="text-xs font-medium text-slate-800 space-y-1 mt-1">
-                        {stats.warnings.slice(0, 2).map((w) => (
-                            <p key={w.id} className="truncate">
-                                • {w.taskName}: <span className="text-red-600 font-bold">{w.status === 'REJECTED' ? 'Bị từ chối' : 'Quá hạn'}</span>
-                            </p>
-                        ))}
-                        {stats.warnings.length > 2 && (
-                            <p className="text-slate-500 italic text-[10px] pl-2">+ {stats.warnings.length - 2} vấn đề khác...</p>
-                        )}
-                    </div>
-                ) : (
-                    <div className="text-xs font-medium text-emerald-700 mt-1 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Hiện tại chưa phát hiện vấn đề nghiêm trọng.
-                    </div>
-                )}
-             </div>
+             {/* [ĐÃ XÓA] Phần hiển thị "Vấn đề cần xử lý" */}
           </div>
 
         </div>
@@ -328,7 +302,11 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
 
       {/* MAIN CONTENT */}
       <div className="flex-1 overflow-hidden relative">
-         <ProjectTaskList projectId={projectId} />
+         <ProjectTaskList 
+            projectId={projectId} 
+            driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
+            projectName={project.name} // Thêm dòng này để tab Files có context
+         />
       </div>
 
     </div>

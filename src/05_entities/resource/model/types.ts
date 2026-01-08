@@ -6,13 +6,14 @@ import {
   biddingHistoryItemSchema,
   biddingHistoryResponseSchema,
   historyFilterOptionsSchema,
-  resourceBreakdownItemSchema // [MỚI]
+  resourceBreakdownItemSchema
 } from "./schema"; // Chú ý đường dẫn import schema cho đúng cấu trúc folder của bạn
 
 // ==========================================
 // 1. RESOURCE TYPES
 // ==========================================
 
+// ResourceItem bây giờ sẽ tự động có thêm: parentName?: string | null | undefined
 export type ResourceItem = z.infer<typeof resourceItemSchema>;
 
 export type ResourceFolderResponse = z.infer<typeof resourceFolderResponseSchema>;

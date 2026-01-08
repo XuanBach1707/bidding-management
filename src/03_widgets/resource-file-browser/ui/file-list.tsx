@@ -1,16 +1,19 @@
 import { FileText, File, FileSpreadsheet, FileImage, ExternalLink } from "lucide-react";
 import { ResourceItem } from "@/entities/resource";
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 interface FileListProps {
   items: ResourceItem[];
 }
 
 export const FileList = ({ items }: FileListProps) => {
-  // Hàm helper chọn icon dựa trên tên file hoặc mimeType (Mock logic)
+  // Hàm helper chọn icon dựa trên tên file hoặc mimeType
   const getFileIcon = (fileName: string) => {
-    if (fileName.endsWith(".pdf")) return <FileText className="w-4 h-4 text-red-500" />;
-    if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) return <FileSpreadsheet className="w-4 h-4 text-green-500" />;
-    if (fileName.endsWith(".png") || fileName.endsWith(".jpg")) return <FileImage className="w-4 h-4 text-purple-500" />;
+    const lowerName = fileName.toLowerCase();
+    if (lowerName.endsWith(".pdf")) return <FileText className="w-4 h-4 text-red-500" />;
+    if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) return <FileSpreadsheet className="w-4 h-4 text-green-500" />;
+    if (lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) return <FileImage className="w-4 h-4 text-purple-500" />;
     return <File className="w-4 h-4 text-slate-400" />;
   };
 
@@ -33,7 +36,7 @@ export const FileList = ({ items }: FileListProps) => {
             <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3 font-medium">Tên tài liệu</th>
-                <th className="px-4 py-3 font-medium w-32">Ngày tạo</th>
+                <th className="px-4 py-3 font-medium w-40">Cập nhật lần cuối</th>
                 <th className="px-4 py-3 font-medium w-24 text-right">Mở</th>
               </tr>
             </thead>
@@ -43,15 +46,22 @@ export const FileList = ({ items }: FileListProps) => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {getFileIcon(item.name)}
-                      <span className="text-slate-700 font-medium truncate max-w-xs md:max-w-md">
+                      <span className="text-slate-700 font-medium truncate max-w-xs md:max-w-md" title={item.name}>
                         {item.name}
                       </span>
+                      {/* Hiển thị Tag nếu có */}
+                      {item.tag && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                          {item.tag}
+                        </span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">
-                    {/* Mock data ngày tháng vì API folder detail có thể thiếu field này */}
-                    {/* Nếu API có trả về createdAt (camelCase) thì hiển thị, ko thì hiện -- */}
-                    {(item as any).createdAt ? new Date((item as any).createdAt).toLocaleDateString('vi-VN') : "--"}
+                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">
+                    {/* Hiển thị ngày cập nhật chuẩn xác */}
+                    {item.updatedAt 
+                      ? format(new Date(item.updatedAt), "HH:mm dd/MM/yyyy", { locale: vi }) 
+                      : "--"}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {item.link && (

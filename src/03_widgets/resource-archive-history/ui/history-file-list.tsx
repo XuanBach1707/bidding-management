@@ -1,6 +1,8 @@
-import { FileText, ExternalLink, File, Folder } from "lucide-react"; // Import thêm icon Folder
+import { FileText, ExternalLink, File, Folder, Clock } from "lucide-react"; 
 import { ResourceItem } from "@/entities/resource";
 import { Button } from "@/shared/ui/button";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 
 export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
   if (items.length === 0) {
@@ -25,9 +27,10 @@ export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
             <tr>
-              <th className="px-6 py-3 font-semibold text-xs uppercase w-[60%]">Tên tài liệu</th>
-              {/* [UPDATE] Thêm cột vị trí hoặc gộp vào cột tên đều được, ở đây ta hiển thị dưới tên cho đẹp */}
-              <th className="px-6 py-3 font-semibold text-xs uppercase w-[40%] text-right">Thao tác</th>
+              <th className="px-6 py-3 font-semibold text-xs uppercase w-[50%]">Tên tài liệu</th>
+              {/* [MỚI] Thêm cột Ngày cập nhật */}
+              <th className="px-6 py-3 font-semibold text-xs uppercase w-[25%]">Cập nhật</th>
+              <th className="px-6 py-3 font-semibold text-xs uppercase w-[25%] text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -36,27 +39,39 @@ export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
                 <td className="px-6 py-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-50 rounded text-blue-600 shrink-0">
-                       <FileText className="w-4 h-4" />
+                        <FileText className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
                       {/* Tên file */}
-                      <span className="text-slate-700 font-medium block group-hover:text-blue-700 transition-colors truncate pr-4">
+                      <span className="text-slate-700 font-medium block group-hover:text-blue-700 transition-colors truncate pr-4" title={item.name}>
                         {item.name}
                       </span>
                       
-                      {/* [MỚI] HIỂN THỊ FOLDER CHA (PARENT NAME) */}
-                      {/* Chỉ hiện khi có parentName (tức là khi đang Search) */}
-                      {(item as any).parentName && (
+                      {/* [CHUẨN HÓA] Dùng item.parentName trực tiếp (đã thêm vào type) */}
+                      {item.parentName && (
                         <div className="flex items-center gap-1.5 mt-1 text-slate-400">
                           <Folder className="w-3 h-3" />
-                          <span className="text-[11px] truncate max-w-[200px] md:max-w-[300px]" title={(item as any).parentName}>
-                            {(item as any).parentName}
+                          <span className="text-[11px] truncate max-w-[200px]" title={item.parentName}>
+                            {item.parentName}
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
                 </td>
+                
+                {/* [MỚI] Cột Ngày cập nhật */}
+                <td className="px-6 py-3 text-slate-500 text-xs whitespace-nowrap">
+                    {item.updatedAt ? (
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            {format(new Date(item.updatedAt), "dd/MM/yyyy HH:mm", { locale: vi })}
+                        </div>
+                    ) : (
+                        "--"
+                    )}
+                </td>
+
                 <td className="px-6 py-3 text-right">
                   {item.link ? (
                     <Button 

@@ -5,34 +5,24 @@ import { DriveItem } from "@/entities/drive";
 import { driveApi } from "@/entities/drive/api/drive-api"; 
 import { FileText, ExternalLink, Loader2, User } from "lucide-react";
 
-// --- GLOBAL CACHE & QUEUE (Nằm ngoài component để chia sẻ giữa các dòng) ---
-
-// 1. Cache: Lưu ID các folder cha để không phải tìm đi tìm lại
+// --- GLOBAL CACHE & QUEUE (Giữ nguyên logic này vì nó đang tốt) ---
 const folderCache: Record<string, string> = {}; 
-// VD: { "ROOT_KHO_TAI_LIEU": "id_123", "Hồ sơ pháp lý": "id_456" }
-
-// 2. Queue: Hàng đợi xử lý tuần tự
 const requestQueue: Array<() => Promise<void>> = [];
 let isProcessingQueue = false;
 
-// Hàm xử lý hàng đợi
 const processQueue = async () => {
   if (isProcessingQueue) return;
   isProcessingQueue = true;
-
   while (requestQueue.length > 0) {
-    const task = requestQueue.shift(); // Lấy task đầu tiên
+    const task = requestQueue.shift();
     if (task) {
-      await task(); // Chờ task chạy xong
-      // Nghỉ 300ms giữa các request để Google không chặn
+      await task();
       await new Promise((resolve) => setTimeout(resolve, 300)); 
     }
   }
-
   isProcessingQueue = false;
 };
 
-// Hàm đẩy task vào hàng đợi
 const enqueueTask = (task: () => Promise<void>) => {
   requestQueue.push(task);
   processQueue();
@@ -47,11 +37,30 @@ interface Props {
 export const AutoFetchFileCell = ({ taskName }: Props) => {
   const [files, setFiles] = useState<DriveItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const mountedRef = useRef(true); // Để check component còn mount không
+  const mountedRef = useRef(true);
 
-  // Chỉ fetch cho các đầu mục lớn
-  const TARGET_TASKS = ["Hồ sơ pháp lý", "Hồ sơ tài chính", "Hồ sơ nhân sự", "Biện pháp thi công"]; 
-  const shouldFetch = TARGET_TASKS.some(t => taskName.toLowerCase().includes(t.toLowerCase()));
+  // [CẬP NHẬT] Thêm các từ khóa biến thể vào đây để "bắt" được task
+  // Ví dụ: BE trả về "Báo cáo tài chính" thì mình vẫn phải nhận diện để đi tìm
+  const TARGET_KEYWORDS = ["pháp lý", "tài chính", "nhân sự", "biện pháp thi công", "báo cáo tài chính"];
+  
+  const shouldFetch = TARGET_KEYWORDS.some(k => taskName.toLowerCase().includes(k));
+
+  // [MỚI] Hàm chuẩn hóa tên để tìm Folder
+  // Input: "Báo cáo tài chính" -> Output mong đợi: "hồ sơ tài chính"
+  const resolveFolderName = (rawName: string): string => {
+      const lower = rawName.trim().toLowerCase();
+      
+      // Map các trường hợp đặc biệt (Fix cứng theo yêu cầu của bạn)
+      if (lower.includes("báo cáo tài chính") || lower.includes("hồ sơ tài chính")) {
+          return "hồ sơ tài chính"; // Luôn tìm folder có chữ này
+      }
+      if (lower.includes("pháp lý")) return "hồ sơ pháp lý";
+      if (lower.includes("nhân sự")) return "hồ sơ nhân sự";
+      if (lower.includes("biện pháp")) return "biện pháp thi công";
+
+      // Mặc định trả về chính nó
+      return lower;
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -61,48 +70,59 @@ export const AutoFetchFileCell = ({ taskName }: Props) => {
       return;
     }
 
-    // Định nghĩa công việc cần làm (nhưng chưa chạy ngay)
     const fetchJob = async () => {
       if (!mountedRef.current) return;
 
       try {
-        // BƯỚC 1: Tìm ID của "KHO TÀI LIỆU" (Dùng Cache nếu có)
+        // BƯỚC 1: Tìm ID của "KHO TÀI LIỆU"
         let khoTaiLieuId = folderCache["ROOT_KHO_TAI_LIEU"];
-        
         if (!khoTaiLieuId) {
-            // Nếu chưa có trong cache thì mới gọi API
             const rootRes = await driveApi.getRootProjects();
             const khoFolder = rootRes.data.find(
-                (item) => item.name === "KHO TÀI LIỆU" && item.type === "FOLDER"
+                (item) => item.name.trim().toUpperCase() === "KHO TÀI LIỆU" && item.type === "FOLDER"
             );
             if (!khoFolder) {
                 if (mountedRef.current) setLoading(false);
                 return;
             }
             khoTaiLieuId = khoFolder.id;
-            folderCache["ROOT_KHO_TAI_LIEU"] = khoTaiLieuId; // Lưu Cache
+            folderCache["ROOT_KHO_TAI_LIEU"] = khoTaiLieuId;
         }
 
-        // BƯỚC 2: Tìm ID của Folder Task (VD: "Hồ sơ pháp lý")
-        // Key cache sẽ là: "KHO_ID_TaskName" để tránh trùng tên ở dự án khác
-        const cacheKeyTask = `${khoTaiLieuId}_${taskName.trim().toLowerCase()}`;
+        // BƯỚC 2: Tìm ID của Folder Task
+        // Lấy tên Folder chuẩn cần tìm (đã qua hàm resolve)
+        const targetFolderName = resolveFolderName(taskName); 
+        
+        const cacheKeyTask = `${khoTaiLieuId}_${targetFolderName}`;
         let taskFolderId = folderCache[cacheKeyTask];
 
         if (!taskFolderId) {
             const subRes = await driveApi.getFolderDetail(khoTaiLieuId);
-            const targetFolder = subRes.data.find(
-                (item) => item.name.trim().toLowerCase() === taskName.trim().toLowerCase() && item.type === "FOLDER"
-            );
+            
+            // [LOGIC TÌM KIẾM MỚI] 
+            // - Trim() 2 đầu để bỏ dấu cách thừa (Fix lỗi "Hồ sơ tài chính ")
+            // - Dùng includes thay vì === để tìm kiếm tương đối
+            const targetFolder = subRes.data.find((item) => {
+                if (item.type !== "FOLDER") return false;
+                
+                const itemName = item.name.trim().toLowerCase();
+                
+                // So sánh: Tên folder chứa keyword HOẶC keyword chứa tên folder
+                // VD: Folder="Hồ sơ tài chính " -> trim="hồ sơ tài chính" === target="hồ sơ tài chính" -> OK
+                return itemName === targetFolderName || itemName.includes(targetFolderName);
+            });
             
             if (!targetFolder) {
+                // Log nhẹ để debug nếu vẫn không tìm thấy
+                // console.log(`Không tìm thấy folder: [${targetFolderName}] trong list`, subRes.data.map(i => i.name));
                 if (mountedRef.current) setLoading(false);
                 return;
             }
             taskFolderId = targetFolder.id;
-            folderCache[cacheKeyTask] = taskFolderId; // Lưu Cache
+            folderCache[cacheKeyTask] = taskFolderId;
         }
 
-        // BƯỚC 3: Lấy File trong folder đích (Bước này luôn phải gọi mới nhất)
+        // BƯỚC 3: Lấy File
         const filesRes = await driveApi.getFolderDetail(taskFolderId);
         const foundFiles = filesRes.data.filter((i) => i.type === "FILE");
 
@@ -117,13 +137,12 @@ export const AutoFetchFileCell = ({ taskName }: Props) => {
       }
     };
 
-    // Đẩy việc vào hàng đợi thay vì chạy ngay lập tức
     enqueueTask(fetchJob);
 
     return () => { mountedRef.current = false; };
   }, [taskName, shouldFetch]);
 
-  // --- RENDER ---
+  // --- RENDER (Giữ nguyên) ---
   if (loading) return <Loader2 className="h-4 w-4 animate-spin text-slate-400" />;
   
   if (files.length > 0) {
@@ -154,6 +173,7 @@ export const AutoFetchFileCell = ({ taskName }: Props) => {
     );
   }
 
+  // Fallback UI khi không tìm thấy file hoặc không phải task cần tìm
   return (
     <div className="flex items-center gap-1.5 opacity-50">
        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
