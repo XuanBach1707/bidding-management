@@ -1,12 +1,14 @@
-import { LoginPage } from "@/02_pages/login";
+// src/app/(auth)/login/page.tsx
 
-// Metadata cho SEO (Next.js support)
-export const metadata = {
-  title: "Đăng nhập | PMS Construction",
-  description: "Trang đăng nhập hệ thống",
+import { Metadata } from "next";
+import { LoginPage } from "@/02_pages/login"; // Import từ index.ts
+
+// [QUAN TRỌNG] Metadata phải nằm ở đây (Server Component)
+export const metadata: Metadata = {
+  title: "Đăng nhập | PC1 Bidding Hub",
+  description: "Hệ thống quản lý đấu thầu tập trung",
 };
 
 export default function Route() {
-  // Router chỉ việc render Page
   return <LoginPage />;
 }
