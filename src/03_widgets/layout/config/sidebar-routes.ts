@@ -59,7 +59,7 @@ export const sidebarRoutes: SidebarRoute[] = [
   {
     title: "Cơ hội đấu thầu",
     icon: Search,
-    roles: [ROLES.ADMIN, ROLES.BID_MANAGER, ROLES.SPECIALIST], 
+    roles: [ROLES.ADMIN, ROLES.BID_MANAGER, ROLES.SPECIALIST, ROLES.MANAGER], 
     children: [
       { 
         title: "Tra cứu gói thầu", 

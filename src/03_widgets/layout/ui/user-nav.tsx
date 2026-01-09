@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MoreVertical, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { MoreVertical, LogOut, User as UserIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import { 
   DropdownMenu, 
@@ -17,10 +17,10 @@ import { Skeleton } from "@/shared/ui/skeleton";
 export const SidebarUserItem = () => {
   const { user, isLoading, logout } = useAuth();
 
-  // Skeleton khi đang load thông tin
+  // Skeleton Loading
   if (isLoading) {
     return (
-      <div className="flex items-center gap-3 p-2 mt-auto">
+      <div className="flex items-center gap-3 p-2">
          <Skeleton className="h-9 w-9 rounded-full shrink-0" />
          <div className="space-y-1.5 flex-1 overflow-hidden">
             <Skeleton className="h-3 w-20" />
@@ -30,42 +30,48 @@ export const SidebarUserItem = () => {
     );
   }
 
-  // Không có user -> Không hiện (AuthGuard sẽ lo việc đá ra login, hoặc user đang ở trang public)
   if (!user) return null;
 
+  // Lấy URL ảnh (đảm bảo fallback về undefined nếu null/rỗng để hiện AvatarFallback)
+  const avatarSrc = user.avatarUrl || undefined;
+
   return (
-    <div className="mt-auto pt-2">
+    <div className="w-full">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors w-full group">
-            {/* Avatar */}
+          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 cursor-pointer transition-all w-full group">
+            
+            {/* AVATAR */}
             <Avatar className="h-9 w-9 border border-slate-200 shrink-0">
-              <AvatarImage src={undefined} /> 
-              <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold text-xs">
+              {/* SỬA Ở ĐÂY: Truyền avatarSrc vào */}
+              <AvatarImage 
+                src={avatarSrc} 
+                alt={user.fullName} 
+                className="object-cover" // Thêm class này để ảnh không bị méo nếu không vuông
+              /> 
+              <AvatarFallback className="bg-[#009d98]/10 text-[#009d98] font-extrabold text-xs">
                 {user.fullName?.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
 
-            {/* Info Text */}
             <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-semibold text-slate-700 truncate group-hover:text-slate-900">
+              <p className="text-sm font-bold text-slate-700 truncate group-hover:text-[#009d98] transition-colors">
                 {user.fullName}
               </p>
-              <p className="text-xs text-slate-500 truncate group-hover:text-slate-600" title={user.email}>
+              <p className="text-[11px] text-slate-500 truncate" title={user.email}>
                 {user.email}
               </p>
             </div>
             
-            <MoreVertical className="h-4 w-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+            <MoreVertical className="h-4 w-4 text-slate-400 group-hover:text-[#009d98] shrink-0" />
           </div>
         </DropdownMenuTrigger>
         
-        {/* Dropdown Content - Hiển thị menu bay lên trên hoặc sang phải */}
         <DropdownMenuContent className="w-60 mb-2 ml-2" align="start" side="right" sideOffset={10}>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.fullName}</p>
-              <p className="text-xs leading-none text-muted-foreground truncate">
+              <p className="text-sm font-medium leading-none text-[#009d98]">{user.fullName}</p>
+              <p className="text-xs leading-none text-slate-500 truncate">
                 {user.email}
               </p>
             </div>
@@ -73,7 +79,7 @@ export const SidebarUserItem = () => {
           <DropdownMenuSeparator />
           
           <Link href="/profile" className="w-full">
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem className="cursor-pointer focus:bg-[#009d98]/5 focus:text-[#009d98]">
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Hồ sơ cá nhân</span>
               </DropdownMenuItem>
@@ -81,7 +87,7 @@ export const SidebarUserItem = () => {
           
           <DropdownMenuSeparator />
           
-          <DropdownMenuItem onClick={() => logout()} className="text-red-600 focus:text-red-600 cursor-pointer focus:bg-red-50">
+          <DropdownMenuItem onClick={() => logout()} className="text-red-600 focus:text-red-700 cursor-pointer focus:bg-red-50">
             <LogOut className="mr-2 h-4 w-4" />
             <span>Đăng xuất</span>
           </DropdownMenuItem>
