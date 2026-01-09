@@ -126,7 +126,7 @@ export function LoginForm() {
           {loginMutation.isPending ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 
           ) : (
-              "Đăng nhập hệ thống"
+              "Đăng nhập"
           )}
         </Button>
         
