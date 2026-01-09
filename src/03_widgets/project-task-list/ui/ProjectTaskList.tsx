@@ -148,9 +148,9 @@ const TaskRowItem = ({ task, unitMap, isExpanded, onToggleExpand, onSelect, sele
                 isSubTask && selectedId === task.id && "bg-[#009d98]/5 border-l-4 border-l-[#009d98] pl-[44px]"
             )}
         >
-            <div className="col-span-6 flex items-center gap-3">
+            <div className="col-span-6 flex items-center gap-3 min-w-0">
                 {!isSubTask && (
-                     <button className={cn("text-slate-400 transition-colors hover:text-slate-600", task.isFileTask && "opacity-0 cursor-default")}>
+                     <button className={cn("text-slate-400 transition-colors hover:text-slate-600 shrink-0", task.isFileTask && "opacity-0 cursor-default")}>
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                 )}
@@ -168,30 +168,30 @@ const TaskRowItem = ({ task, unitMap, isExpanded, onToggleExpand, onSelect, sele
                             {task.taskName}
                         </h3>
                         {!isSubTask && (
-                             <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-bold border", displayProgress === 100 ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-500 border-slate-200")}>
+                             <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-bold border shrink-0", displayProgress === 100 ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-500 border-slate-200")}>
                                 {displayProgress}%
                              </span>
                         )}
                     </div>
                     {!isSubTask && (
-                        <div className="w-24 h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                        <div className="w-24 h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden shrink-0">
                             <div className={cn("h-full transition-all duration-500", displayProgress === 100 ? "bg-emerald-500" : "bg-[#009d98]")} style={{ width: `${displayProgress}%` }} />
                         </div>
                     )}
                 </div>
             </div>
 
-            <div className="col-span-2 text-xs font-medium">{renderAssignee()}</div>
-            <div className="col-span-2 text-xs text-slate-500 font-medium">
+            <div className="col-span-2 text-xs font-medium min-w-0">{renderAssignee()}</div>
+            <div className="col-span-2 text-xs text-slate-500 font-medium min-w-0">
                 {task.deadline ? (
                      <span className={cn("flex items-center gap-1.5", new Date(task.deadline) < new Date() && task.status !== 'COMPLETED' ? "text-red-600 font-bold" : "")}>
-                        <Clock className="w-3 h-3 text-slate-400" />
+                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                         {format(new Date(task.deadline), "dd/MM")}
                      </span>
                 ) : "--"}
             </div>
-            <div className="col-span-2 text-right pr-4">
-                 <Badge variant="outline" className={cn("h-5 px-2 font-bold text-[9px] uppercase shadow-none border", getStatusColor(displayStatus))}>
+            <div className="col-span-2 text-right pr-4 min-w-0">
+                 <Badge variant="outline" className={cn("h-5 px-2 font-bold text-[9px] uppercase shadow-none border shrink-0 inline-flex", getStatusColor(displayStatus))}>
                     {displayStatus}
                 </Badge>
             </div>
@@ -217,41 +217,43 @@ const ProjectPersonnelList = ({ projectId }: { projectId: number }) => {
 
     return (
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden m-1">
-             <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+             <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
                 <div className="col-span-4 pl-4">Họ và tên</div>
                 <div className="col-span-3">Vai trò</div>
                 <div className="col-span-3">Đơn vị / Chức vụ</div>
                 <div className="col-span-2">Liên hệ</div>
             </div>
-            {personnel.map((p) => (
-                <div key={p.userId} className="grid grid-cols-12 gap-4 py-3 px-4 items-center border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-                    <div className="col-span-4 flex items-center gap-3">
-                         <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden relative text-slate-600 font-bold text-xs">
-                            {p.avatarUrl ? (
-                                <img src={p.avatarUrl} alt={p.fullName} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                            ) : (
-                                p.fullName.charAt(0).toUpperCase()
-                            )}
+            <div className="overflow-y-auto max-h-[calc(100vh-350px)] custom-scrollbar">
+                {personnel.map((p) => (
+                    <div key={p.userId} className="grid grid-cols-12 gap-4 py-3 px-4 items-center border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                        <div className="col-span-4 flex items-center gap-3">
+                             <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden relative text-slate-600 font-bold text-xs">
+                                {p.avatarUrl ? (
+                                    <img src={p.avatarUrl} alt={p.fullName} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : (
+                                    p.fullName.charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            <div><p className="text-sm font-bold text-slate-800">{p.fullName}</p></div>
                         </div>
-                        <div><p className="text-sm font-bold text-slate-800">{p.fullName}</p></div>
-                    </div>
-                    <div className="col-span-3">
-                        <Badge variant="outline" className={cn("h-5 px-2 font-bold text-[9px] uppercase shadow-none", getRoleBadgeColor(p.role))}>{p.role}</Badge>
-                    </div>
-                    <div className="col-span-3">
-                        <div className="flex flex-col gap-0.5">
-                             <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Building2 className="w-3 h-3 text-slate-400" />{p.orgUnitName}</span>
-                             <span className="text-[10px] text-slate-500 pl-4.5">{p.jobTitle}</span>
+                        <div className="col-span-3">
+                            <Badge variant="outline" className={cn("h-5 px-2 font-bold text-[9px] uppercase shadow-none", getRoleBadgeColor(p.role))}>{p.role}</Badge>
+                        </div>
+                        <div className="col-span-3">
+                            <div className="flex flex-col gap-0.5">
+                                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Building2 className="w-3 h-3 text-slate-400" />{p.orgUnitName}</span>
+                                 <span className="text-[10px] text-slate-500 pl-4.5">{p.jobTitle}</span>
+                            </div>
+                        </div>
+                        <div className="col-span-2">
+                            <div className="flex items-center gap-1.5 text-xs text-[#009d98] hover:underline cursor-pointer group" title={p.email}>
+                                <Mail className="w-3 h-3 text-slate-400 group-hover:text-[#009d98]" />
+                                <span className="truncate max-w-[120px] font-medium">{p.email.split('@')[0]}</span>
+                            </div>
                         </div>
                     </div>
-                    <div className="col-span-2">
-                        <div className="flex items-center gap-1.5 text-xs text-[#009d98] hover:underline cursor-pointer group" title={p.email}>
-                            <Mail className="w-3 h-3 text-slate-400 group-hover:text-[#009d98]" />
-                            <span className="truncate max-w-[120px] font-medium">{p.email.split('@')[0]}</span>
-                        </div>
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
@@ -318,8 +320,11 @@ export const ProjectTaskList = ({ projectId, driveFolderId, projectName }: Proje
   );
 
   return (
-    <div className="relative flex h-full overflow-hidden bg-slate-50">
-      <div className={cn("flex-1 flex flex-col transition-all duration-300 ease-in-out p-6 pt-4 h-full", selectedTaskId ? "mr-[450px]" : "")}>
+    <div className="relative flex h-full overflow-hidden bg-slate-50 w-full">
+      <div className={cn(
+          "flex-1 flex flex-col transition-all duration-300 ease-in-out p-6 pt-4 h-full", 
+          selectedTaskId ? "mr-[450px]" : "w-full"
+      )}>
         <Tabs defaultValue="roadmap" className="flex flex-col h-full w-full">
             <div className="flex items-center justify-between mb-4 shrink-0">
               <TabsList className="bg-white border border-slate-200 p-1 rounded-lg h-9 shadow-sm">
@@ -344,8 +349,8 @@ export const ProjectTaskList = ({ projectId, driveFolderId, projectName }: Proje
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-hidden">
-              <TabsContent value="roadmap" className="h-full overflow-y-auto pr-2 custom-scrollbar mt-0 pb-4 focus-visible:outline-none">
+            <div className="flex-1 overflow-hidden relative">
+              <TabsContent value="roadmap" className="absolute inset-0 overflow-y-auto pr-2 custom-scrollbar mt-0 pb-4 focus-visible:outline-none">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                     <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
                         <div className="col-span-6 pl-10">Hạng mục công việc</div>
@@ -390,11 +395,11 @@ export const ProjectTaskList = ({ projectId, driveFolderId, projectName }: Proje
                 </div>
               </TabsContent>
               
-              <TabsContent value="personnel" className="h-full overflow-y-auto mt-0 pb-4 focus-visible:outline-none custom-scrollbar">
+              <TabsContent value="personnel" className="absolute inset-0 overflow-y-auto mt-0 pb-4 focus-visible:outline-none custom-scrollbar">
                   <ProjectPersonnelList projectId={projectId} />
               </TabsContent>
 
-              <TabsContent value="files" className="h-full overflow-y-auto mt-0 pb-4 focus-visible:outline-none px-1 custom-scrollbar">
+              <TabsContent value="files" className="absolute inset-0 overflow-y-auto mt-0 pb-4 focus-visible:outline-none px-1 custom-scrollbar">
                   <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 min-h-[400px]">
                       <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-wide">
                           <FileText className="w-4 h-4 text-[#009d98]" /> Tài liệu dự án

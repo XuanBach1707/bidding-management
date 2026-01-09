@@ -12,7 +12,7 @@ import { taskApi } from '@/entities/task';
 // UI
 import { 
   ArrowLeft, Trash2, Calendar, Building2, 
-  CheckCircle2, Clock, Info, MoreVertical,
+  Clock, Info, MoreVertical,
   PieChart, ExternalLink, AlertTriangle, Layers
 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
