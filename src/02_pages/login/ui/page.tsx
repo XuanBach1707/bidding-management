@@ -1,84 +1,94 @@
 import { LoginForm } from "@/features/auth";
 import { CleanLandscape } from "@/shared/ui/pc1-landscape";
+import { ShieldCheck, Zap, Building2 } from "lucide-react";
 
 export function LoginPage() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-slate-900">
       
-      {/* --- LỚP NỀN: LANDSCAPE FULL MÀN HÌNH --- */}
+      {/* --- LỚP NỀN --- */}
       <div className="absolute inset-0 z-0">
         <CleanLandscape className="w-full h-full object-cover" />
-        {/* Lớp phủ để tăng độ tương phản cho text */}
-        <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" /> 
+        <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px]" /> 
       </div>
 
       {/* --- LỚP NỘI DUNG --- */}
-      {/* - max-w-[1700px]: Nới rộng khung chứa để nội dung giãn ra thêm.
-          - gap-x-20: Tăng khoảng cách trống ở giữa hai cột.
-      */}
       <div className="relative z-10 grid lg:grid-cols-2 min-h-screen w-full max-w-[1700px] mx-auto gap-x-20">
 
-        {/* CỘT TRÁI: BRANDING NỘI DUNG */}
-        {/* p-16 và pl-20 để giữ khoảng cách với mép trái màn hình vừa phải */}
-        <div className="hidden lg:flex flex-col justify-between p-16 pl-20 text-white">
-          {/* Header Text */}
+        {/* === CỘT TRÁI === */}
+        {/* Sửa p-16 thành px-20 py-12 để đẩy nội dung sát lề trên/dưới hơn */}
+        <div className="hidden lg:flex flex-col justify-between px-20 py-12 text-white h-full">
+          
+          {/* 1. HEADER BRAND (Góc trên cùng bên trái) */}
           <div>
-            <h3 className="text-xl font-bold tracking-widest uppercase opacity-80 mb-2">
-              PC1 GROUP
-            </h3>
-            <div className="h-1 w-12 bg-[#009d98] mb-6" />
+             {/* Đã bỏ gạch chân và đẩy lên cao */}
+             <h3 className="text-xl font-bold tracking-widest uppercase opacity-90">
+               CÔNG TY CỔ PHẦN TẬP ĐOÀN PC1
+             </h3>
           </div>
 
-          {/* Main Message: Căn lề trái tự nhiên để giãn xa form hơn */}
-          <div className="max-w-xl">
-            <h1 className="text-6xl font-extrabold tracking-tight leading-[1.1] mb-8">
-              Digital <br /> 
-              <span className="text-[#009d98]">Transformation.</span>
+          {/* 2. MAIN CONTENT (Nằm giữa) */}
+          <div className="max-w-2xl mb-10">
+            <h1 className="text-6xl font-bold tracking-tight leading-[1.15] mb-6">
+              Hệ thống quản lý <br /> 
+              <span className="text-[#20a19c]">Đấu thầu Tập trung</span>
             </h1>
-            <p className="text-xl font-light text-white/90 leading-relaxed max-w-md border-l-2 border-[#009d98] pl-8">
-              Hệ thống quản lý đấu thầu tập trung – Nâng cao hiệu quả, minh bạch
-              và tối ưu hóa nguồn lực dự án.
+            
+            <p className="text-xl font-light text-white/90 leading-relaxed max-w-lg mb-10 border-l-2 border-[#20a19c] pl-6">
+              Kiến tạo giá trị bền vững thông qua quy trình minh bạch, 
+              hiệu quả và tối ưu hóa nguồn lực kỹ thuật số.
             </p>
+
+            {/* Badges */}
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md">
+                <ShieldCheck size={18} className="text-[#20a19c]" />
+                <span className="text-sm font-medium">Bảo mật Enterprise</span>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md">
+                <Zap size={18} className="text-[#20a19c]" />
+                <span className="text-sm font-medium">Hiệu suất cao</span>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md">
+                <Building2 size={18} className="text-[#20a19c]" />
+                <span className="text-sm font-medium">Hạ tầng số</span>
+              </div>
+            </div>
           </div>
 
-          {/* Footer Text */}
-          <div className="flex items-center gap-4 text-xs font-medium text-white/50 uppercase tracking-widest">
-            <span>Enterprise System</span>
-            <span className="w-1 h-1 bg-white/30 rounded-full" />
-            <span>Internal Use Only</span>
+          {/* 3. FOOTER (Góc dưới cùng bên trái) */}
+          <div className="text-xs text-white/60 font-medium tracking-wider">
+            © 2026 PC1 GROUP JS COMPANY
           </div>
         </div>
 
-        {/* CỘT PHẢI: FORM ĐĂNG NHẬP */}
-        {/* justify-center giúp form nằm giữa cột phải, tạo độ giãn tự nhiên với cột trái */}
-        <div className="flex items-center justify-center lg:justify-center p-8 pr-20">
-          <div className="w-full max-w-[420px] bg-white/95 backdrop-blur-xl p-8 md:p-10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20">
+        {/* === CỘT PHẢI: FORM ĐĂNG NHẬP === */}
+        <div className="flex items-center justify-center lg:justify-center p-6">
+          <div className="w-full max-w-[480px] bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden p-10 md:p-12 relative z-20 border border-white/20">
+             
+             {/* Logo góc phải form */}
+             <div className="absolute top-10 right-10">
+                <img 
+                  src="/PC1.jpg" 
+                  alt="PC1 Logo" 
+                  className="w-28 h-auto object-contain" 
+                />
+             </div>
 
-            {/* Header Mobile (Chỉ hiện khi màn hình nhỏ) */}
-            <div className="lg:hidden mb-8 text-center">
-              <h2 className="text-2xl font-black text-[#009d98] uppercase tracking-wider">
-                PC1 Group
-              </h2>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
-                Bidding Hub
-              </p>
-            </div>
+             {/* Header Mobile Only */}
+             <div className="lg:hidden mb-8 flex items-center gap-2">
+                <span className="font-bold text-[#0d1f23] text-lg">PC1 GROUP</span>
+             </div>
 
-            <div className="mb-10">
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-[#0d1f23] mb-2">
                 Đăng nhập
               </h2>
-              <div className="h-1.5 w-10 bg-[#009d98] mt-3 rounded-full" />
+              <div className="h-1.5 w-12 bg-[#20a19c] rounded-full" />
             </div>
 
             <LoginForm />
 
-            <div className="mt-10 pt-6 border-t border-slate-100 text-center">
-              <p className="text-xs text-slate-400 font-medium">
-                © 2026 PC1 Group Joint Stock Company. <br />
-                <span className="opacity-70">Version 1.0.0 (Stable)</span>
-              </p>
-            </div>
           </div>
         </div>
 
