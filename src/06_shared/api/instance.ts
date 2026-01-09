@@ -3,7 +3,7 @@ import camelcaseKeys from 'camelcase-keys';
 import snakecaseKeys from 'snakecase-keys';
 import { authStorage } from '@/shared/lib/auth'; 
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://saturday-gray-excuse-sas.trycloudflare.com/";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://steam-elect-least-study.trycloudflare.com/";
 const SKIP_TRANSFORM_HEADER = 'x-no-transform';
 
 // Mở rộng type để chứa cờ nội bộ
