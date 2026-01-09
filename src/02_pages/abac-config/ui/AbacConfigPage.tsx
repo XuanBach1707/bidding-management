@@ -1,19 +1,29 @@
 "use client";
 import React, { useState } from 'react';
 import { AbacPolicy } from '@/entities/abac';
+import { Settings2, Shield, Play, Database, Plus } from "lucide-react";
 
-// Import các Widgets
+// Import UI Libs
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { Sheet, SheetContent } from "@/shared/ui/sheet"; // Dùng Sheet thay cho Div Drawer
+import { Button } from "@/shared/ui/button";
+
+// Import Widgets
 import { PolicyListTable } from '@/widgets/abac/policy-list';
 import { PolicyEditor } from '@/widgets/abac/policy-editor';
 import { PolicySimulator } from '@/widgets/abac/policy-simulator';
-import { AttributeDictionary } from '@/widgets/abac/attribute-dictionary'; // Widget mới tách
+import { AttributeDictionary } from '@/widgets/abac/attribute-dictionary';
 
 export const AbacConfigPage = () => {
-  const [activeTab, setActiveTab] = useState<'policies' | 'simulator' | 'attributes'>('policies');
+  // State Tabs
+  const [activeTab, setActiveTab] = useState("policies");
+  
+  // State Drawer & Data
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<AbacPolicy | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Handlers
   const handleCreateNew = () => {
     setEditingPolicy(null);
     setIsDrawerOpen(true);
@@ -26,72 +36,103 @@ export const AbacConfigPage = () => {
 
   const handleSaveSuccess = () => {
     setIsDrawerOpen(false);
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey(prev => prev + 1); // Refresh list
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 font-sans">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Cấu hình Phân quyền (ABAC)</h1>
-          <p className="text-sm text-gray-500">Quản lý chính sách truy cập và từ điển thuộc tính hệ thống</p>
-        </div>
+    <div className="flex flex-col h-full min-h-screen bg-slate-50/50 font-sans">
+      
+      {/* 1. CONTAINER */}
+      <div className="container mx-auto max-w-7xl p-6 md:p-8 flex-1 flex flex-col min-h-0">
         
-        {activeTab === 'policies' && (
-          <button 
-            onClick={handleCreateNew}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2 transition-all font-bold"
-          >
-            <span className="text-xl">+</span> Tạo Chính Sách
-          </button>
-        )}
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 shrink-0">
+           <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-[#009d98]/10 rounded-xl shadow-sm">
+                 <Settings2 className="w-6 h-6 text-[#009d98]" />
+              </div>
+              <div>
+                 <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                    Cấu hình Phân quyền (ABAC)
+                 </h1>
+                 <p className="text-sm text-slate-500 font-medium">
+                    Quản lý chính sách truy cập động và từ điển dữ liệu.
+                 </p>
+              </div>
+           </div>
+
+           {/* Global Action (Chỉ hiện ở Tab Policies) */}
+           {activeTab === 'policies' && (
+              <Button 
+                onClick={handleCreateNew}
+                className="bg-[#009d98] hover:bg-[#008580] text-white shadow-sm font-bold gap-2"
+              >
+                <Plus className="w-5 h-5" /> Tạo Chính Sách Mới
+              </Button>
+           )}
+        </div>
+
+        {/* MAIN TABS */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 space-y-6">
+           
+           {/* Tab Navigation */}
+           <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm pb-1">
+              <TabsList className="bg-white border border-slate-200 h-12 p-1 w-full sm:w-auto shadow-sm">
+                 <TabsTrigger 
+                    value="policies" 
+                    className="data-[state=active]:bg-[#009d98] data-[state=active]:text-white h-10 px-6 font-semibold transition-all gap-2"
+                 >
+                    <Shield className="w-4 h-4" /> Danh sách Chính sách
+                 </TabsTrigger>
+                 <TabsTrigger 
+                    value="simulator" 
+                    className="data-[state=active]:bg-[#009d98] data-[state=active]:text-white h-10 px-6 font-semibold transition-all gap-2"
+                 >
+                    <Play className="w-4 h-4" /> Giả lập (Simulator)
+                 </TabsTrigger>
+                 <TabsTrigger 
+                    value="attributes" 
+                    className="data-[state=active]:bg-[#009d98] data-[state=active]:text-white h-10 px-6 font-semibold transition-all gap-2"
+                 >
+                    <Database className="w-4 h-4" /> Từ điển Attributes
+                 </TabsTrigger>
+              </TabsList>
+           </div>
+
+           {/* Tab Contents */}
+           {/* Min-h-0 để scroll hoạt động đúng bên trong các widget con */}
+           <div className="flex-1 min-h-0 relative">
+              <TabsContent value="policies" className="mt-0 h-full">
+                 <PolicyListTable key={refreshKey} onEdit={handleEdit} />
+              </TabsContent>
+              
+              <TabsContent value="simulator" className="mt-0 h-full">
+                 <PolicySimulator />
+              </TabsContent>
+              
+              <TabsContent value="attributes" className="mt-0 h-full">
+                 <AttributeDictionary />
+              </TabsContent>
+           </div>
+
+        </Tabs>
+
       </div>
 
-      {/* TABS NAVIGATION */}
-      <div className="flex gap-1 mb-6 border-b border-gray-300">
-        {[
-          { id: 'policies', label: 'Danh sách Chính sách', color: 'text-blue-600' },
-          { id: 'simulator', label: 'Giả lập (Simulator)', color: 'text-indigo-600' },
-          { id: 'attributes', label: 'Từ điển Attributes', color: 'text-green-600' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-6 py-3 text-sm font-bold rounded-t-lg transition-all ${
-              activeTab === tab.id 
-                ? `bg-white ${tab.color} border border-b-0 border-gray-300 shadow-sm translate-y-[1px]` 
-                : 'text-gray-500 hover:bg-gray-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* EDITOR DRAWER (SHEET) */}
+      <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        {/* Sử dụng max-w lớn (4xl hoặc 1000px) vì Editor có 2 cột */}
+        <SheetContent side="right" className="w-full sm:max-w-[1000px] p-0 border-l border-slate-200 shadow-2xl">
+           {isDrawerOpen && (
+             <PolicyEditor 
+               initialPolicy={editingPolicy}
+               onSuccess={handleSaveSuccess}
+               onCancel={() => setIsDrawerOpen(false)}
+             />
+           )}
+        </SheetContent>
+      </Sheet>
 
-      {/* CONTENT AREA */}
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {activeTab === 'policies' && <PolicyListTable key={refreshKey} onEdit={handleEdit} />}
-        {activeTab === 'simulator' && <PolicySimulator />}
-        {activeTab === 'attributes' && <AttributeDictionary />}
-      </div>
-
-      {/* EDITOR DRAWER */}
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setIsDrawerOpen(false)} />
-      )}
-
-      <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-5xl bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${
-        isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        {isDrawerOpen && (
-          <PolicyEditor 
-            initialPolicy={editingPolicy}
-            onSuccess={handleSaveSuccess}
-            onCancel={() => setIsDrawerOpen(false)}
-          />
-        )}
-      </div>
     </div>
   );
 };

@@ -4,9 +4,10 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { userApi } from "@/entities/user";
 import { useToast } from "@/shared/lib/hooks/use-toast";
+import { AlertTriangle } from "lucide-react";
 
 interface DeleteUserAlertProps {
-  userId: number | null; // Nếu null thì dialog đóng
+  userId: number | null; 
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -18,16 +19,12 @@ export const DeleteUserAlert = ({ userId, onClose, onSuccess }: DeleteUserAlertP
     if (!userId) return;
     try {
       await userApi.deleteUser(userId);
-      
-      // [SỬA LỖI] Thay variant="success" bằng className màu xanh
       toast({ 
         title: "Đã xóa nhân sự", 
-        className: "bg-green-600 text-white" 
+        className: "bg-green-600 text-white border-none" 
       });
-      
       onSuccess();
     } catch (error) {
-      // Variant "destructive" là mặc định có sẵn cho thông báo lỗi
       toast({ 
         title: "Xóa thất bại", 
         variant: "destructive" 
@@ -41,14 +38,17 @@ export const DeleteUserAlert = ({ userId, onClose, onSuccess }: DeleteUserAlertP
     <AlertDialog open={!!userId} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+          <div className="flex items-center gap-3 text-red-600 mb-2">
+             <div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="w-6 h-6" /></div>
+             <AlertDialogTitle>Xóa tài khoản nhân sự?</AlertDialogTitle>
+          </div>
           <AlertDialogDescription>
-            Hành động này không thể hoàn tác. Tài khoản người dùng sẽ bị xóa vĩnh viễn khỏi hệ thống.
+            Hành động này <strong>không thể hoàn tác</strong>. Tài khoản này sẽ bị xóa vĩnh viễn khỏi hệ thống và không thể truy cập được nữa.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirm} className="bg-red-600 hover:bg-red-700">
+          <AlertDialogAction onClick={handleConfirm} className="bg-red-600 hover:bg-red-700 text-white border-none">
             Xóa vĩnh viễn
           </AlertDialogAction>
         </AlertDialogFooter>
