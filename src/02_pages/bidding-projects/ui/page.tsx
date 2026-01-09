@@ -174,9 +174,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                 </Button>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                        <Badge variant="outline" className="text-[10px] font-mono text-slate-500 bg-slate-50 border-slate-200">
-                            ID: #{project.id}
-                        </Badge>
+                        {/* Đã xóa Badge ID */}
                         <Badge className={cn(
                             "text-[10px] font-bold border-0 uppercase tracking-wider",
                             project.status === 'ACTIVE' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-blue-500 text-white"
@@ -189,11 +187,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     </h1>
                     
                     <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
-                        <div className="flex items-center gap-1.5">
-                            <Building2 className="w-4 h-4 text-slate-400" /> 
-                            <span>Chủ trì: <span className="text-slate-900 font-bold">{project.hostId}</span></span>
-                        </div>
-                        <div className="w-px h-3 bg-slate-300"></div>
+                        {/* Đã xóa thông tin Chủ trì */}
                         <div className="flex items-center gap-1.5">
                             <Calendar className="w-4 h-4 text-slate-400" /> 
                             <span>Tạo ngày: <span className="text-slate-900">{new Date(project.createdAt).toLocaleDateString('vi-VN')}</span></span>
