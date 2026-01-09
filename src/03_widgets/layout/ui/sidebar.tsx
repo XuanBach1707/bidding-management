@@ -15,6 +15,7 @@ export function Sidebar() {
   const { user } = useAuth();
   const userRole = user?.role || null;
 
+  // Logic lọc menu theo quyền hạn
   const filteredMenu = useMemo(() => {
     if (!userRole) return [];
 
@@ -29,6 +30,7 @@ export function Sidebar() {
           children: route.children ? filterFn(route.children) : undefined,
         }))
         .filter((route) => {
+            // Loại bỏ mục cha nếu không còn con nào và cũng không có link
             if (route.children && route.children.length === 0 && !route.href) return false;
             return true;
         });
@@ -38,15 +40,15 @@ export function Sidebar() {
   }, [userRole]);
 
   return (
-    <div className="flex h-full w-[250px] flex-col border-r bg-white shadow-sm">
+    <div className="flex h-full w-[260px] flex-col border-r border-slate-200 bg-white shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
 
-      {/* HEADER / LOGO - ĐÃ SỬA: Không dùng Link, Logo to hơn */}
-      <div className="flex h-20 items-center border-b px-4 shrink-0 bg-white"> {/* Tăng chiều cao header lên h-20 */}
-        <div className="flex items-center gap-4 w-full"> {/* Tăng khoảng cách gap lên 4 */}
+      {/* HEADER / LOGO: Sạch sẽ, chuyên nghiệp */}
+      <div className="flex h-20 items-center px-6 shrink-0 bg-white border-b border-slate-100/50">
+        <div className="flex items-center gap-3 w-full">
            {/* Logo Ảnh */}
-           <div className="relative h-12 w-12 shrink-0"> {/* Tăng kích thước ảnh lên h-12 w-12 */}
+           <div className="relative h-10 w-10 shrink-0">
              <Image
-               src="/PC1_Logo.svg" // Đã đổi thành .svg
+               src="/PC1_Logo.svg"
                alt="PC1 Group Logo"
                fill
                className="object-contain"
@@ -56,33 +58,34 @@ export function Sidebar() {
 
            {/* Tên Hệ thống */}
            <div className="flex flex-col justify-center">
-              <span className="text-base font-extrabold text-slate-900 leading-tight"> {/* Tăng cỡ chữ lên text-base */}
+              <span className="text-[15px] font-extrabold text-slate-800 leading-none tracking-tight">
                 PC1 GROUP
               </span>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5"> {/* Tăng cỡ chữ phụ lên text-[11px] */}
+              <span className="text-[10px] font-bold text-[#009d98] uppercase tracking-[0.15em] mt-1">
                 Bidding Hub
               </span>
            </div>
         </div>
       </div>
 
-      {/* Menu List */}
-      <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 custom-scrollbar">
+      {/* MENU LIST */}
+      <div className="flex flex-1 flex-col gap-1 overflow-y-auto py-4 px-3 custom-scrollbar">
         {filteredMenu.length > 0 ? (
             filteredMenu.map((route, index) => (
                <SidebarItem key={index} route={route} />
             ))
         ) : (
-            <div className="space-y-3 p-2">
-                <div className="h-8 bg-slate-100 rounded animate-pulse" />
-                <div className="h-8 bg-slate-100 rounded animate-pulse" />
-                <div className="h-8 bg-slate-100 rounded animate-pulse" />
+            // Skeleton Loading khi chưa có menu
+            <div className="space-y-2 p-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-9 bg-slate-50 rounded animate-pulse" />
+                ))}
             </div>
         )}
       </div>
 
       {/* FOOTER USER NAV */}
-      <div className="p-3 bg-slate-50 border-t shrink-0">
+      <div className="p-3 border-t border-slate-100 shrink-0 bg-slate-50/50">
          <SidebarUserItem />
       </div>
     </div>
@@ -90,13 +93,13 @@ export function Sidebar() {
 }
 
 // ----------------------------------------------------------------------
-// SUB COMPONENT: SIDEBAR ITEM (Giữ nguyên không thay đổi)
+// SUB COMPONENT: SIDEBAR ITEM
 // ----------------------------------------------------------------------
 function SidebarItem({ route }: { route: SidebarRoute }) {
-  // ... (Code phần này giữ nguyên như cũ)
   const pathname = usePathname() || "";
   const [isOpen, setIsOpen] = useState(false);
 
+  // Logic Active
   const isActive = route.href 
     ? (pathname === route.href || pathname.startsWith(`${route.href}/`)) 
     : false;
@@ -106,26 +109,32 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
   );
 
   useEffect(() => {
-    if (hasActiveChild) {
-      setIsOpen(true);
-    }
+    if (hasActiveChild) setIsOpen(true);
   }, [hasActiveChild]);
 
   const Icon = route.icon;
 
+  // --- TRƯỜNG HỢP 1: MENU CÓ CON (PARENT) ---
   if (route.children && route.children.length > 0) {
     return (
       <div className="mb-1">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100 hover:text-slate-900",
-            hasActiveChild ? "text-indigo-600 font-semibold bg-indigo-50/50" : "text-slate-600"
+            "group relative flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
+            hasActiveChild 
+              ? "text-[#009d98] font-bold bg-[#009d98]/5" 
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           )}
         >
-          <div className="flex items-center gap-3">
+          {/* Thanh chỉ thị bên trái cho Parent (khi con đang active) */}
+          {hasActiveChild && (
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[4px] bg-[#009d98] rounded-r-md" />
+          )}
+
+          <div className="flex items-center gap-3 ml-1"> {/* Thêm ml-1 để tránh dính vào thanh chỉ thị */}
             {Icon && (
-              <Icon className={cn("h-5 w-5", hasActiveChild ? "text-indigo-600" : "text-slate-400")} />
+              <Icon className={cn("h-[18px] w-[18px]", hasActiveChild ? "text-[#009d98]" : "text-slate-400 group-hover:text-slate-600")} />
             )}
             <span>{route.title}</span>
           </div>
@@ -137,7 +146,7 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
         </button>
 
         {isOpen && (
-          <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-100 pl-2">
+          <div className="ml-5 mt-1 space-y-0.5 border-l border-slate-200 pl-2">
             {route.children.map((child, idx) => (
               <SidebarItem key={idx} route={child} />
             ))}
@@ -147,20 +156,31 @@ function SidebarItem({ route }: { route: SidebarRoute }) {
     );
   }
 
+  // --- TRƯỜNG HỢP 2: MENU ĐƠN (LINK) ---
   return (
     <Link
       href={route.href || "#"}
       className={cn(
-        "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5",
+        // 'relative' để định vị thanh span absolute bên trong
+        "group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 mb-0.5",
         isActive
-          ? "bg-indigo-50 text-indigo-700 font-semibold shadow-sm border border-indigo-100"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          ? "bg-[#009d98]/10 text-[#009d98] font-bold" 
+          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
       )}
     >
-      {Icon && (
-        <Icon className={cn("h-5 w-5 transition-colors", isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600")} />
+      {/* THANH CHỈ THỊ (Thay thế border-l) */}
+      {/* Nó nằm đè lên, thẳng tắp, không bị cong theo border-radius của nút */}
+      {isActive && (
+         <span className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#009d98] rounded-r-md" />
       )}
-      <span>{route.title}</span>
+      
+      {/* Content */}
+      <div className={cn("flex items-center gap-3", isActive && "ml-1")}> {/* Thêm chút margin khi active để cân đối */}
+        {Icon && (
+            <Icon className={cn("h-[18px] w-[18px] transition-colors", isActive ? "text-[#009d98]" : "text-slate-400 group-hover:text-slate-600")} />
+        )}
+        <span>{route.title}</span>
+      </div>
     </Link>
   );
 }

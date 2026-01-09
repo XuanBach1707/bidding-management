@@ -1,13 +1,17 @@
-// src/entities/user/model/schemas.ts
 import { z } from "zod";
 import { UserRole, SecurityLevel } from "./consts";
 
 // 1. Schema hiển thị (GET)
+// Dữ liệu từ BE (snake_case) được map sang camelCase trước khi validate
 export const UserSchema = z.object({
   userId: z.number(),
   email: z.string().email(),
   fullName: z.string(),
   role: z.nativeEnum(UserRole),
+  
+  // --- [MỚI] Thêm trường Avatar ---
+  avatarUrl: z.string().nullable().optional(), 
+  
   orgUnitId: z.number().nullable().optional(), 
   orgUnitName: z.string().nullable().optional(),
   jobTitle: z.string().nullable().optional(),
@@ -34,25 +38,20 @@ export const UpdateUserSchema = CreateUserSchema.partial().omit({
   email: true 
 });
 
-// =================================================================
-// 4. [MỚI] SCHEMA ĐỔI MẬT KHẨU
-// =================================================================
-
-// 4.1. User tự đổi mật khẩu (Cần confirm)
+// 4. SCHEMA ĐỔI MẬT KHẨU
 export const ChangePasswordSchema = z.object({
   newPassword: z.string().min(6, "Mật khẩu mới phải có ít nhất 6 ký tự"),
   confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Mật khẩu xác nhận không khớp",
-  path: ["confirmPassword"], // Lỗi sẽ hiện ở trường confirmPassword
+  path: ["confirmPassword"],
 });
 
-// 4.2. Admin reset mật khẩu (Không cần confirm, vì admin set rồi gửi cho user)
 export const ResetPasswordSchema = z.object({
   newPassword: z.string().min(6, "Mật khẩu mới phải có ít nhất 6 ký tự"),
 });
 
-// Export Type trực tiếp tại đây cũng được, hoặc sang file types.ts export (như cấu trúc bạn đang làm)
+// Export Types
 export type User = z.infer<typeof UserSchema>;
 export type CreateUserFormValues = z.infer<typeof CreateUserSchema>;
 export type UpdateUserFormValues = z.infer<typeof UpdateUserSchema>;
