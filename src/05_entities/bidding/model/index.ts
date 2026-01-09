@@ -1,7 +1,7 @@
 // 1. Export Types
 export type {
   // Common
-  BaseResponse,
+  // BaseResponses, // <-- Đã xóa dòng này
   GetBiddingPackagesParams,
   
   // Main Entities

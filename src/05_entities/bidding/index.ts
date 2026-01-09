@@ -4,7 +4,6 @@ export {
   type BiddingPackage,
   type BiddingFile,
   type GetBiddingPackagesParams,
-  type BaseResponse,
   
   // AI Types (Để Feature dùng)
   type BidAiExtractData,

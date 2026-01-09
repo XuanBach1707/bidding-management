@@ -13,6 +13,13 @@ export const BaseResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
     data: dataSchema,
   });
 
+  export interface BaseResponse<T> {
+  success: boolean;
+  status: number;
+  message?: string | null;
+  data: T;
+}
+
 // Schema cho Metadata phân trang (nằm trong object data)
 export const PaginationMetaSchema = z.object({
   total: z.number().optional().default(0),
