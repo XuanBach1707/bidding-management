@@ -2,7 +2,7 @@
 import React, { useEffect, useState, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInCalendarDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 // Entities
@@ -11,9 +11,9 @@ import { taskApi } from '@/entities/task';
 
 // UI
 import { 
-  ArrowLeft, Trash2, Calendar, Building, 
+  ArrowLeft, Trash2, Calendar, Building2, 
   CheckCircle2, Clock, Info, MoreVertical,
-  PieChart 
+  PieChart, ExternalLink, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useToast } from "@/shared/lib/hooks/use-toast";
@@ -27,6 +27,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/shared/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/ui/alert-dialog";
+import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
 
 // Widget
@@ -36,7 +37,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// Danh sách task chỉ tính điểm (100%) khi có file
+// Danh sách task đặc biệt (chỉ cần file là xong)
 const FILE_ONLY_TASKS = ["Hồ sơ pháp lý", "Hồ sơ tài chính"];
 
 export default function BiddingProjectDetailPage({ params }: PageProps) {
@@ -49,7 +50,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
   const [loadingProject, setLoadingProject] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // --- 1. FETCH PROJECT INFO ---
+  // --- 1. FETCH PROJECT ---
   useEffect(() => {
     const fetchProject = async () => {
       try {
@@ -74,62 +75,65 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
 
   // --- 3. CALCULATE STATS ---
   const stats = useMemo(() => {
-    if (!tasks || tasks.length === 0) return { progress: 0, timeLeft: "---", isUrgent: false, timeBarPercent: 0 };
+    if (!tasks || tasks.length === 0) return { progress: 0, timeLeft: "Chưa có deadline", isUrgent: false, timeBarPercent: 0, daysLeft: 0 };
 
-    // --- A. TÍNH TIẾN ĐỘ TỔNG THỂ ---
+    // A. Tiến độ
     const parentScores = tasks.map(parent => {
         const isFileTask = FILE_ONLY_TASKS.some(t => parent.taskName.includes(t));
-        if (isFileTask) return 100;
+        if (isFileTask) return 100; // Mặc định 100 nếu là task hồ sơ (giả định logic)
 
         const subTasks = parent.subTasks || [];
         if (subTasks.length === 0) return 0;
-
         const completedCount = subTasks.filter(s => s.status === 'COMPLETED').length;
         return (completedCount / subTasks.length) * 100;
     });
-
     const totalScore = parentScores.reduce((a, b) => a + b, 0);
-    const progressPercent = Math.round(totalScore / tasks.length);
+    const progressPercent = Math.round(totalScore / (tasks.length || 1));
 
-    // --- B. TÍNH THỜI GIAN (LOGIC MỚI) ---
+    // B. Thời gian
     const allTasksWithDeadline = tasks.flatMap(t => [t, ...(t.subTasks || [])]);
-    
     const futureDeadlines = allTasksWithDeadline
         .map(t => t.deadline ? new Date(t.deadline).getTime() : 0)
-        .filter(d => d > Date.now());
+        .filter(d => d > 0); // Lấy tất cả deadline (cả quá khứ)
     
     let timeLeftString = "---";
     let isUrgent = false;
-    let timeBarPercent = 100; // Mặc định đầy
+    let timeBarPercent = 0;
+    let daysRemaining = 0;
 
     if (futureDeadlines.length > 0) {
-        const minDeadline = Math.min(...futureDeadlines);
-        const now = Date.now();
-        const msLeft = minDeadline - now;
-        const daysLeft = msLeft / (1000 * 60 * 60 * 24); // Đổi ra số ngày
+        // Tìm deadline gần nhất (Min)
+        const minDeadlineTimestamp = Math.min(...futureDeadlines);
+        const minDeadline = new Date(minDeadlineTimestamp);
+        const now = new Date();
+        
+        daysRemaining = differenceInCalendarDays(minDeadline, now);
 
-        // Text hiển thị (VD: "còn 5 ngày")
-        timeLeftString = formatDistanceToNow(new Date(minDeadline), { locale: vi });
-
-        // Logic thanh Bar:
-        if (daysLeft > 7) {
-            // Trên 7 ngày -> Luôn đầy vạch
-            timeBarPercent = 100;
-            isUrgent = false;
+        if (daysRemaining < 0) {
+            timeLeftString = "Đã quá hạn";
+            isUrgent = true;
+            timeBarPercent = 100; // Full đỏ
         } else {
-            // Dưới 7 ngày -> Rút dần vạch (còn 7 ngày = 100%, 0 ngày = 0%)
-            timeBarPercent = Math.max(0, (daysLeft / 7) * 100);
-            isUrgent = true; // Đánh dấu gấp để đổi màu đỏ
+            timeLeftString = formatDistanceToNow(minDeadline, { locale: vi, addSuffix: true });
+            
+            // Logic Time Bar:
+            // > 7 ngày: Xanh (An toàn)
+            // 3-7 ngày: Vàng (Cảnh báo)
+            // < 3 ngày: Đỏ (Gấp)
+            if (daysRemaining > 7) {
+                isUrgent = false;
+                timeBarPercent = 25; 
+            } else if (daysRemaining > 3) {
+                isUrgent = false; // Vẫn chưa urgent lắm, nhưng warning
+                timeBarPercent = 60;
+            } else {
+                isUrgent = true;
+                timeBarPercent = 90;
+            }
         }
-
-    } else if (allTasksWithDeadline.some(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'COMPLETED')) {
-        // Trường hợp quá hạn
-        timeLeftString = "Quá hạn";
-        isUrgent = true;
-        timeBarPercent = 0; // Hết vạch
     }
 
-    return { progress: progressPercent, timeLeft: timeLeftString, isUrgent, timeBarPercent };
+    return { progress: progressPercent, timeLeft: timeLeftString, isUrgent, timeBarPercent, daysLeft: daysRemaining };
   }, [tasks]);
 
   // --- DELETE HANDLER ---
@@ -137,75 +141,96 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
     try {
       setIsDeleting(true);
       await biddingProjectApi.delete(projectId);
-      toast({ title: "Thành công", description: "Dự án đã được xóa." });
-      router.push('/opportunities'); 
+      toast({ title: "Đã xóa dự án", className: "bg-green-600 text-white border-none" });
+      router.push('/bidding-projects'); 
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Lỗi", description: error?.message });
+      toast({ variant: "destructive", title: "Lỗi xóa dự án", description: error?.message });
     } finally {
       setIsDeleting(false);
     }
   };
 
   if (loadingProject) return (
-    <div className="h-screen w-full flex items-center justify-center bg-slate-50">
-       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-3">
+       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#009d98]"></div>
+       <p className="text-slate-500 text-sm animate-pulse">Đang tải dữ liệu dự án...</p>
     </div>
   );
   
-  if (!project) return <div className="p-10 text-center text-red-500">Không tìm thấy dự án.</div>;
+  if (!project) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
+        <h2 className="text-xl font-bold text-slate-800">Không tìm thấy dự án</h2>
+        <Button variant="link" onClick={() => router.back()}>Quay lại</Button>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50 font-sans">
       
-      {/* HEADER SECTION */}
-      <div className="bg-white border-b shadow-sm z-20 flex-shrink-0">
-        <div className="px-6 py-4">
+      {/* --- 1. HEADER SECTION (Compact & Clean) --- */}
+      <div className="bg-white border-b border-slate-200 shadow-sm z-20 flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           
-          {/* Top Bar */}
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-start gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()} className="mt-1 h-8 w-8 text-slate-400 hover:text-slate-900">
+          {/* Top Bar: Back + Title + Actions */}
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex items-start gap-4 min-w-0">
+                <Button variant="ghost" size="icon" onClick={() => router.back()} className="mt-0.5 h-8 w-8 text-slate-400 hover:text-[#009d98] hover:bg-[#009d98]/10 rounded-full">
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-[10px] font-mono text-slate-500 bg-slate-50 border-slate-200">
+                            ID: #{project.id}
+                        </Badge>
+                        <Badge className={cn(
+                            "text-[10px] font-bold border-0",
+                            project.status === 'ACTIVE' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                        )}>
+                            {project.status}
+                        </Badge>
+                    </div>
+                    <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 leading-snug truncate" title={project.name}>
                         {project.name}
                     </h1>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500 font-medium">
-                        <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">ID: #{project.id}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1"><Building className="w-3 h-3" /> Chủ trì: {project.hostId}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(project.createdAt).toLocaleDateString('vi-VN')}</span>
+                    
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500 font-medium">
+                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                            <Building2 className="w-3.5 h-3.5 text-slate-400" /> 
+                            <span>Chủ trì: <span className="text-slate-700 font-semibold">{project.hostId}</span></span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" /> 
+                            <span>Tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
                 <Dialog>
                     <DialogTrigger asChild>
-                         <Button variant="outline" className="gap-2 text-slate-600">
-                            <Info className="w-4 h-4" /> Chi tiết gói thầu
+                         <Button variant="ghost" size="sm" className="text-slate-500 hover:text-[#009d98] hidden md:flex gap-1.5">
+                            <Info className="w-4 h-4" /> Info
                          </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl">
                         <DialogHeader>
-                            <DialogTitle>Danh sách gói thầu liên kết</DialogTitle>
+                            <DialogTitle className="text-lg font-bold text-[#009d98]">Gói thầu liên kết</DialogTitle>
                         </DialogHeader>
                         <Table>
                             <TableHeader className="bg-slate-50">
                                 <TableRow>
-                                    <TableHead>Mã TBMT</TableHead>
+                                    <TableHead className="w-[120px]">Mã TBMT</TableHead>
                                     <TableHead>Tên gói thầu</TableHead>
-                                    <TableHead className="text-right">Ngày đăng</TableHead>
+                                    <TableHead className="text-right w-[120px]">Ngày đăng</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {(project.packages || []).map((pkg) => (
                                     <TableRow key={pkg.maTbmt}>
-                                        <TableCell className="font-mono text-blue-600 font-bold">{pkg.maTbmt}</TableCell>
-                                        <TableCell>{pkg.tenGoiThau}</TableCell>
-                                        <TableCell className="text-right">{new Date(pkg.ngayDangTai).toLocaleDateString('vi-VN')}</TableCell>
+                                        <TableCell className="font-mono text-[#009d98] font-bold text-xs">{pkg.maTbmt}</TableCell>
+                                        <TableCell className="font-medium text-sm">{pkg.tenGoiThau}</TableCell>
+                                        <TableCell className="text-right text-xs text-slate-500">{new Date(pkg.ngayDangTai).toLocaleDateString('vi-VN')}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -213,27 +238,26 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     </DialogContent>
                 </Dialog>
 
-                {/* [ĐÃ XÓA] Nút "Xuất báo cáo" đã được bỏ đi theo yêu cầu */}
-                
-                {/* Nút: Mở kho hồ sơ */}
+                {/* Drive Button (Primary Action) */}
                 <Button 
-                    className="gap-2 bg-blue-600 hover:bg-blue-700 font-bold shadow-sm shadow-blue-200"
+                    className="gap-2 bg-[#009d98] hover:bg-[#008580] shadow-sm font-semibold h-9 px-4"
                     onClick={() => {
                         const folderId = project.driveFolderId || (project as any).drive_folder_id;
                         if (folderId) {
                             window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
-                            toast({ title: "Đang chuyển hướng", description: "Đang mở kho lưu trữ trên Google Drive...", className: "bg-green-600 text-white border-none" });
+                            toast({ title: "Đang mở Drive", description: "Chuyển hướng đến kho lưu trữ...", className: "bg-[#009d98] text-white border-none" });
                         } else {
-                            toast({ variant: "destructive", title: "Không tìm thấy liên kết", description: "Dự án này chưa được liên kết với thư mục Drive nào." });
+                            toast({ variant: "destructive", title: "Chưa liên kết", description: "Dự án này chưa có thư mục Drive." });
                         }
                     }}
                 >
-                    <CheckCircle2 className="w-4 h-4" /> Tổng hợp hồ sơ & Tải
+                    <ExternalLink className="w-4 h-4" /> 
+                    <span className="hidden sm:inline">Mở Drive</span>
                 </Button>
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4 text-slate-400" /></Button>
+                        <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200"><MoreVertical className="w-4 h-4 text-slate-500" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <AlertDialog>
@@ -244,12 +268,15 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>Xác nhận xóa?</AlertDialogTitle>
-                                    <AlertDialogDescription>Dự án <strong>{project.name}</strong> sẽ bị xóa vĩnh viễn.</AlertDialogDescription>
+                                    <AlertDialogTitle className="text-red-600">Cảnh báo xóa dữ liệu</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Bạn có chắc chắn muốn xóa dự án <strong>{project.name}</strong> không? <br/>
+                                        Hành động này không thể hoàn tác và sẽ xóa toàn bộ tiến độ công việc liên quan.
+                                    </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>Hủy</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Xóa</AlertDialogAction>
+                                    <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Xóa vĩnh viễn</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
@@ -258,55 +285,68 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Stats Grid */}
-          {/* [SỬA] Đổi grid-cols-4 thành grid-cols-2 vì đã bỏ cột Warning và Export */}
-          <div className="grid grid-cols-2 gap-4">
-             {/* 1. THỜI GIAN CÒN LẠI */}
-             <div className="bg-white border rounded-xl p-3 px-4 shadow-sm flex flex-col justify-center">
-                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Thời gian còn lại</h3>
-                <div className="flex items-center gap-2">
-                    <Clock className={cn("w-5 h-5", stats.isUrgent ? "text-red-500" : "text-emerald-500")} />
-                    <span className={cn("text-xl font-black", stats.isUrgent ? "text-red-600" : "text-slate-800")}>
-                        {stats.timeLeft}
-                    </span>
+          {/* Stats Grid (Compact) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+             
+             {/* 1. DEADLINE CARD */}
+             <div className={cn(
+                 "col-span-2 md:col-span-1 rounded-xl p-3 border shadow-sm transition-all relative overflow-hidden flex flex-col justify-center",
+                 stats.isUrgent ? "bg-red-50 border-red-200" : "bg-white border-slate-200"
+             )}>
+                {/* Background Decor */}
+                <Clock className={cn("absolute right-2 top-2 w-8 h-8 opacity-10", stats.isUrgent ? "text-red-500" : "text-slate-400")} />
+                
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1">
+                    {stats.isUrgent && <AlertTriangle className="w-3 h-3 text-red-500" />} Deadline
+                </h3>
+                <div className={cn("text-lg font-black leading-none", stats.isUrgent ? "text-red-600" : "text-slate-800")}>
+                    {stats.timeLeft}
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
-                    {/* [LOGIC MỚI] width dựa vào timeBarPercent */}
+                
+                {/* Time Bar */}
+                <div className="w-full bg-black/5 rounded-full h-1 mt-2 overflow-hidden">
                     <div 
-                        className={cn("h-1.5 rounded-full transition-all duration-500", stats.isUrgent ? "bg-red-500" : "bg-emerald-500")} 
+                        className={cn("h-full rounded-full transition-all duration-500", 
+                            stats.daysLeft < 3 ? "bg-red-500" : 
+                            stats.daysLeft < 7 ? "bg-amber-500" : "bg-emerald-500"
+                        )} 
                         style={{ width: `${stats.timeBarPercent}%` }}
                     ></div>
                 </div>
              </div>
 
-             {/* 2. TIẾN ĐỘ TỔNG THỂ */}
-             <div className="bg-white border rounded-xl p-3 px-4 shadow-sm flex flex-col justify-center">
-                <div className="flex justify-between items-center mb-1">
-                    <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tiến độ tổng thể</h3>
-                    <PieChart className={cn("w-4 h-4", stats.progress === 100 ? "text-emerald-500" : "text-blue-500")} />
+             {/* 2. PROGRESS CARD */}
+             <div className="col-span-2 md:col-span-1 bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                <PieChart className="absolute right-2 top-2 w-8 h-8 text-blue-500 opacity-10" />
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Tiến độ</h3>
+                <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-blue-600 tabular-nums">{stats.progress}</span>
+                    <span className="text-xs font-bold text-blue-400">%</span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                    <span className="text-xl font-black text-slate-800">{stats.progress}%</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-                    <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
+                <div className="w-full bg-slate-100 rounded-full h-1 mt-1">
+                    <div className="bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
                 </div>
              </div>
 
-             {/* [ĐÃ XÓA] Phần hiển thị "Vấn đề cần xử lý" */}
+             {/* 3. Placeholder for future stats (Optional) */}
+             <div className=" md:block col-span-2 bg-slate-50 rounded-xl border border-slate-100 border-dashed p-3 flex items-center justify-center text-xs text-slate-400">
+                 Khu vực thống kê mở rộng (Nhân sự / Ngân sách)
+             </div>
+
           </div>
 
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-hidden relative">
-         <ProjectTaskList 
-            projectId={projectId} 
-            driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
-            projectName={project.name} // Thêm dòng này để tab Files có context
-         />
+      {/* --- 2. MAIN CONTENT (Task List) --- */}
+      <div className="flex-1 overflow-hidden relative bg-slate-50/50">
+         <div className="h-full max-w-7xl mx-auto">
+             <ProjectTaskList 
+                projectId={projectId} 
+                driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
+                projectName={project.name}
+             />
+         </div>
       </div>
 
     </div>

@@ -13,6 +13,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/shared/ui/alert-dialog";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Textarea } from "@/shared/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import { Badge } from "@/shared/ui/badge";
+import { Edit, Trash2, Plus, Database, Code } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/shared/ui/dialog";
 
 export const AttributeDictionary = () => {
   const { toast } = useToast();
@@ -23,7 +38,6 @@ export const AttributeDictionary = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   
-  // formData cập nhật theo Schema chuẩn của Backend
   const [formData, setFormData] = useState({
     attr_key: '',
     attr_type: 'STRING' as AttributeType,
@@ -83,13 +97,12 @@ export const AttributeDictionary = () => {
     }
 
     try {
-      // Dữ liệu sẽ đi qua Zod Schema (AttributeTypeSchema) để đảm bảo attr_type hợp lệ
       if (editingId) {
         await abacApi.updateAttribute(editingId, formData);
-        toast({ title: "Thành công", description: "Đã cập nhật thuộc tính." });
+        toast({ title: "Thành công", description: "Đã cập nhật thuộc tính.", className: "bg-[#009d98] text-white border-none" });
       } else {
         await abacApi.createAttribute(formData);
-        toast({ title: "Thành công", description: "Đã thêm thuộc tính mới." });
+        toast({ title: "Thành công", description: "Đã thêm thuộc tính mới.", className: "bg-[#009d98] text-white border-none" });
       }
       setIsModalOpen(false);
       loadData();
@@ -101,7 +114,7 @@ export const AttributeDictionary = () => {
   const onConfirmDelete = async (id: number) => {
     try {
       await abacApi.deleteAttribute(id);
-      toast({ title: "Thành công", description: "Đã xóa thuộc tính." });
+      toast({ title: "Thành công", description: "Đã xóa thuộc tính.", className: "bg-green-600 text-white border-none" });
       loadData();
     } catch (error) {
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể xóa thuộc tính này." });
@@ -109,165 +122,180 @@ export const AttributeDictionary = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button 
-          onClick={handleOpenAdd}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow text-sm font-bold transition-all"
-        >
-          + Thêm Thuộc Tính
-        </button>
+    <div className="space-y-6">
+      
+      {/* TOOLBAR */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+            <h3 className="font-bold text-slate-800 text-lg">Từ điển Thuộc tính</h3>
+            <p className="text-xs text-slate-500">Định nghĩa các biến (Attribute) dùng trong chính sách ABAC.</p>
+        </div>
+        <Button onClick={handleOpenAdd} className="bg-[#009d98] hover:bg-[#008580] text-white shadow-sm font-bold">
+          <Plus className="w-4 h-4 mr-2" /> Thêm Thuộc Tính
+        </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow border overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50 text-gray-600 font-bold border-b text-xs uppercase tracking-wider">
-            <tr>
-              <th className="p-4">Attribute Key</th>
-              <th className="p-4">Type</th>
-              <th className="p-4">Source Table</th>
-              <th className="p-4">Mapping Path</th>
-              <th className="p-4 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
+      {/* TABLE */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <Table>
+          <TableHeader className="bg-slate-50 border-b border-slate-200">
+            <TableRow>
+              <TableHead className="font-bold text-slate-700 pl-6">Attribute Key</TableHead>
+              <TableHead className="font-bold text-slate-700 w-[100px]">Type</TableHead>
+              <TableHead className="font-bold text-slate-700">Source Table</TableHead>
+              <TableHead className="font-bold text-slate-700">Mapping Path</TableHead>
+              <TableHead className="font-bold text-slate-700 text-right pr-6">Thao tác</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr><td colSpan={5} className="p-8 text-center text-gray-400 font-medium">Đang tải dữ liệu từ điển thuộc tính...</td></tr>
+              <TableRow><TableCell colSpan={5} className="h-32 text-center text-slate-400">Đang tải dữ liệu...</TableCell></TableRow>
             ) : attrs.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-gray-400 italic">Chưa có thuộc tính nào được định nghĩa.</td></tr>
+              <TableRow><TableCell colSpan={5} className="h-32 text-center text-slate-400 italic">Chưa có dữ liệu.</TableCell></TableRow>
             ) : attrs.map(a => (
-              <tr key={a.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                <td className="p-4">
-                    <div className="font-mono text-blue-600 font-bold">{a.attr_key}</div>
-                    <div className="text-[10px] text-gray-400 line-clamp-1 italic">{a.description || 'Không có mô tả'}</div>
-                </td>
-                <td className="p-4">
-                    <span className={`border px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        a.attr_type === 'INTEGER' || a.attr_type === 'DECIMAL' 
-                        ? 'bg-blue-50 text-blue-600 border-blue-100' 
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
+              <TableRow key={a.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100 last:border-0">
+                <TableCell className="pl-6 py-4">
+                    <div className="flex flex-col">
+                        <span className="font-mono font-bold text-[#009d98] text-sm">{a.attr_key}</span>
+                        {a.description && <span className="text-xs text-slate-400 italic mt-0.5 line-clamp-1">{a.description}</span>}
+                    </div>
+                </TableCell>
+                <TableCell className="py-4">
+                    <Badge variant="outline" className={`font-mono text-[10px] uppercase border ${
+                        ['INTEGER', 'DECIMAL'].includes(a.attr_type) ? 'bg-blue-50 text-blue-600 border-blue-200' : 
+                        a.attr_type === 'BOOLEAN' ? 'bg-purple-50 text-purple-600 border-purple-200' :
+                        'bg-slate-100 text-slate-600 border-slate-200'
                     }`}>
                         {a.attr_type}
-                    </span>
-                </td>
-                <td className="p-4 font-medium text-gray-600">{a.source_table}</td>
-                <td className="p-4 font-mono text-[11px] text-gray-500">{a.mapping_path || '-'}</td>
-                <td className="p-4 text-right space-x-3">
-                  <button onClick={() => handleOpenEdit(a)} className="text-indigo-600 hover:text-indigo-900 font-bold transition-colors">Sửa</button>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button className="text-red-500 hover:text-red-700 font-bold transition-colors">Xóa</button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Xác nhận xóa thuộc tính?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Bạn sắp xóa thuộc tính <code className="text-blue-600 font-bold">{a.attr_key}</code>.
-                          Hành động này có thể làm ảnh hưởng đến các chính sách ABAC đang sử dụng thuộc tính này.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => onConfirmDelete(a.id)}
-                          className="bg-red-600 hover:bg-red-700 font-bold"
-                        >
-                          Xác nhận xóa
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </td>
-              </tr>
+                    </Badge>
+                </TableCell>
+                <TableCell className="py-4 font-medium text-slate-600 text-sm">
+                    <div className="flex items-center gap-1.5">
+                        <Database className="w-3.5 h-3.5 text-slate-400" />
+                        {a.source_table}
+                    </div>
+                </TableCell>
+                <TableCell className="py-4 font-mono text-xs text-slate-500">
+                    {a.mapping_path ? (
+                        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded w-fit border border-slate-100">
+                            <Code className="w-3 h-3 text-slate-400" /> {a.mapping_path}
+                        </div>
+                    ) : <span className="text-slate-300 italic">-</span>}
+                </TableCell>
+                <TableCell className="text-right pr-6 py-4">
+                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(a)} className="h-8 w-8 text-slate-400 hover:text-[#009d98] hover:bg-[#009d98]/10">
+                        <Edit className="w-4 h-4" />
+                    </Button>
+                    
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50">
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className="text-red-600">Xóa thuộc tính hệ thống?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Bạn sắp xóa thuộc tính <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-bold">{a.attr_key}</code>.
+                                    <br/>Điều này có thể gây lỗi cho các Policy đang sử dụng nó.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onConfirmDelete(a.id)} className="bg-red-600 hover:bg-red-700 text-white border-none">
+                                    Xác nhận xóa
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {/* FORM MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 tracking-tight">{editingId ? 'Sửa thuộc tính' : 'Thêm thuộc tính mới'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Attribute Key *</label>
-                    <input 
-                      required
-                      className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                      value={formData.attr_key}
-                      onChange={e => setFormData({...formData, attr_key: e.target.value})}
-                      placeholder="Ví dụ: user.department_id"
+      {/* MODAL FORM (Dùng Dialog của Shadcn) */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+                <DialogTitle>{editingId ? 'Cập nhật thuộc tính' : 'Định nghĩa thuộc tính mới'}</DialogTitle>
+                <DialogDescription>Khai báo biến dữ liệu để sử dụng trong bộ quy tắc ABAC.</DialogDescription>
+            </DialogHeader>
+            
+            <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Attribute Key <span className="text-red-500">*</span></label>
+                        <Input 
+                            required
+                            placeholder="user.department_id"
+                            className="font-mono text-sm"
+                            value={formData.attr_key}
+                            onChange={e => setFormData({...formData, attr_key: e.target.value})}
+                        />
+                    </div>
+
+                    <div className="col-span-2 space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Mapping Path</label>
+                        <Input 
+                            className="font-mono text-sm bg-slate-50"
+                            placeholder="profile.department.id"
+                            value={formData.mapping_path}
+                            onChange={e => setFormData({...formData, mapping_path: e.target.value})}
+                        />
+                        <p className="text-[10px] text-slate-400 italic">Đường dẫn truy xuất dữ liệu từ JSON context.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Source Table <span className="text-red-500">*</span></label>
+                        <Select value={formData.source_table} onValueChange={(val) => setFormData({...formData, source_table: val})}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Chọn bảng" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {tableOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Data Type</label>
+                        <Select value={formData.attr_type} onValueChange={(val) => setFormData({...formData, attr_type: val as AttributeType})}>
+                            <SelectTrigger className="font-mono font-bold text-[#009d98]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'LIST'].map(t => (
+                                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Mô tả</label>
+                    <Textarea 
+                        placeholder="Giải thích ý nghĩa của thuộc tính này..."
+                        className="h-20 resize-none text-sm"
+                        value={formData.description}
+                        onChange={e => setFormData({...formData, description: e.target.value})}
                     />
-                  </div>
+                </div>
 
-                  <div className="col-span-2">
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Mapping Path</label>
-                    <input 
-                      className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
-                      value={formData.mapping_path}
-                      onChange={e => setFormData({...formData, mapping_path: e.target.value})}
-                      placeholder="Ví dụ: profile.department.id"
-                    />
-                    <p className="text-[10px] text-gray-400 mt-1 italic">Đường dẫn lấy dữ liệu từ JSON context.</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Source Table *</label>
-                    <select 
-                      required
-                      className="w-full border rounded-lg p-2.5 text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500"
-                      value={formData.source_table}
-                      onChange={e => setFormData({...formData, source_table: e.target.value})}
-                    >
-                      <option value="">-- Chọn bảng --</option>
-                      {tableOptions.map(table => (
-                        <option key={table} value={table}>{table}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Kiểu dữ liệu *</label>
-                    <select 
-                      className="w-full border rounded-lg p-2.5 text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500 font-bold text-blue-600"
-                      value={formData.attr_type}
-                      onChange={e => setFormData({...formData, attr_type: e.target.value as AttributeType})}
-                    >
-                      <option value="STRING">STRING</option>
-                      <option value="INTEGER">INTEGER</option>
-                      <option value="DECIMAL">DECIMAL</option>
-                      <option value="BOOLEAN">BOOLEAN</option>
-                      <option value="LIST">LIST</option>
-                    </select>
-                  </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Mô tả</label>
-                <textarea 
-                  className="w-full border rounded-lg p-2.5 text-sm outline-none h-16 resize-none"
-                  value={formData.description}
-                  onChange={e => setFormData({...formData, description: e.target.value})}
-                  placeholder="ID phòng ban của người dùng..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm text-gray-400 font-medium hover:text-gray-600 transition-colors">Hủy</button>
-                <button type="submit" className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-100 transition-all">
-                  {editingId ? 'Cập nhật' : 'Tạo mới'}
-                </button>
-              </div>
+                <DialogFooter className="pt-2">
+                    <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Hủy</Button>
+                    <Button type="submit" className="bg-[#009d98] hover:bg-[#008580] text-white font-bold">
+                        {editingId ? 'Lưu thay đổi' : 'Thêm mới'}
+                    </Button>
+                </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

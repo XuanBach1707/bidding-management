@@ -1,11 +1,8 @@
 import { 
-  FileText, 
-  HardDrive, 
-  Briefcase, 
-  Share2, 
-  TrendingUp 
+  FileText, HardDrive, Briefcase, Share2, TrendingUp, TrendingDown 
 } from "lucide-react";
 import { ResourceStats } from "@/entities/resource";
+import { Skeleton } from "@/shared/ui/skeleton";
 
 interface ResourceKpiCardsProps {
   stats: ResourceStats | null;
@@ -13,75 +10,78 @@ interface ResourceKpiCardsProps {
 }
 
 export const ResourceKpiCards = ({ stats, isLoading }: ResourceKpiCardsProps) => {
-  // Skeleton Loader khi đang tải
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-slate-100 p-6 rounded-lg border border-slate-200 shadow-sm h-32 animate-pulse" />
+          <Skeleton key={i} className="h-32 rounded-xl" />
         ))}
       </div>
     );
   }
 
-  // Cấu hình danh sách thẻ (Mix giữa Real Data và Fake Data)
   const cards = [
     {
-      title: "Tổng số tài liệu",
-      // [REAL DATA]: Lấy từ API
+      title: "Tổng tài liệu",
       value: stats?.totalFiles?.toLocaleString() || "0",
-      subtext: "+12% tháng này",
-      subColor: "text-green-600",
+      subtext: "+12% so với tháng trước",
+      trend: "up",
       icon: FileText,
-      iconColor: "text-blue-600",
-      bgIcon: "bg-blue-50",
+      // Dùng màu Teal làm chủ đạo cho chỉ số chính
+      iconColor: "text-[#009d98]", 
+      bgIcon: "bg-[#009d98]/10",
     },
     {
-      title: "Dung lượng",
-      // [MOCK DATA]: Vì API stats/count chưa trả về size
+      title: "Dung lượng sử dụng",
       value: stats?.totalSizeLabel || "45.2 GB", 
       subtext: "85% tổng dung lượng",
-      subColor: "text-slate-500",
+      trend: "neutral",
       icon: HardDrive,
       iconColor: "text-orange-600",
       bgIcon: "bg-orange-50",
     },
     {
       title: "Hồ sơ dự án",
-      // [MOCK DATA]: Giả lập số lượng dự án active
       value: "156", 
-      subtext: "32 đang hoạt động",
-      subColor: "text-slate-500",
+      subtext: "32 dự án đang chạy",
+      trend: "neutral",
       icon: Briefcase,
       iconColor: "text-purple-600",
       bgIcon: "bg-purple-50",
     },
     {
       title: "Lượt truy cập",
-      // [MOCK DATA]: Số liệu giả
       value: "892",
-      subtext: "+5% tuần trước",
-      subColor: "text-green-600",
+      subtext: "+5% tuần này",
+      trend: "up",
       icon: Share2,
-      iconColor: "text-green-600",
-      bgIcon: "bg-green-50",
+      iconColor: "text-blue-600",
+      bgIcon: "bg-blue-50",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, index) => (
-        <div key={index} className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-slate-500 text-sm font-medium">{card.title}</span>
-            <div className={`p-2 rounded ${card.bgIcon} ${card.iconColor}`}>
+        <div 
+            key={index} 
+            className="bg-white p-5 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">{card.title}</span>
+            <div className={`p-2 rounded-lg ${card.bgIcon} ${card.iconColor}`}>
               <card.icon className="w-5 h-5" />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-800">{card.value}</div>
-          <div className={`text-xs mt-1 flex items-center ${card.subColor}`}>
-             {/* Chỉ hiện icon tăng trưởng ở thẻ 1 và 4 cho giống mẫu */}
-             {(index === 0 || index === 3) && <TrendingUp className="w-3 h-3 mr-1" />}
+          
+          <div className="text-2xl font-black text-slate-800 tabular-nums tracking-tight">
+            {card.value}
+          </div>
+          
+          <div className={`text-xs mt-2 flex items-center font-medium ${
+              card.trend === 'up' ? 'text-emerald-600' : 'text-slate-400'
+          }`}>
+             {card.trend === 'up' && <TrendingUp className="w-3 h-3 mr-1" />}
              {card.subtext}
           </div>
         </div>

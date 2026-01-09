@@ -5,7 +5,7 @@ import {
   User, 
   CreateUserSchema, 
   UpdateUserSchema, 
-  CreateUserFormValues, // Dùng type full để register input không bị lỗi
+  CreateUserFormValues,
   UserRole, 
   SecurityLevel, 
   USER_ROLE_LABELS, 
@@ -13,13 +13,14 @@ import {
   userApi
 } from "@/entities/user";
 import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
 } from "@/shared/ui/dialog"; 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Label } from "@/shared/ui/label";
 import { useToast } from "@/shared/lib/hooks/use-toast"; 
+import { Loader2, UserPlus, Pencil } from "lucide-react";
 
 interface UserFormDialogProps {
   open: boolean;
@@ -32,28 +33,16 @@ export const UserFormDialog = ({ open, onOpenChange, userToEdit, onSuccess }: Us
   const { toast } = useToast();
   const isEditMode = !!userToEdit;
 
-  // Chọn Schema validation tương ứng
   const schema = isEditMode ? UpdateUserSchema : CreateUserSchema;
   
   const form = useForm<CreateUserFormValues>({
-    // [FIX 1] Ép kiểu schema as any
-    // Lý do: Để tránh xung đột type giữa UpdateSchema (thiếu password) và FormType (có password).
-    // Logic của chúng ta vẫn đúng vì ở Edit Mode ta ẩn input password đi.
     resolver: zodResolver(schema as any),
-    
     defaultValues: {
-      email: "",
-      fullName: "",
-      password: "",
-      role: UserRole.ENGINEER,
-      jobTitle: "",
-      securityClearance: SecurityLevel.INTERNAL,
-      status: true,
-      orgUnitId: 0,
+      email: "", fullName: "", password: "", role: UserRole.ENGINEER,
+      jobTitle: "", securityClearance: SecurityLevel.INTERNAL, status: true, orgUnitId: 0,
     }
   });
 
-  // Reset form khi mở dialog hoặc đổi user
   useEffect(() => {
     if (open) {
       if (userToEdit) {
@@ -69,37 +58,27 @@ export const UserFormDialog = ({ open, onOpenChange, userToEdit, onSuccess }: Us
         });
       } else {
         form.reset({
-            email: "", 
-            fullName: "", 
-            password: "", 
-            role: UserRole.ENGINEER, 
-            securityClearance: SecurityLevel.INTERNAL, 
-            status: true,
-            orgUnitId: 0,
-            jobTitle: ""
+            email: "", fullName: "", password: "", role: UserRole.ENGINEER, 
+            securityClearance: SecurityLevel.INTERNAL, status: true, orgUnitId: 0, jobTitle: ""
         });
       }
     }
   }, [open, userToEdit, form]);
 
-  // [FIX 2] Đổi type tham số thành 'any' hoặc union type
-  // Vì khi ở Edit Mode, data gửi lên sẽ thiếu password/email, không khớp hoàn toàn với CreateUserFormValues
   const onSubmit = async (data: any) => {
     try {
       if (isEditMode && userToEdit) {
-        // data lúc này là UpdateUserFormValues (đã được validate qua UpdateUserSchema)
         await userApi.updateUser(userToEdit.userId, data);
-        toast({ title: "Cập nhật thành công", className: "bg-green-600 text-white" });
+        toast({ title: "Cập nhật thành công", className: "bg-[#009d98] text-white border-none" });
       } else {
-        // data lúc này là CreateUserFormValues
         await userApi.createUser(data);
-        toast({ title: "Tạo mới thành công", className: "bg-green-600 text-white" });
+        toast({ title: "Tạo mới thành công", className: "bg-[#009d98] text-white border-none" });
       }
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast({ title: "Có lỗi xảy ra", variant: "destructive" });
+      toast({ title: "Có lỗi xảy ra", description: "Vui lòng thử lại sau.", variant: "destructive" });
     }
   };
 
@@ -107,39 +86,45 @@ export const UserFormDialog = ({ open, onOpenChange, userToEdit, onSuccess }: Us
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? "Cập nhật nhân sự" : "Thêm mới nhân sự"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-800">
+             {isEditMode ? <Pencil className="w-5 h-5 text-[#009d98]" /> : <UserPlus className="w-5 h-5 text-[#009d98]" />}
+             {isEditMode ? "Cập nhật thông tin nhân sự" : "Thêm mới nhân sự"}
+          </DialogTitle>
+          <DialogDescription>
+             Điền đầy đủ thông tin để {isEditMode ? "cập nhật" : "tạo"} tài khoản truy cập hệ thống.
+          </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            {/* Full Name */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-2">
+          
+          {/* Group 1: Thông tin cơ bản */}
+          <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 rounded-lg border border-slate-100">
             <div className="space-y-2">
-              <Label>Họ và tên <span className="text-red-500">*</span></Label>
-              <Input {...form.register("fullName")} placeholder="Nguyễn Văn A" />
+              <Label className="text-slate-700 font-semibold">Họ và tên <span className="text-red-500">*</span></Label>
+              <Input {...form.register("fullName")} placeholder="Nguyễn Văn A" className="bg-white" />
               {form.formState.errors.fullName && <p className="text-red-500 text-xs">{form.formState.errors.fullName.message}</p>}
             </div>
 
-            {/* Email */}
             <div className="space-y-2">
-              <Label>Email <span className="text-red-500">*</span></Label>
-              <Input {...form.register("email")} placeholder="a@company.com" disabled={isEditMode} />
+              <Label className="text-slate-700 font-semibold">Email <span className="text-red-500">*</span></Label>
+              <Input {...form.register("email")} placeholder="a@company.com" disabled={isEditMode} className="bg-white" />
               {form.formState.errors.email && <p className="text-red-500 text-xs">{form.formState.errors.email.message}</p>}
             </div>
           </div>
 
-          {/* Password (Chỉ hiện khi Create) */}
+          {/* Group 2: Password (Create Only) */}
           {!isEditMode && (
              <div className="space-y-2">
-               <Label>Mật khẩu khởi tạo <span className="text-red-500">*</span></Label>
-               <Input type="password" {...form.register("password")} />
+               <Label className="text-slate-700 font-semibold">Mật khẩu khởi tạo <span className="text-red-500">*</span></Label>
+               <Input type="password" {...form.register("password")} placeholder="••••••••" />
                {form.formState.errors.password && <p className="text-red-500 text-xs">{form.formState.errors.password.message}</p>}
              </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-             {/* Role */}
+          {/* Group 3: Phân quyền & Chức vụ */}
+          <div className="grid grid-cols-2 gap-5">
              <div className="space-y-2">
-                <Label>Vai trò</Label>
+                <Label className="text-slate-700 font-semibold">Vai trò hệ thống</Label>
                 <Select 
                     onValueChange={(val) => form.setValue("role", val as UserRole)} 
                     value={form.watch("role")}
@@ -153,9 +138,8 @@ export const UserFormDialog = ({ open, onOpenChange, userToEdit, onSuccess }: Us
                 </Select>
              </div>
 
-             {/* Security Level */}
              <div className="space-y-2">
-                <Label>Mức độ bảo mật</Label>
+                <Label className="text-slate-700 font-semibold">Mức độ bảo mật</Label>
                 <Select 
                     onValueChange={(val) => form.setValue("securityClearance", Number(val))} 
                     value={String(form.watch("securityClearance"))}
@@ -171,14 +155,15 @@ export const UserFormDialog = ({ open, onOpenChange, userToEdit, onSuccess }: Us
           </div>
           
           <div className="space-y-2">
-             <Label>Chức danh (Job Title)</Label>
-             <Input {...form.register("jobTitle")} placeholder="Ví dụ: Kỹ sư cầu đường" />
+             <Label className="text-slate-700 font-semibold">Chức danh / Vị trí</Label>
+             <Input {...form.register("jobTitle")} placeholder="Ví dụ: Chuyên viên đấu thầu" />
           </div>
 
-          <DialogFooter>
-             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button>
-             <Button type="submit" disabled={form.formState.isSubmitting}>
-               {form.formState.isSubmitting ? "Đang xử lý..." : (isEditMode ? "Lưu thay đổi" : "Tạo mới")}
+          <DialogFooter className="pt-4">
+             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy bỏ</Button>
+             <Button type="submit" disabled={form.formState.isSubmitting} className="bg-[#009d98] hover:bg-[#008580] text-white">
+               {form.formState.isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+               {isEditMode ? "Lưu thay đổi" : "Tạo tài khoản"}
              </Button>
           </DialogFooter>
         </form>

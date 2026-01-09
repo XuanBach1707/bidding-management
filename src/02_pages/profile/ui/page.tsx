@@ -65,12 +65,12 @@ export default function ProfilePage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate Client-side: Max 5MB
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate Client-side: Max 10MB
+      if (file.size > 10 * 1024 * 1024) {
         toast({
           variant: "destructive",
           title: "File quá lớn",
-          description: "Vui lòng chọn ảnh có dung lượng dưới 5MB.",
+          description: "Vui lòng chọn ảnh có dung lượng dưới 10MB.",
         });
         return;
       }
