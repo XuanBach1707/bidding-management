@@ -15,7 +15,9 @@ export const TaskAllocationPage = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-gray-100 overflow-hidden">
+    // [UPDATE] Design System: Sử dụng bg-slate-50 thay cho gray-100
+    // Thêm animation fade-in nhẹ
+    <div className="flex h-screen w-full bg-slate-50 overflow-hidden animate-in fade-in duration-300">
       {/* SIDEBAR TRÁI */}
       <TaskAllocationSidebar
         currentTaskId={selectedTask?.id || null}
@@ -24,6 +26,7 @@ export const TaskAllocationPage = () => {
       />
 
       {/* BOARD PHẢI */}
+      {/* Component này đã được set flex-1 bên trong nên sẽ tự chiếm không gian còn lại */}
       <TaskAllocationBoard 
         parentTask={selectedTask}
         onRefresh={handleRefresh}

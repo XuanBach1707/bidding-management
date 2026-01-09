@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Folder, FileText, ArrowRight, Loader2 } from "lucide-react";
+import { Folder, FileText, ArrowRight, Loader2, Copy } from "lucide-react";
 import { Task } from "@/entities/task";
 import { driveApi, DriveItem } from "@/entities/drive";
 import { Button } from "@/shared/ui/button";
@@ -31,13 +31,10 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [sourceFiles, setSourceFiles] = useState<DriveItem[]>([]);
   
-  // State backup: Nếu cha không truyền targetId thì con tự lưu vào đây
   const [localTargetId, setLocalTargetId] = useState<string | null>(null);
-
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [cloningId, setCloningId] = useState<string | null>(null);
   
-  // Ref để tránh fetch lại nhiều lần
   const fetchTargetCalled = useRef(false);
 
   // --- LOGIC 1: LỌC FOLDER & AUTO-SELECT ---
@@ -56,28 +53,23 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.tag]);
 
-  // --- LOGIC 2: TỰ ĐỘNG LẤY TARGET ID NẾU THIẾU ---
+  // --- LOGIC 2: TỰ ĐỘNG LẤY TARGET ID ---
   useEffect(() => {
-    // Nếu cha đã truyền hoặc đã fetch rồi thì thôi
     if (preloadedTargetId || localTargetId || fetchTargetCalled.current || !task.biddingProjectId) return;
     
     const fetchTargetIdFallback = async () => {
       fetchTargetCalled.current = true;
       try {
-        console.log("🛠️ [Browser] Đang tự tìm ID thư mục đích...");
-        // B1: Lấy Folder gốc dự án
         const resProject = await driveApi.getProjectFolders(task.biddingProjectId!);
         
         if (resProject.currentFolderId) {
-            // B2: Lấy Target ID
             const resTarget = await driveApi.getTargetFolder(resProject.currentFolderId, task.biddingProjectId!);
             if (resTarget.targetFolderId) {
-                console.log("✅ [Browser] Đã tự tìm thấy đích:", resTarget.targetFolderId);
                 setLocalTargetId(resTarget.targetFolderId);
             }
         }
       } catch (error) {
-        console.error("❌ [Browser] Không thể tự lấy thư mục đích:", error);
+        console.error("Lỗi lấy target folder:", error);
       }
     };
 
@@ -100,36 +92,28 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
     }
   };
 
-  // --- LOGIC 4: CLONE FILE (FIXED) ---
+  // --- LOGIC 4: CLONE FILE ---
   const handleCloneFile = async (file: DriveItem) => {
-    console.log("🖱️ User clicked Clone:", file.name); // Debug log
-
-    // Ưu tiên dùng của cha (preloaded), nếu không có thì dùng của mình (local)
     const finalTargetId = preloadedTargetId || localTargetId;
 
-    console.log("🎯 Target ID to clone:", finalTargetId); // Debug log
-
     if (!finalTargetId) {
-      return toast({ variant: "destructive", description: "Lỗi: Không tìm thấy thư mục đích để lưu file. Vui lòng thử lại sau giây lát." });
+      return toast({ variant: "destructive", description: "Lỗi: Không tìm thấy thư mục đích." });
     }
 
     try {
       setCloningId(file.id);
       
-      // Gọi API Clone
       await driveApi.cloneFile({
         sourceFileId: file.id,
         targetFolderId: finalTargetId
       });
 
-      toast({ title: "Thành công", description: `Đã lấy file "${file.name}" về hồ sơ.` });
+      toast({ title: "Thành công", description: `Đã lấy file "${file.name}"`, className: "bg-[#009d98] text-white border-none" });
       
-      // Gọi callback để cha reload lại list file
       if (onSuccess) {
           onSuccess();
       }
     } catch (error) {
-      console.error("❌ Clone Error:", error);
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể copy file này." });
     } finally {
       setCloningId(null);
@@ -138,17 +122,18 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
 
   // --- RENDER ---
   return (
-    <div className="flex h-full border-t bg-white">
-      {/* CỘT TRÁI */}
-      <div className="w-1/3 border-r bg-gray-50 flex flex-col">
-        <div className="p-3 bg-gray-100 text-xs font-bold text-gray-500 uppercase flex justify-between">
-          <span>Danh mục phù hợp</span>
-          <span className="text-blue-600 font-bold">{resourceFolders.length}</span>
+    <div className="flex h-full border-t border-slate-200 bg-white">
+      
+      {/* CỘT TRÁI: DANH MỤC */}
+      <div className="w-1/3 border-r border-slate-200 bg-slate-50/50 flex flex-col">
+        <div className="p-4 border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-500 uppercase flex justify-between items-center">
+          <span>Danh mục nguồn</span>
+          <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px]">{resourceFolders.length}</span>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {resourceFolders.length === 0 ? (
              <div className="text-center py-10 px-4">
-                <p className="text-xs text-gray-400">Không tìm thấy thư mục mẫu khớp với: <span className="font-bold text-gray-500">{task.tag}</span></p>
+                <p className="text-xs text-slate-400">Không tìm thấy thư mục khớp với thẻ: <span className="font-bold text-slate-600">{task.tag}</span></p>
              </div>
           ) : (
             resourceFolders.map(folder => (
@@ -156,13 +141,13 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
                 key={folder.id}
                 onClick={() => handleSelectFolder(folder.id)}
                 className={cn(
-                  "w-full text-left px-3 py-2.5 rounded text-sm flex items-center gap-2 transition-all",
+                  "w-full text-left px-3 py-3 rounded-lg text-sm flex items-center gap-3 transition-all",
                   selectedFolderId === folder.id 
-                    ? "bg-white text-blue-700 font-bold shadow-sm ring-1 ring-blue-100 border-l-4 border-l-blue-500" 
-                    : "hover:bg-gray-200 text-gray-700 border-l-4 border-l-transparent"
+                    ? "bg-white text-[#009d98] font-bold shadow-sm ring-1 ring-[#009d98]/20" 
+                    : "hover:bg-slate-100 text-slate-600"
                 )}
               >
-                <Folder className={cn("w-4 h-4 flex-shrink-0", selectedFolderId === folder.id ? "fill-blue-100 text-blue-600" : "fill-gray-300 text-gray-400")} />
+                <Folder className={cn("w-5 h-5 flex-shrink-0 transition-colors", selectedFolderId === folder.id ? "fill-[#009d98]/20 text-[#009d98]" : "fill-slate-200 text-slate-400")} />
                 <span className="truncate">{folder.name}</span>
               </button>
             ))
@@ -170,50 +155,55 @@ export const ResourceRepositoryBrowser = ({ task, preloadedTargetId, onSuccess }
         </div>
       </div>
 
-      {/* CỘT PHẢI */}
+      {/* CỘT PHẢI: FILE LIST */}
       <div className="flex-1 flex flex-col bg-white">
-        <div className="p-3 border-b text-xs font-bold text-gray-500 uppercase flex justify-between items-center h-[41px]">
+        <div className="p-4 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase flex justify-between items-center h-[53px]">
           <span>Tài liệu mẫu {selectedFolderId ? `(${sourceFiles.length})` : ""}</span>
-          {isLoadingFiles && <Loader2 className="w-3 h-3 animate-spin text-blue-500"/>}
+          {isLoadingFiles && <div className="flex items-center gap-2 text-[#009d98]"><Loader2 className="w-3 h-3 animate-spin"/> <span className="text-[10px]">Đang tải...</span></div>}
         </div>
         
         <div className="flex-1 overflow-y-auto p-0">
           {!selectedFolderId ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-               <ArrowRight className="w-8 h-8 mb-2 opacity-20" />
-               <p className="text-sm">Chọn danh mục bên trái</p>
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
+               <div className="p-4 bg-slate-50 rounded-full"><ArrowRight className="w-6 h-6 text-slate-300" /></div>
+               <p className="text-sm">Chọn một danh mục bên trái để xem file</p>
             </div>
           ) : isLoadingFiles ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-               <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-               <p className="text-xs">Đang tải danh sách file...</p>
+            <div className="h-full flex items-center justify-center text-slate-400">
+               <Loader2 className="w-8 h-8 animate-spin text-[#009d98]" />
             </div>
           ) : sourceFiles.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-gray-400"><p className="text-sm">Thư mục trống</p></div>
+            <div className="h-full flex items-center justify-center text-slate-400 text-sm">Thư mục trống</div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-50">
                {sourceFiles.map(file => (
-                 <div key={file.id} className="flex items-center justify-between p-3 hover:bg-blue-50 group transition-colors">
+                 <div key={file.id} className="flex items-center justify-between p-3.5 hover:bg-[#009d98]/5 group transition-colors">
                     <div className="flex items-center gap-3 overflow-hidden">
-                       <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-500 group-hover:text-blue-600 group-hover:bg-blue-100">
-                         <FileText className="w-4 h-4" />
+                       <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-[#009d98] group-hover:shadow-sm transition-all border border-slate-100">
+                         <FileText className="w-5 h-5" />
                        </div>
                        <div className="min-w-0">
-                         <p className="text-sm text-gray-700 truncate font-medium group-hover:text-blue-700">{file.name}</p>
+                         <p className="text-sm text-slate-700 truncate font-medium group-hover:text-[#009d98] transition-colors">{file.name}</p>
                        </div>
                     </div>
                     
-                    {/* NÚT CLONE - QUAN TRỌNG */}
+                    {/* BUTTON CLONE */}
                     <Button 
-                      size="sm" variant="outline"
+                      size="sm" 
                       onClick={(e) => {
-                          e.stopPropagation(); // Ngăn sự kiện nổi bọt nếu có
+                          e.stopPropagation(); 
                           handleCloneFile(file);
                       }}
-                      disabled={cloningId === file.id} // Disable nút khi đang clone file này
-                      className="h-8 text-xs border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-white"
+                      disabled={cloningId === file.id} 
+                      className={cn(
+                          "h-8 text-xs font-semibold transition-all shadow-none",
+                          cloningId === file.id 
+                            ? "bg-slate-100 text-slate-400"
+                            : "bg-white border border-slate-200 text-slate-600 hover:border-[#009d98] hover:text-[#009d98]"
+                      )}
                     >
-                      {cloningId === file.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Chọn"}
+                      {cloningId === file.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Copy className="w-3 h-3 mr-1.5" />}
+                      {cloningId === file.id ? "Đang lấy..." : "Chọn File"}
                     </Button>
                  </div>
                ))}

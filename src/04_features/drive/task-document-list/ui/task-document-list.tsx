@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FolderSearch, AlertCircle, Loader2 } from "lucide-react";
+import { FolderSearch, AlertCircle, Loader2, Files } from "lucide-react";
 import { Task } from "@/entities/task";
 import { driveApi, DriveItem } from "@/entities/drive";
 import { FileItem } from "./file-item";
@@ -17,7 +17,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
     const fetchDocuments = async () => {
       // 1. Validate Input
       if (!task.biddingProjectId) {
-        setErrorMsg("Công việc không thuộc dự án nào.");
+        setErrorMsg("Công việc này không thuộc dự án nào.");
         setLoading(false);
         return;
       }
@@ -36,7 +36,6 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
         let collectedFiles: DriveItem[] = rootItems.filter(item => item.type === "FILE");
 
         // --- STEP 2: Gọi tuần tự từng Folder để lấy file ---
-        // Dùng for...of để await lần lượt, tránh spam request cùng lúc
         if (folders.length > 0) {
           for (const folder of folders) {
             try {
@@ -46,8 +45,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
               // Cộng dồn vào danh sách
               collectedFiles = [...collectedFiles, ...filesInThisFolder];
             } catch (err) {
-              console.warn(`Không thể lấy file trong folder: ${folder.name}`, err);
-              // Nếu 1 folder lỗi thì bỏ qua, vẫn chạy tiếp folder sau
+              console.warn(`Lỗi lấy file folder: ${folder.name}`, err);
               continue; 
             }
           }
@@ -57,7 +55,7 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
 
       } catch (error) {
         console.error("Lỗi tải tài liệu:", error);
-        setErrorMsg("Có lỗi xảy ra khi tải tài liệu từ Drive.");
+        setErrorMsg("Có lỗi khi kết nối Google Drive.");
       } finally {
         setLoading(false);
       }
@@ -70,17 +68,17 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-gray-500">
-        <Loader2 className="w-8 h-8 animate-spin mb-2" />
-        <span className="text-sm">Đang quét tài liệu (Lần lượt)...</span>
+      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin mb-3 text-[#009d98]" />
+        <span className="text-xs font-medium uppercase tracking-wide animate-pulse">Đang quét tài liệu...</span>
       </div>
     );
   }
 
   if (errorMsg) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-        <AlertCircle className="w-10 h-10 mb-2 opacity-50" />
+      <div className="flex flex-col items-center justify-center py-10 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+        <AlertCircle className="w-8 h-8 mb-2 opacity-40 text-red-400" />
         <p className="text-sm">{errorMsg}</p>
       </div>
     );
@@ -88,21 +86,22 @@ export const TaskDocumentList = ({ task }: TaskDocumentListProps) => {
 
   if (files.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-        <FolderSearch className="w-10 h-10 mb-2 opacity-50" />
-        <p className="text-sm">Không tìm thấy file nào trong các thư mục.</p>
+      <div className="flex flex-col items-center justify-center py-10 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+        <FolderSearch className="w-8 h-8 mb-2 opacity-40" />
+        <p className="text-sm font-medium">Không tìm thấy tài liệu liên quan.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between pb-2 border-b">
-        <h3 className="text-sm font-bold text-gray-700 uppercase">
-          Tất cả tài liệu ({files.length})
+    <div className="space-y-4">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+          <Files className="w-4 h-4" />
+          Tài liệu đính kèm ({files.length})
         </h3>
       </div>
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
         {files.map((file) => (
           <FileItem key={file.id} file={file} />
         ))}

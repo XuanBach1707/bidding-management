@@ -3,7 +3,7 @@ import {
   FileCode, 
   FileType, 
   AlertCircle,
-  Sparkles // [MỚI] Import icon cho nút AI
+  Sparkles 
 } from "lucide-react";
 
 // Shared UI
@@ -39,10 +39,7 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
   const [step, setStep] = useState<Step>("SELECT");
   const [editorMode, setEditorMode] = useState<EditorMode>("RICH_TEXT");
   
-  // [MỚI] State điều khiển Sidebar AI
   const [isAiOpen, setIsAiOpen] = useState(false);
-
-  // "Source of Truth"
   const [fullHtmlContent, setFullHtmlContent] = useState("");
   
   // Data State
@@ -91,7 +88,7 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
       setFullHtmlContent(content);
       setStep("EDITOR");
       setEditorMode("RICH_TEXT");
-      toast({ title: "Thành công", description: "Đã tải lại bản nháp." });
+      toast({ title: "Thành công", description: "Đã tải lại bản nháp.", className: "bg-[#009d98] text-white border-none" });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải bản nháp." });
@@ -109,7 +106,7 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     try {
       await draftingApi.saveDraft(taskId, contentToSave);
       setFullHtmlContent(contentToSave);
-      toast({ title: "Đã lưu bản nháp", description: "Nội dung đã được đồng bộ." });
+      toast({ title: "Đã lưu bản nháp", description: "Nội dung đã được đồng bộ lên hệ thống.", className: "bg-[#009d98] text-white border-none" });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Lỗi lưu", description: "Không thể lưu bản nháp." });
@@ -136,10 +133,9 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     }
   };
 
-  // [MỚI] Hàm xử lý khi AI trả về nội dung mới
   const handleAiApplyChanges = (newHtml: string) => {
      setFullHtmlContent(newHtml);
-     toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!" });
+     toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!", className: "bg-purple-600 text-white border-none" });
   };
 
   // --- RENDER ---
@@ -157,22 +153,35 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
   }
 
   return (
-    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300 relative">
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg border shadow-sm sticky top-0 z-20">
-            <div>
-                <h3 className="font-bold text-slate-800">Soạn thảo: {taskName}</h3>
-                <p className="text-xs text-slate-500 flex items-center gap-1">
-                    {editorMode === "RICH_TEXT" ? "Chế độ văn bản (WYSIWYG)" : "Chế độ mã nguồn (HTML/Developer)"}
-                </p>
+    <div className="space-y-0 h-full flex flex-col relative bg-white">
+        
+        {/* HEADER BAR (Nằm ngoài Editor để luôn hiển thị mode switcher) */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-6 py-3 border-b border-slate-200 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${editorMode === "RICH_TEXT" ? "bg-blue-100 text-blue-600" : "bg-slate-800 text-slate-300"}`}>
+                    {editorMode === "RICH_TEXT" ? <FileType className="w-5 h-5" /> : <FileCode className="w-5 h-5" />}
+                </div>
+                <div>
+                    <h3 className="font-bold text-slate-800 text-sm line-clamp-1 max-w-[300px]" title={taskName}>
+                        {taskName}
+                    </h3>
+                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+                        {editorMode === "RICH_TEXT" ? "Trình soạn thảo trực quan" : "Trình sửa mã nguồn HTML"}
+                    </p>
+                </div>
             </div>
 
-            <div className="flex items-center gap-2">
-                {/* [MỚI] Nút AI nằm cạnh các nút chức năng khác */}
+            <div className="flex items-center gap-3">
+                {/* Warning Text */}
+                <div className="hidden lg:flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Lưu trước khi đổi chế độ</span>
+                </div>
+
                 <Button 
                     size="sm" 
-                    onClick={() => setIsAiOpen(true)} // Mở Sidebar
-                    className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm border border-purple-500"
+                    onClick={() => setIsAiOpen(true)} 
+                    className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm border border-purple-500 font-bold h-9"
                 >
                     <Sparkles className="w-4 h-4" /> AI Trợ lý
                 </Button>
@@ -181,44 +190,38 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
                     variant="outline" 
                     size="sm" 
                     onClick={toggleEditorMode}
-                    className="gap-2 text-slate-600 hover:text-blue-600 border-slate-200"
+                    className="gap-2 text-slate-600 hover:text-[#009d98] border-slate-200 h-9 font-medium"
                 >
                     {editorMode === "RICH_TEXT" ? (
-                        <><FileCode className="w-4 h-4" /> Sửa HTML</>
+                        <><FileCode className="w-4 h-4" /> Switch to Code</>
                     ) : (
-                        <><FileType className="w-4 h-4" /> Sửa Giao diện</>
+                        <><FileType className="w-4 h-4" /> Switch to Visual</>
                     )}
                 </Button>
             </div>
         </div>
 
-        {/* WARNING */}
-        <Alert className="bg-blue-50 border-blue-100 py-2">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-xs text-blue-700 ml-2">
-                Lưu ý: Hãy bấm <strong>"Lưu lại"</strong> trước khi chuyển chế độ soạn thảo để tránh mất dữ liệu mới nhập.
-            </AlertDescription>
-        </Alert>
+        {/* EDITOR AREA (Chiếm toàn bộ phần còn lại) */}
+        <div className="flex-1 overflow-hidden relative">
+            {editorMode === "RICH_TEXT" ? (
+                <RichTextEditor 
+                    initialContent={parsedData.bodyContent}
+                    css={parsedData.editorCss} 
+                    onBack={handleBackToSelect}
+                    onSave={handleRichTextSave}
+                    isSaving={isSaving}
+                />
+            ) : (
+                <RawHtmlEditor 
+                    initialContent={fullHtmlContent}
+                    onBack={handleBackToSelect}
+                    onSave={handleRawHtmlSave}
+                    isSaving={isSaving}
+                />
+            )}
+        </div>
 
-        {/* EDITOR */}
-        {editorMode === "RICH_TEXT" ? (
-            <RichTextEditor 
-                initialContent={parsedData.bodyContent}
-                css={parsedData.editorCss} 
-                onBack={handleBackToSelect}
-                onSave={handleRichTextSave}
-                isSaving={isSaving}
-            />
-        ) : (
-            <RawHtmlEditor 
-                initialContent={fullHtmlContent}
-                onBack={handleBackToSelect}
-                onSave={handleRawHtmlSave}
-                isSaving={isSaving}
-            />
-        )}
-
-        {/* [MỚI] AI ASSISTANT - Đã truyền đủ props */}
+        {/* AI ASSISTANT SIDEBAR */}
         <AiAssistant 
             isOpen={isAiOpen} 
             onClose={() => setIsAiOpen(false)}

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { format } from "date-fns"; // Import format ngày
-import { Calendar as CalendarIcon } from "lucide-react"; // Import Icon
+import { format } from "date-fns"; 
+import { Calendar as CalendarIcon, Plus } from "lucide-react"; 
 import { TaskType } from "@/entities/task";
 import { AssigneeSelect } from "@/features/select-assignee";
 import { useCreateSubtask } from "../model/use-create-subtask";
@@ -10,6 +10,14 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Calendar } from "@/shared/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Input } from "@/shared/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/shared/ui/select";
 
 interface QuickSubtaskFormProps {
   parentId: number;
@@ -40,7 +48,7 @@ export const QuickSubtaskForm = ({
       // Reset form sau khi tạo thành công
       setTaskName("");
       setAssigneeId(null);
-      setDeadline(undefined); // Reset về undefined
+      setDeadline(undefined); 
       onSuccess();
     }
   });
@@ -62,13 +70,13 @@ export const QuickSubtaskForm = ({
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 border border-dashed border-blue-300 rounded-md bg-blue-50/30 mt-2">
+    <div className="flex items-center gap-2 p-1.5 border border-dashed border-[#009d98]/30 rounded-lg bg-[#009d98]/5 mt-2 transition-all focus-within:bg-white focus-within:border-[#009d98] focus-within:shadow-sm">
       {/* Nút Plus + Input Name */}
-      <div className="flex-1 flex items-center gap-2">
-        <span className="text-blue-500 font-bold px-2">+</span>
+      <div className="flex-1 flex items-center gap-2 pl-2">
+        <Plus className="w-4 h-4 text-[#009d98]" strokeWidth={3} />
         <input
           type="text"
-          className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-gray-400"
+          className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-slate-400 text-slate-700 h-9"
           placeholder="Nhập tên việc rồi Enter..."
           value={taskName}
           onChange={(e) => setTaskName(e.target.value)}
@@ -79,15 +87,19 @@ export const QuickSubtaskForm = ({
 
       {/* Select Type */}
       <div className="w-[140px]">
-        <select
-          value={taskType}
-          onChange={(e) => setTaskType(e.target.value as TaskType)}
-          className="w-full text-xs border rounded px-2 py-1 bg-white h-8 outline-none focus:border-blue-500"
-          disabled={isSubmitting}
+        <Select 
+            value={taskType} 
+            onValueChange={(val) => setTaskType(val as TaskType)}
+            disabled={isSubmitting}
         >
-          <option value="DRAFTING">✍️ Soạn thảo</option>
-          <option value="SELECTION">📂 Chọn tài liệu</option>
-        </select>
+            <SelectTrigger className="h-8 text-xs bg-white border-slate-200 focus:ring-0 focus:border-[#009d98]">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="DRAFTING">✍️ Soạn thảo</SelectItem>
+                <SelectItem value="SELECTION">📂 Chọn tài liệu</SelectItem>
+            </SelectContent>
+        </Select>
       </div>
 
       {/* Select Assignee */}
@@ -96,9 +108,9 @@ export const QuickSubtaskForm = ({
           unitId={parentUnitId}
           value={assigneeId}
           onChange={setAssigneeId}
-          className="h-8 text-xs bg-white"
-          placeholder="-- Chọn NV --"
+          className="h-8 text-xs" // Class cha
           disabled={isSubmitting}
+          placeholder="-- Chọn NV --"
         />
       </div>
 
@@ -109,16 +121,16 @@ export const QuickSubtaskForm = ({
             <Button
               variant={"outline"}
               className={cn(
-                "w-full h-8 px-2 text-xs justify-start text-left font-normal bg-white border-gray-200",
-                !deadline && "text-muted-foreground"
+                "w-full h-8 px-2 text-xs justify-start text-left font-normal bg-white border-slate-200 hover:bg-slate-50",
+                !deadline && "text-slate-400"
               )}
               disabled={isSubmitting}
             >
-              <CalendarIcon className="mr-2 h-3 w-3 text-gray-400" />
+              <CalendarIcon className="mr-2 h-3 w-3 opacity-50" />
               {deadline ? (
                 format(deadline, "dd/MM/yyyy")
               ) : (
-                <span className="text-gray-400">Hạn chót</span>
+                <span>Hạn chót</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -136,14 +148,15 @@ export const QuickSubtaskForm = ({
       </div>
 
       {/* Action Button (Enter) */}
-      <button
+      <Button
+        size="icon"
         onClick={handleSubmit}
         disabled={isSubmitting || !taskName.trim()}
-        className="bg-blue-600 text-white p-1.5 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        className="h-8 w-8 bg-[#009d98] hover:bg-[#008580] text-white shrink-0 rounded-md"
         title="Tạo nhanh (Enter)"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </Button>
     </div>
   );
 };

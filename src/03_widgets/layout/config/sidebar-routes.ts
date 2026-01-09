@@ -66,11 +66,11 @@ export const sidebarRoutes: SidebarRoute[] = [
         href: "/opportunities", 
         icon: Search 
       },
-      { 
-        title: "Phân tích & Sàng lọc", 
-        href: "/opportunities/analysis", 
-        icon: Filter 
-      },
+      // { 
+      //   title: "Phân tích & Sàng lọc", 
+      //   href: "/opportunities/analysis", 
+      //   icon: Filter 
+      // },
       { 
         title: "Cấu hình Bot", 
         href: "/bot-config", 
@@ -106,8 +106,6 @@ export const sidebarRoutes: SidebarRoute[] = [
         icon: CheckSquare,
         // Engineer, JKAN và cả Specialist (nếu trực tiếp làm) cần thấy
         roles: [
-            ROLES.ADMIN, 
-            ROLES.SPECIALIST, 
             ROLES.ENGINEER, 
             ROLES.JKAN
         ] 
@@ -176,10 +174,10 @@ export const sidebarRoutes: SidebarRoute[] = [
     href: "/abac-config",
     roles: [ROLES.ADMIN],
   },
-  {
-    title: "Hệ thống",
-    icon: Settings,
-    href: "/settings",
-    roles: [ROLES.ADMIN],
-  },
+  // {
+  //   title: "Hệ thống",
+  //   icon: Settings,
+  //   href: "/settings",
+  //   roles: [ROLES.ADMIN],
+  // },
 ];

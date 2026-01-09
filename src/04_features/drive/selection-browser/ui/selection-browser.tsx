@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
-import { Users, Truck, CheckSquare, Plus, Loader2, FileText, ExternalLink } from "lucide-react";
+import { Users, Truck, CheckSquare, Plus, Loader2, FileText, ExternalLink, BoxSelect } from "lucide-react";
 import { Task } from "@/entities/task";
 import { driveApi, DriveItem } from "@/entities/drive";
 import { requirementApi, RequirementItem, PersonnelReq, EquipmentReq } from "@/entities/requirement";
 import { biddingProjectApi } from "@/entities/bidding-project";
 import { Button } from "@/shared/ui/button";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/shared/ui/dialog"; 
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogHeader, DialogDescription } from "@/shared/ui/dialog"; 
 import { ResourceRepositoryBrowser } from "./resource-repository-browser"; 
+import { Badge } from "@/shared/ui/badge";
 
 interface SelectionBrowserProps {
   task: Task;
-  isReadOnly?: boolean; // [MỚI] Thêm prop này
+  isReadOnly?: boolean; 
 }
 
 export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserProps) => {
-  // --- STATE ---
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [projectFiles, setProjectFiles] = useState<DriveItem[]>([]);
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
@@ -23,12 +23,9 @@ export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserP
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- LOGIC 1: LOAD YÊU CẦU (Giữ nguyên) ---
+  // --- LOGIC 1: LOAD YÊU CẦU ---
   useEffect(() => {
     const fetchReqs = async () => {
-      // ... (Code fetchReqs giữ nguyên y hệt cũ)
-      console.log("🚀 [SelectionBrowser] Bắt đầu fetchReqs...", { taskId: task.id });
-
       if (!task.biddingProjectId || !task.tag) return;
 
       setLoadingReq(true);
@@ -44,11 +41,10 @@ export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserP
         } else if (task.tag === "DEVICE") {
            data = await requirementApi.getEquipment(hsmtId);
         }
-        
         setRequirements(data);
 
       } catch (e) {
-        console.error("❌ [SelectionBrowser] Lỗi load requirements:", e);
+        console.error("Lỗi load requirements:", e);
       } finally {
         setLoadingReq(false);
       }
@@ -57,7 +53,7 @@ export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserP
     fetchReqs();
   }, [task.biddingProjectId, task.tag]);
 
-  // --- LOGIC 2: LOAD FILE DỰ ÁN (Giữ nguyên) ---
+  // --- LOGIC 2: LOAD FILE DỰ ÁN ---
   const fetchProjectFiles = async () => {
     if (!task.biddingProjectId) return;
     setLoadingFiles(true);
@@ -89,47 +85,44 @@ export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserP
 
   // --- RENDER ---
   return (
-    <div className="flex h-[600px] gap-6 font-sans">
+    <div className="flex flex-col lg:flex-row h-[600px] gap-6 font-sans">
       
-      {/* CỘT TRÁI: YÊU CẦU (Chỉ xem -> Giữ nguyên) */}
-      <div className="w-1/2 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden">
-        <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-          <h3 className="font-bold text-gray-700 flex items-center gap-2">
-            {task.tag === "HR" ? <Users className="w-4 h-4"/> : <Truck className="w-4 h-4"/>}
-            Yêu cầu từ E-HSMT
+      {/* CỘT TRÁI: YÊU CẦU */}
+      <div className="w-full lg:w-1/2 flex flex-col border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <h3 className="font-bold text-slate-700 flex items-center gap-2 text-sm uppercase tracking-wide">
+            {task.tag === "HR" ? <Users className="w-4 h-4 text-slate-500"/> : <Truck className="w-4 h-4 text-slate-500"/>}
+            Yêu cầu E-HSMT
           </h3>
-          <span className="bg-white border px-2 py-0.5 rounded-full text-xs font-bold text-gray-600 shadow-sm">
+          <Badge variant="secondary" className="bg-white border-slate-200 text-slate-600 shadow-sm">
             {requirements.length}
-          </span>
+          </Badge>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white custom-scrollbar">
           {loadingReq ? (
-             <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin text-blue-500 inline"/></div>
+             <div className="text-center py-10"><Loader2 className="w-8 h-8 animate-spin text-[#009d98] inline"/></div>
           ) : requirements.length === 0 ? (
-             <div className="text-center py-10 text-gray-400 italic">Không có yêu cầu nào.</div>
+             <div className="text-center py-10 text-slate-400 italic text-sm">Không tìm thấy yêu cầu nào.</div>
           ) : (
             requirements.map((req) => (
-              <div key={req.id} className="bg-white p-3 rounded border border-gray-200 shadow-sm hover:border-blue-300 transition-all">
+              <div key={req.id} className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 shadow-sm hover:border-[#009d98]/30 transition-all group">
                 <div className="flex gap-3">
-                   <CheckSquare className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-                   <div>
-                      <h4 className="text-sm font-bold text-gray-800">
-                         {(req as PersonnelReq).positionName || (req as EquipmentReq).equipmentName}
+                   <div className="mt-0.5"><CheckSquare className="w-4 h-4 text-[#009d98]" /></div>
+                   <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-slate-800 line-clamp-2">
+                          {(req as PersonnelReq).positionName || (req as EquipmentReq).equipmentName}
                       </h4>
-                      <div className="text-xs text-gray-500 mt-1 space-y-1">
-                         <p>Số lượng: <strong className="text-gray-900">{req.quantity}</strong></p>
-                         {'qualificationReq' in req && (
-                           <p className="line-clamp-2" title={req.qualificationReq}>Yêu cầu: {req.qualificationReq}</p>
-                         )}
-                         {'specifications' in req && req.specifications && (
-                           <p className="line-clamp-2">TSKT: {req.specifications}</p>
-                         )}
+                      <div className="text-xs text-slate-500 mt-1.5 space-y-1">
+                          <p>Số lượng: <strong className="text-slate-900">{req.quantity}</strong></p>
+                          {'qualificationReq' in req && (
+                            <p className="line-clamp-2 text-slate-600">Yêu cầu: {req.qualificationReq}</p>
+                          )}
+                          {'specifications' in req && req.specifications && (
+                            <p className="line-clamp-2 text-slate-600">TSKT: {req.specifications}</p>
+                          )}
                       </div>
                    </div>
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100">BẮT BUỘC</span>
                 </div>
               </div>
             ))
@@ -137,58 +130,61 @@ export const SelectionBrowser = ({ task, isReadOnly = false }: SelectionBrowserP
         </div>
       </div>
 
-      {/* CỘT PHẢI: KẾT QUẢ / FILE ĐÃ CHỌN */}
-      <div className="w-1/2 flex flex-col border rounded-lg bg-white shadow-sm overflow-hidden border-dashed border-blue-200">
+      {/* CỘT PHẢI: KẾT QUẢ */}
+      <div className="w-full lg:w-1/2 flex flex-col border border-dashed border-slate-300 rounded-xl bg-slate-50/30 overflow-hidden relative">
         
-        <div className="p-4 border-b flex justify-between items-center bg-blue-50/30">
-           <h3 className="font-bold text-gray-700">Tài liệu dự thầu đã chọn</h3>
-           {loadingFiles && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+        <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+           <h3 className="font-bold text-slate-700 text-sm uppercase tracking-wide flex items-center gap-2">
+              <BoxSelect className="w-4 h-4 text-[#009d98]" /> Tài liệu đã chọn
+           </h3>
+           {loadingFiles && <Loader2 className="w-4 h-4 animate-spin text-[#009d98]" />}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col custom-scrollbar">
            {projectFiles.length > 0 ? (
              <div className="space-y-2 w-full">
                 {projectFiles.map(file => (
-                  <div key={file.id} className="flex items-center p-2 bg-blue-50 border border-blue-100 rounded group">
-                     <FileText className="w-4 h-4 text-blue-600 mr-2" />
-                     <span className="text-sm font-medium text-gray-700 truncate flex-1">{file.name}</span>
+                  <div key={file.id} className="flex items-center p-3 bg-white border border-slate-200 rounded-lg group shadow-sm hover:border-[#009d98]/30 transition-all">
+                     <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500 mr-3 group-hover:text-[#009d98] group-hover:bg-[#009d98]/10">
+                        <FileText className="w-4 h-4" />
+                     </div>
+                     <span className="text-sm font-medium text-slate-700 truncate flex-1 group-hover:text-[#009d98] transition-colors">{file.name}</span>
                      {file.link && (
-                        <a href={file.link} target="_blank" className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-600 p-1">
-                           <ExternalLink className="w-3 h-3" />
+                        <a href={file.link} target="_blank" className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[#009d98] p-1.5 hover:bg-slate-100 rounded-md transition-all">
+                           <ExternalLink className="w-4 h-4" />
                         </a>
                      )}
                   </div>
                 ))}
              </div>
            ) : (
-             <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                   <Plus className="w-8 h-8 text-gray-300" />
+             <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                   <Plus className="w-8 h-8 text-slate-300" />
                 </div>
-                <p className="text-gray-500 text-sm">Chưa có tài liệu nào.</p>
-                {/* Ẩn dòng hướng dẫn nếu đang ReadOnly để đỡ gây hiểu nhầm */}
-                {!isReadOnly && <p className="text-xs text-gray-400">Chọn từ kho để thêm vào hồ sơ.</p>}
+                <p className="text-slate-500 text-sm font-medium">Chưa có tài liệu nào.</p>
+                {!isReadOnly && <p className="text-xs text-slate-400 mt-1">Chọn từ kho để thêm vào hồ sơ.</p>}
              </div>
            )}
         </div>
 
-        {/* [QUAN TRỌNG] Footer: Ẩn nút thêm nếu ReadOnly */}
+        {/* Footer Action */}
         {!isReadOnly && (
-            <div className="p-4 border-t bg-gray-50">
+            <div className="p-4 border-t border-slate-200 bg-white">
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogTrigger asChild>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Chọn tài liệu từ Kho tài nguyên
+                    <Button className="w-full bg-[#009d98] hover:bg-[#008580] text-white font-bold h-11 shadow-md gap-2">
+                        <Plus className="w-5 h-5" />
+                        Chọn từ Kho tài nguyên
                     </Button>
                 </DialogTrigger>
                 
-                <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0">
-                    <div className="p-4 border-b">
-                        <DialogTitle className="text-lg font-bold text-gray-800">Kho tài nguyên chung</DialogTitle>
-                        <p className="text-sm text-gray-500">Chọn tài liệu mẫu để clone vào dự án</p>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
+                <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0 border-none shadow-2xl">
+                    <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                        <DialogTitle className="text-lg font-extrabold text-slate-800">Kho tài nguyên chung</DialogTitle>
+                        <DialogDescription>Duyệt và chọn tài liệu mẫu để clone vào dự án hiện tại.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-hidden bg-white">
                         <ResourceRepositoryBrowser 
                             task={task} 
                             preloadedTargetId={targetFolderId} 

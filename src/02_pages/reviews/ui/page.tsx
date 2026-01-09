@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { Task, taskApi } from "@/entities/task";
 
 import { WorkspaceLayout } from "@/widgets/workspace-board";
-import { ReviewTaskList } from "@/features/task-list/ui/review-task-list"; // [MỚI] Import List Review
-import { TaskDetailPanel } from "@/widgets/task-detail"; // Widget cũ
+import { ReviewTaskList } from "@/features/task-list/ui/review-task-list"; 
+import { TaskDetailPanel } from "@/widgets/task-detail"; 
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -78,9 +78,9 @@ export const ReviewsPage = () => {
       // CONTENT: Dùng TaskDetailPanel nhưng bật ReviewMode
       content={
         isLoadingDetail ? (
-           <div className="h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50/30">
-              <Loader2 className="w-10 h-10 animate-spin text-orange-500 mb-3" />
-              <p className="text-sm font-medium">Đang tải hồ sơ duyệt...</p>
+           <div className="h-full flex flex-col items-center justify-center text-slate-400 bg-white">
+              <Loader2 className="w-10 h-10 animate-spin text-[#009d98] mb-3" />
+              <p className="text-sm font-bold text-slate-600">Đang tải hồ sơ duyệt...</p>
            </div>
         ) : (
            <TaskDetailPanel 
