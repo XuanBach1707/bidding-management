@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HardDrive } from "lucide-react"; // Icon header
 import { 
   resourceApi, 
   ResourceStats, 
@@ -43,26 +44,41 @@ export const ResourceStatsOverview = () => {
   }, []);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      {/* 1. Phần thẻ bài KPI */}
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+      
+      {/* HEADER PAGE (Optional but good for UX) */}
+      <div className="flex flex-col gap-1">
+         <div className="flex items-center gap-2 text-slate-800">
+            <div className="p-2 bg-[#009d98]/10 rounded-lg">
+                <HardDrive className="w-5 h-5 text-[#009d98]" />
+            </div>
+            <h2 className="text-xl font-extrabold tracking-tight">Tổng quan Tài nguyên</h2>
+         </div>
+         <p className="text-sm text-slate-500 ml-[44px]">
+            Thống kê dung lượng, tần suất hoạt động và cơ cấu tài liệu của hệ thống.
+         </p>
+      </div>
+
+      {/* 1. KPI Cards */}
       <ResourceKpiCards stats={stats} isLoading={isLoading} />
 
-      {/* 2. Phần biểu đồ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-           {/* [SỬA] Truyền dữ liệu thật vào đây */}
+      {/* 2. Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-[400px]">
+        <div className="lg:col-span-1 h-full">
            <StructureChart 
               data={stats?.breakdown} 
               isLoading={isLoading} 
            />
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-full">
            <ActivityChart />
         </div>
       </div>
 
-      {/* 3. Phần Tập tin gần đây */}
-      <RecentFiles files={recentFiles} isLoading={isLoading} />
+      {/* 3. Recent Files Table */}
+      <div className="min-h-[300px]">
+         <RecentFiles files={recentFiles} isLoading={isLoading} />
+      </div>
     </div>
   );
 };

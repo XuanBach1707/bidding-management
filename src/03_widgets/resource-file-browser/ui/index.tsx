@@ -9,8 +9,9 @@ import {
 import { BrowserHeader, BreadcrumbItem } from "./browser-header";
 import { FolderGrid } from "./folder-grid";
 import { FileList } from "./file-list";
-import { Loader2 } from "lucide-react";
+import { Loader2, SearchX } from "lucide-react";
 
+// Hook Debounce giữ nguyên
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -21,7 +22,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export const ResourceFileBrowser = () => {
-  // --- STATE ---
+  // State
   const [currentFolderId, setCurrentFolderId] = useState(RESOURCE_REPO_ROOT_ID);
   const [items, setItems] = useState<ResourceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,10 +34,10 @@ export const ResourceFileBrowser = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500);
 
-  // --- LOGIC GỌI API ---
+  // Logic API
   useEffect(() => {
     const fetchData = async () => {
-      // 1. Nếu searchQuery rỗng -> LUÔN LUÔN load folder content, không quan tâm debounce
+      // Case 1: Load Folder
       if (!searchQuery) {
         setIsLoading(true);
         try {
@@ -51,12 +52,10 @@ export const ResourceFileBrowser = () => {
         return;
       }
 
-      // 2. Nếu có searchQuery nhưng chưa khớp với debouncedSearch -> Đợi tiếp (không bắn request)
-      if (searchQuery !== debouncedSearch) {
-        return;
-      }
+      // Case 2: Waiting Debounce
+      if (searchQuery !== debouncedSearch) return;
 
-      // 3. Nếu debouncedSearch đã khớp với searchQuery và không rỗng -> Gọi API Search
+      // Case 3: Search API
       setIsLoading(true);
       try {
         const results = await resourceApi.searchResources(debouncedSearch, RESOURCE_REPO_ROOT_ID);
@@ -70,20 +69,17 @@ export const ResourceFileBrowser = () => {
     };
 
     fetchData();
-    // Lắng nghe 3 thứ: ID folder, giá trị đã debounce, và giá trị thực tế của ô search
   }, [currentFolderId, debouncedSearch, searchQuery]);
 
-  // --- HANDLERS ---
-  
+  // Handlers
   const handleFolderClick = (folder: ResourceItem) => {
-    // [QUAN TRỌNG]: Reset search trước để effect nhận biết ngay lập tức là searchQuery rỗng
     setSearchQuery(""); 
     setCurrentFolderId(folder.id);
     setBreadcrumbs((prev) => [...prev, { id: folder.id, name: folder.name }]);
   };
 
   const handleBreadcrumbClick = (index: number) => {
-    setSearchQuery(""); // Reset search
+    setSearchQuery(""); 
     const targetCrumb = breadcrumbs[index];
     setCurrentFolderId(targetCrumb.id);
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
@@ -101,23 +97,37 @@ export const ResourceFileBrowser = () => {
         searchValue={searchQuery}
       />
 
-      <div className="flex-1 bg-slate-50 rounded-lg p-2 md:p-0">
+      <div className="flex-1 bg-slate-50/50 rounded-xl p-1 md:p-0 min-h-[400px]">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-            <Loader2 className="w-8 h-8 animate-spin mb-2 text-blue-500" />
-            <span className="text-sm">Đang tải dữ liệu...</span>
+          <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-400 gap-3">
+            <Loader2 className="w-10 h-10 animate-spin text-[#009d98]" />
+            <span className="text-sm font-medium animate-pulse">Đang tải dữ liệu...</span>
           </div>
         ) : (
           <>
-            {/* Chỉ hiện thông báo kết quả khi có searchQuery thực tế */}
+            {/* Search Result Feedback */}
             {searchQuery && debouncedSearch === searchQuery && (
-              <div className="mb-4 text-sm text-slate-500 italic px-4">
-                Tìm thấy {items.length} kết quả cho từ khóa "{debouncedSearch}"
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-sm flex items-center gap-2">
+                 <span className="font-semibold">Kết quả tìm kiếm:</span> 
+                 <span>Tìm thấy <b>{items.length}</b> tài liệu cho từ khóa "{debouncedSearch}"</span>
               </div>
             )}
 
-            <FolderGrid items={folders} onFolderClick={handleFolderClick} />
-            <FileList items={files} />
+            {/* Empty State */}
+            {items.length === 0 && !isLoading && (
+                <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-400">
+                    <div className="p-4 bg-slate-100 rounded-full mb-3">
+                        <SearchX className="w-8 h-8 text-slate-300" />
+                    </div>
+                    <p>Không tìm thấy dữ liệu nào.</p>
+                </div>
+            )}
+
+            {/* Content */}
+            <div className="space-y-2">
+                <FolderGrid items={folders} onFolderClick={handleFolderClick} />
+                <FileList items={files} />
+            </div>
           </>
         )}
       </div>

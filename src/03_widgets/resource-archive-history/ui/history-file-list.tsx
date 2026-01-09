@@ -1,23 +1,32 @@
-import { FileText, ExternalLink, File, Folder, Clock } from "lucide-react"; 
+import { FileText, ExternalLink, File, Folder, Clock, FileSpreadsheet, FileImage, FileArchive } from "lucide-react"; 
 import { ResourceItem } from "@/entities/resource";
 import { Button } from "@/shared/ui/button";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
+// Helper chọn icon file
+const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    
+    // Style wrapper
+    const wrapperClass = (bg: string, text: string) => `p-2 rounded-lg ${bg} ${text} shrink-0`;
+
+    if (['pdf'].includes(ext!)) return <div className={wrapperClass("bg-red-50", "text-red-600")}><FileText className="w-4 h-4" /></div>;
+    if (['xls', 'xlsx', 'csv'].includes(ext!)) return <div className={wrapperClass("bg-green-50", "text-green-600")}><FileSpreadsheet className="w-4 h-4" /></div>;
+    if (['doc', 'docx'].includes(ext!)) return <div className={wrapperClass("bg-blue-50", "text-blue-600")}><FileText className="w-4 h-4" /></div>;
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext!)) return <div className={wrapperClass("bg-purple-50", "text-purple-600")}><FileImage className="w-4 h-4" /></div>;
+    if (['zip', 'rar', '7z'].includes(ext!)) return <div className={wrapperClass("bg-orange-50", "text-orange-600")}><FileArchive className="w-4 h-4" /></div>;
+    
+    return <div className={wrapperClass("bg-slate-100", "text-slate-500")}><File className="w-4 h-4" /></div>;
+};
+
 export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-        <File className="w-10 h-10 mb-2 opacity-20" />
-        <span className="text-sm">Thư mục này chưa có tài liệu nào.</span>
-      </div>
-    );
-  }
+  if (items.length === 0) return null; // Ẩn luôn nếu không có file (để Empty State của component cha lo)
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+      <div className="flex items-center justify-between px-1">
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
           <FileText className="w-4 h-4" />
           Danh sách tài liệu ({items.length})
         </h4>
@@ -25,33 +34,30 @@ export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+          <thead className="bg-slate-50/50 text-slate-500 border-b border-slate-200 text-[11px] uppercase font-semibold">
             <tr>
-              <th className="px-6 py-3 font-semibold text-xs uppercase w-[50%]">Tên tài liệu</th>
-              {/* [MỚI] Thêm cột Ngày cập nhật */}
-              <th className="px-6 py-3 font-semibold text-xs uppercase w-[25%]">Cập nhật</th>
-              <th className="px-6 py-3 font-semibold text-xs uppercase w-[25%] text-right">Thao tác</th>
+              <th className="px-6 py-3 w-[50%]">Tên tài liệu</th>
+              <th className="px-6 py-3 w-[30%]">Cập nhật</th>
+              <th className="px-6 py-3 w-[20%] text-right">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-50">
             {items.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+              <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
                 <td className="px-6 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded text-blue-600 shrink-0">
-                        <FileText className="w-4 h-4" />
-                    </div>
+                    {getFileIcon(item.name)}
                     <div className="min-w-0">
                       {/* Tên file */}
-                      <span className="text-slate-700 font-medium block group-hover:text-blue-700 transition-colors truncate pr-4" title={item.name}>
+                      <span className="text-slate-700 font-medium block group-hover:text-[#009d98] transition-colors truncate pr-4 max-w-xs md:max-w-md" title={item.name}>
                         {item.name}
                       </span>
                       
-                      {/* [CHUẨN HÓA] Dùng item.parentName trực tiếp (đã thêm vào type) */}
+                      {/* Folder chứa (nếu có - thường xuất hiện khi search) */}
                       {item.parentName && (
-                        <div className="flex items-center gap-1.5 mt-1 text-slate-400">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-slate-400">
                           <Folder className="w-3 h-3" />
-                          <span className="text-[11px] truncate max-w-[200px]" title={item.parentName}>
+                          <span className="text-[10px] truncate max-w-[200px]" title={item.parentName}>
                             {item.parentName}
                           </span>
                         </div>
@@ -60,15 +66,15 @@ export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
                   </div>
                 </td>
                 
-                {/* [MỚI] Cột Ngày cập nhật */}
+                {/* Ngày cập nhật */}
                 <td className="px-6 py-3 text-slate-500 text-xs whitespace-nowrap">
                     {item.updatedAt ? (
-                        <div className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <div className="flex items-center gap-1.5 font-mono">
+                            <Clock className="w-3 h-3 text-slate-300" />
                             {format(new Date(item.updatedAt), "dd/MM/yyyy HH:mm", { locale: vi })}
                         </div>
                     ) : (
-                        "--"
+                        <span className="text-slate-300 text-[10px] italic">--</span>
                     )}
                 </td>
 
@@ -76,9 +82,9 @@ export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
                   {item.link ? (
                     <Button 
                       asChild 
-                      variant="outline" 
+                      variant="ghost" 
                       size="sm" 
-                      className="h-8 gap-2 text-blue-600 border-blue-100 hover:bg-blue-50 hover:text-blue-700"
+                      className="h-8 gap-2 text-slate-500 hover:text-[#009d98] hover:bg-[#009d98]/5"
                     >
                       <a
                         href={item.link}
@@ -87,11 +93,11 @@ export const HistoryFileList = ({ items }: { items: ResourceItem[] }) => {
                         title="Mở tài liệu"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        Mở file
+                        <span className="hidden sm:inline text-xs">Mở file</span>
                       </a>
                     </Button>
                   ) : (
-                    <span className="text-slate-300 text-xs italic">Chưa có link</span>
+                    <span className="text-slate-300 text-[10px] italic">No Link</span>
                   )}
                 </td>
               </tr>

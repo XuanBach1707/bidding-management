@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { History, Search, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
+import { History, Search, ChevronLeft, ChevronRight, XCircle, Filter } from "lucide-react";
 import { BiddingHistoryItem, HistoryFilterOptions, resourceApi } from "@/entities/resource";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { Sheet, SheetContent, SheetTrigger } from "@/shared/ui/sheet"; // Dùng Sheet cho Mobile Filter
 import { AdvancedFilterSidebar } from "./advanced-filter-sidebar";
 import { ArchiveTable } from "./archive-table";
 
@@ -82,17 +83,50 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
   };
 
   return (
-    <>
-      <div className="flex items-center gap-3 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm mb-6">
-        <div className="p-2 bg-blue-50 rounded-lg"><History className="w-6 h-6 text-blue-600" /></div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Lịch sử năng lực Dự án</h2>
-          <p className="text-sm text-slate-500">Dữ liệu hồ sơ thầu và kết quả thực hiện dự án</p>
-        </div>
+    <div className="animate-in fade-in duration-500 pb-10">
+      
+      {/* HEADER PAGE */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+         <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#009d98]/10 rounded-xl">
+                <History className="w-6 h-6 text-[#009d98]" />
+            </div>
+            <div>
+                <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Lịch sử Dự án</h2>
+                <p className="text-sm text-slate-500 font-medium">Tra cứu hồ sơ thầu và kết quả thực hiện quá khứ.</p>
+            </div>
+         </div>
+         
+         {/* Mobile Filter Trigger */}
+         <div className="xl:hidden">
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="outline" className="gap-2 border-slate-200">
+                        <Filter className="w-4 h-4" /> Bộ lọc
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0">
+                    <div className="h-full overflow-y-auto p-4">
+                        <AdvancedFilterSidebar 
+                            options={filterOptions}
+                            selectedYears={selectedYears}
+                            selectedInvestors={selectedInvestors}
+                            selectedFields={selectedFields}
+                            onYearChange={handleFilterChange(setSelectedYears)}
+                            onInvestorChange={handleFilterChange(setSelectedInvestors)}
+                            onFieldChange={handleFilterChange(setSelectedFields)}
+                            onReset={resetFilters}
+                        />
+                    </div>
+                </SheetContent>
+            </Sheet>
+         </div>
       </div>
 
-      <div className="flex gap-6 items-start">
-        <aside className="w-72 shrink-0 hidden xl:block sticky top-6">
+      <div className="flex gap-8 items-start">
+        
+        {/* SIDEBAR (Desktop Only) */}
+        <aside className="w-[280px] shrink-0 hidden xl:block sticky top-6 self-start">
           <AdvancedFilterSidebar 
             options={filterOptions}
             selectedYears={selectedYears}
@@ -105,44 +139,83 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
           />
         </aside>
 
-        <div className="flex-1 space-y-4">
-          <div className="flex gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="Tìm kiếm theo Tên dự án hoặc Mã TBMT..." 
-                className="pl-9 border-none shadow-none focus-visible:ring-0 bg-transparent h-9"
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              />
-              {searchTerm && (
-                <button onClick={() => { setSearchTerm(""); setCurrentPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500">
-                  <XCircle className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+        {/* MAIN CONTENT */}
+        <div className="flex-1 min-w-0 space-y-6">
+          
+          {/* Search Bar */}
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#009d98] transition-colors" />
+            <Input 
+              placeholder="Tìm kiếm theo Tên dự án hoặc Mã TBMT..." 
+              className="pl-10 h-11 bg-white border-slate-200 shadow-sm focus-visible:ring-[#009d98] text-sm rounded-xl"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => { setSearchTerm(""); setCurrentPage(1); }} 
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          {isLoading ? (
-            <div className="bg-white p-12 rounded-xl border border-slate-200 space-y-4">
-              <Skeleton className="h-8 w-1/3 bg-slate-100" />
-              <Skeleton className="h-64 w-full bg-slate-50" />
-            </div>
-          ) : (
-            <ArchiveTable projects={paginatedProjects} isLoading={isLoading} onOpenProject={onOpenProject} />
-          )}
+          {/* Table Content */}
+          <div className="min-h-[400px]">
+            {isLoading ? (
+                <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-4 shadow-sm">
+                    <div className="flex justify-between mb-6">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                    {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full rounded-lg bg-slate-50" />)}
+                </div>
+            ) : (
+                <ArchiveTable 
+                    projects={paginatedProjects} 
+                    isLoading={isLoading} 
+                    onOpenProject={onOpenProject} 
+                />
+            )}
+          </div>
 
+          {/* Pagination */}
           {!isLoading && filteredProjects.length > 0 && (
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-xs text-slate-500 pl-1">
-                Hiển thị <strong>{(currentPage - 1) * itemsPerPage + 1}</strong> - <strong>{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</strong> / <strong>{filteredProjects.length}</strong>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-200/50">
+              <div className="text-xs font-medium text-slate-500">
+                Hiển thị <strong>{(currentPage - 1) * itemsPerPage + 1}</strong> - <strong>{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</strong> trong tổng số <strong>{filteredProjects.length}</strong> dự án
               </div>
+              
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 p-0 rounded-lg border-slate-200 hover:border-[#009d98] hover:text-[#009d98]"
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm font-medium px-2 min-w-[60px] text-center">Trang {currentPage}/{totalPages}</span>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}>
+                
+                <div className="flex items-center gap-1">
+                    {/* Page Numbers (Simple Logic) */}
+                    <span className="text-sm font-bold text-slate-800 bg-white border border-slate-200 px-3 py-1 rounded-md shadow-sm min-w-[32px] text-center">
+                        {currentPage}
+                    </span>
+                    <span className="text-sm text-slate-400 px-1">/</span>
+                    <span className="text-sm font-medium text-slate-500 min-w-[20px] text-center">
+                        {totalPages}
+                    </span>
+                </div>
+
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+                    disabled={currentPage === totalPages}
+                    className="h-8 w-8 p-0 rounded-lg border-slate-200 hover:border-[#009d98] hover:text-[#009d98]"
+                >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -150,6 +223,6 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
