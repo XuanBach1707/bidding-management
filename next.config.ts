@@ -9,6 +9,7 @@ const FORCE_SLASH_PATHS = [
   '/abac',
   '/system',
   '/bidding-projects',
+  '/tasks',
 ];
 
 const nextConfig: NextConfig = {

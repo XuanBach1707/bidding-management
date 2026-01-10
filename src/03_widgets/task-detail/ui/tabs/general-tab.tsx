@@ -11,8 +11,7 @@ import {
   Loader2,
   CheckCircle, 
   XCircle,
-  AlertCircle,
-  FileText
+  AlertCircle
 } from "lucide-react";
 import { Task, TaskPriority, taskApi } from "@/entities/task";
 import { DiscussionThread } from "@/features/comment/discussion-thread";
@@ -21,6 +20,7 @@ import { Button } from "@/shared/ui/button";
 import { useToast } from "@/shared/lib/hooks/use-toast"; 
 import { Textarea } from "@/shared/ui/textarea";
 import { Badge } from "@/shared/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,16 @@ interface GeneralTabProps {
   onRefresh: () => void;
   isReviewMode?: boolean; 
 }
+
+/**
+ * Helper: Lấy chữ cái đầu của Tên (Ví dụ: "Nguyễn Văn Hùng" -> "H")
+ * Đồng bộ với Dashboard và CommentItem
+ */
+const getInitials = (name: string) => {
+  if (!name || name === "Chưa phân công") return "U";
+  const parts = name.trim().split(" ");
+  return parts[parts.length - 1].charAt(0).toUpperCase();
+};
 
 const getPriorityDisplay = (priority: TaskPriority) => {
   switch (priority) {
@@ -102,7 +112,6 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
     try {
       setIsProcessing(true);
       await taskApi.updateReviewStatus(task.id, "REJECTED");
-      // Thực tế nên gọi thêm API post comment lý do ở đây
       
       toast({ title: "Đã từ chối", description: "Yêu cầu đã được trả lại." });
       setIsRejectOpen(false);
@@ -129,11 +138,6 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                         {task.taskName}
                     </h2>
                     <div className="flex items-center gap-3 text-sm text-slate-500">
-                        <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                            <FileText className="w-3.5 h-3.5" /> 
-                            ID: <span className="font-mono font-bold text-slate-700">#{task.id}</span>
-                        </span>
-                        {/* Status Mobile View */}
                         <Badge className={cn("lg:hidden border", statusInfo.bg)} variant="outline">
                             {statusInfo.label}
                         </Badge>
@@ -181,7 +185,6 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 </div>
              )}
 
-             {/* Upload Zone (Chỉ hiện với Staff) */}
              {!isReviewMode && (
                 <div className="mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-all cursor-pointer">
                     <CloudUpload className="w-8 h-8 text-slate-300 mb-2" />
@@ -209,7 +212,6 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 </Badge>
              </div>
 
-             {/* --- ACTION: STAFF (SUBMIT) --- */}
              {!isReviewMode && task.status === "IN_PROGRESS" && (
                 <div className="mt-4 pt-4 border-t border-slate-100">
                     <Button 
@@ -226,7 +228,6 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 </div>
              )}
 
-             {/* --- ACTION: MANAGER (APPROVE/REJECT) --- */}
              {isReviewMode && task.status === "PENDING_REVIEW" && (
                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
                     <Button 
@@ -251,19 +252,26 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
 
           {/* B. INFO CARD */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-5">
-             {/* Assignee */}
+             {/* Người thực hiện */}
              <div>
                 <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Người thực hiện</label>
                 <div className="flex items-center gap-3">
-                    <div className={cn("w-9 h-9 rounded-full flex items-center justify-center border", 
+                    <Avatar className={cn(
+                        "w-10 h-10 border shadow-sm",
                         isUnitAssigned ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-blue-50 border-blue-200 text-blue-600"
                     )}>
-                        {mainAssignment?.user?.avatarUrl ? (
-                            <img src={mainAssignment.user.avatarUrl} alt="avt" className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                            isUnitAssigned ? <UsersIcon className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />
+                        {/* Logic Avatar đồng bộ: Ưu tiên ảnh của User */}
+                        {mainAssignment?.user?.avatarUrl && (
+                             <AvatarImage src={mainAssignment.user.avatarUrl} alt="avt" className="object-cover" />
                         )}
-                    </div>
+                        <AvatarFallback className="text-xs font-extrabold bg-transparent">
+                            {isUnitAssigned ? (
+                                <UsersIcon className="w-4 h-4" />
+                            ) : (
+                                getInitials(assigneeName)
+                            )}
+                        </AvatarFallback>
+                    </Avatar>
                     <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-800 line-clamp-1" title={assigneeName}>{assigneeName}</span>
                         <span className="text-xs text-slate-500">{isUnitAssigned ? "Đơn vị" : "Cá nhân"}</span>
@@ -321,7 +329,7 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 onClick={handleRejectConfirm} 
                 disabled={isProcessing}
             >
-               {isProcessing ? "Đang gửi..." : "Gửi yêu cầu"}
+                {isProcessing ? "Đang gửi..." : "Gửi yêu cầu"}
             </Button>
           </DialogFooter>
         </DialogContent>

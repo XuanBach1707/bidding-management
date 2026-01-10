@@ -53,9 +53,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
         <div className="flex-1 space-y-3 w-full">
           {/* Header nhỏ */}
           <div className="flex items-center justify-between lg:justify-start lg:gap-3">
-            <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-               #{project.id}
-            </span>
             <Badge variant="outline" className={cn("text-[10px] h-5 px-2 font-semibold border", getStatusColor(project.status))}>
               {project.status}
             </Badge>
