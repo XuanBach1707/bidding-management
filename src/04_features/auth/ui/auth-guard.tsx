@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { authStorage } from "@/shared/lib/auth"; // Check lại đường dẫn
+import { authApi } from "@/features/auth/api/auth.api"; // Import authApi
+import { authStorage } from "@/shared/lib/auth";
 import { Loader2 } from "lucide-react";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -10,32 +11,34 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      // 1. Lấy token
-      const token = authStorage.getToken();
-
-      if (!token) {
-        // 2. Không có -> Đá về Login
-        console.log("AuthGuard: Missing token, redirecting...");
-        router.replace("/login");
-      } else {
-        // 3. Có -> Tắt loading để hiện nội dung
+    const verifySession = async () => {
+      try {
+        // 1. Gọi API check user (Cookie sẽ tự bay theo request này)
+        const userData = await authApi.getMe();
+        
+        // 2. Nếu OK (200), cập nhật lại info user mới nhất vào storage (phòng khi user đổi tên/avatar)
+        authStorage.setUser(userData);
+        
+        // 3. Cho phép vào
         setIsLoading(false);
+      } catch (error) {
+        // 4. Nếu lỗi (401 Unauthorized), đá về login
+        console.log("AuthGuard: Session invalid or expired");
+        authStorage.clear(); // Xóa info rác
+        router.replace("/login");
       }
     };
 
-    checkAuth();
+    verifySession();
   }, [router]);
 
-  // Nếu đang check hoặc chưa có quyền -> Hiện loading
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#20a19c]" />
       </div>
     );
   }
 
-  // Đã qua cửa -> Render con
   return <>{children}</>;
 }

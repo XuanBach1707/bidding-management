@@ -3,34 +3,44 @@ import camelcaseKeys from 'camelcase-keys';
 import snakecaseKeys from 'snakecase-keys';
 import { authStorage } from '@/shared/lib/auth'; 
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://steam-elect-least-study.trycloudflare.com/";
+// [SỬA QUAN TRỌNG]
+// Thay vì trỏ thẳng IP (bị CORS), ta trỏ vào Proxy của Next.js
+// Next.js sẽ tự nối sang http://26.112.109.171:8000/ ở phía server
+const BASE_URL = "/api-proxy"; 
 const SKIP_TRANSFORM_HEADER = 'x-no-transform';
 
 // Mở rộng type để chứa cờ nội bộ
 interface CustomAxiosConfig extends InternalAxiosRequestConfig {
   _skipTransform?: boolean;
+  _retry?: boolean;
 }
 
+// =================================================================
+// CẤU HÌNH AXIOS VỚI COOKIE
+// =================================================================
 export const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 100000,
+  withCredentials: true, // <--- QUAN TRỌNG: Để trình duyệt gửi/nhận Cookie HttpOnly
 });
 
 const refreshHttp = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
+  withCredentials: true, // <--- Refresh API cũng cần Cookie
 });
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+// Queue giờ không cần nhận token string nữa, chỉ cần resolve là được
+const processQueue = (error: any) => {
   failedQueue.forEach((prom) => {
     if (error) prom.reject(error);
-    else prom.resolve(token);
+    else prom.resolve();
   });
   failedQueue = [];
 };
@@ -40,48 +50,31 @@ const processQueue = (error: any, token: string | null = null) => {
 // =================================================================
 http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Ép kiểu sang CustomConfig để dùng biến _skipTransform
     const customConfig = config as CustomAxiosConfig;
 
-    // 1. Gắn Token
-    const token = authStorage.getToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    // 2. Kiểm tra header chặn transform
+    // 1. Kiểm tra header chặn transform
     const skipHeader = config.headers?.[SKIP_TRANSFORM_HEADER];
-    
-    // LƯU Ý QUAN TRỌNG: Lưu trạng thái vào biến nội bộ _skipTransform
     if (skipHeader) {
       customConfig._skipTransform = true;
-      // Sau khi lưu xong thì xóa header đi để tránh gửi rác lên server
       delete config.headers[SKIP_TRANSFORM_HEADER];
     }
 
-    // --- [MỚI] TỰ ĐỘNG XỬ LÝ FORM DATA ---
-    // Nếu data là FormData, ta xóa Content-Type mặc định (application/json)
-    // để trình duyệt tự động set multipart/form-data kèm boundary chuẩn.
+    // --- XỬ LÝ FORM DATA ---
     if (config.data instanceof FormData) {
         delete config.headers['Content-Type'];
     }
 
-    // Nếu data đã là URLSearchParams (đã chuẩn form) thì bỏ qua transform để tránh lỗi
     if (config.data instanceof URLSearchParams) {
         return customConfig;
     }
 
-    // 3. Chuyển đổi dữ liệu gửi đi (Chỉ khi không có cờ chặn VÀ không phải FormData)
+    // 2. Chuyển đổi snake_case
     if (config.data && !(config.data instanceof FormData) && !customConfig._skipTransform) {
-      // Bước A: Chuyển toàn bộ Key sang snake_case (camelCase -> snake_case)
       const snakedData = snakecaseKeys(config.data, { deep: true });
 
-      // Bước B: Kiểm tra Content-Type để xử lý body phù hợp
-      // Nếu header là x-www-form-urlencoded, ta phải stringify object thành chuỗi "key=value&..."
       if (config.headers?.['Content-Type'] === 'application/x-www-form-urlencoded') {
           config.data = new URLSearchParams(snakedData).toString();
       } else {
-          // Mặc định (JSON)
           config.data = snakedData;
       }
     }
@@ -96,35 +89,30 @@ http.interceptors.request.use(
 // =================================================================
 http.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Lấy cờ skip từ config (đã được lưu ở Request Interceptor)
     const customConfig = response.config as CustomAxiosConfig;
     const skipTransform = customConfig._skipTransform;
 
-    // Convert dữ liệu nhận về (Chỉ convert nếu KHÔNG có cờ skip)
     if (response.data && typeof response.data === 'object' && !skipTransform) {
       response.data = camelcaseKeys(response.data, { deep: true });
     }
     return response.data;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as CustomAxiosConfig & { _retry?: boolean };
+    const originalRequest = error.config as CustomAxiosConfig;
     const skipTransform = originalRequest?._skipTransform;
 
-    // Convert lỗi sang camelCase (nếu không chặn)
     if (error.response?.data && typeof error.response.data === 'object' && !skipTransform) {
        error.response.data = camelcaseKeys(error.response.data as any, { deep: true });
     }
 
-    // --- XỬ LÝ 401 (Giữ nguyên logic cũ) ---
+    // --- XỬ LÝ 401: REFRESH TOKEN TỰ ĐỘNG ---
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            if (originalRequest.headers) {
-                originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            }
+          .then(() => {
             return http(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -133,47 +121,26 @@ http.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = authStorage.getRefreshToken();
-      if (!refreshToken) {
-        handleLogout();
-        return Promise.reject(error);
-      }
-
       try {
-        const { data } = await refreshHttp.post('/auth/refresh', { refresh_token: refreshToken });
-        // Refresh token API luôn trả về snake_case chuẩn nên ta convert thủ công hoặc dùng camelcaseKeys
-        const responseData = camelcaseKeys(data, { deep: true });
-        const { accessToken, refreshToken: newRefreshToken, expiresIn } = responseData.data;
+        // Gọi API Refresh qua Proxy
+        await refreshHttp.post('/auth/refresh', {}); 
 
-        if (!accessToken) throw new Error("Missing accessToken");
-
-        authStorage.setToken(accessToken);
-        if (newRefreshToken) authStorage.setRefreshToken(newRefreshToken);
-        if (expiresIn) authStorage.setExpiresAt(expiresIn);
-
-        http.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
-        if (originalRequest.headers) {
-             originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
-        }
-
-        processQueue(null, accessToken);
-        
-        // Quan trọng: Khi retry, phải đảm bảo cờ _skipTransform vẫn được giữ
+        processQueue(null);
         return http(originalRequest);
 
       } catch (refreshError) {
-        processQueue(refreshError, null);
-        handleLogout();
+        processQueue(refreshError);
+        handleLogout(); 
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // --- LOG (Giữ nguyên) ---
+    // --- LOG ---
     if (error.response) {
         const status = error.response.status;
-        if (status === 403) console.error("Forbidden");
+        if (status === 403) console.error("Forbidden - Không có quyền");
         if (status === 500) console.error("Server Error");
     }
     
@@ -185,8 +152,11 @@ function handleLogout() {
   if (typeof window !== 'undefined') {
      const isLoginPage = window.location.pathname.includes('/login');
      if (!isLoginPage) {
-        authStorage.clear();
-        window.location.href = '/login';
+        // [SỬA LẠI] Thêm dấu / để nối chuỗi cho đúng (/api-proxy/auth/logout)
+        axios.post(`${BASE_URL}/auth/logout`, {}, { withCredentials: true }).finally(() => {
+            authStorage.clear();
+            window.location.href = '/login';
+        });
      }
   }
 }

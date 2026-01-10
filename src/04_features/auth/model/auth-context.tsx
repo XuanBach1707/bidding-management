@@ -3,13 +3,13 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@/entities/user";
-import { authStorage } from "@/shared/lib";
-import { userApi } from "@/entities/user";
+import { authStorage } from "@/shared/lib/auth"; 
+import { authApi } from "@/features/auth/api/auth.api";
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -20,49 +20,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper: Lấy ID an toàn dù là snake_case hay camelCase
-  const getSafeUserId = (userData: any): number | null => {
-    if (!userData) return null;
-    return userData.userId || userData.user_id || userData.id || null;
-  };
-
-  // 1. Khởi tạo
+  // 1. Khởi tạo & Check Session (F5 trang)
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const token = authStorage.getToken();
-        if (token) {
-          const storedUser = authStorage.getUser();
-          
-          if (storedUser) {
-            // Set tạm data để UI hiện ngay
-            // Ép kiểu any để tránh lỗi TypeScript khi data local lệch schema
-            setUser(storedUser as User);
+        console.log("AuthProvider: Checking session via Cookie...");
+        
+        // Bước 1: Gọi API check Cookie xem còn sống không
+        const userFromCookie = await authApi.getMe();
+        
+        // Bước 2: [THÊM MỚI] KIỂM TRA CỜ HIỆU
+        // Cookie còn sống nhưng chúng ta phải xem User có quyền vào không
+        // (để chặn trường hợp Browser tự khôi phục Tab cũ)
+        
+        const isPersistent = localStorage.getItem("IS_PERSISTENT"); // Có tích Ghi nhớ
+        const isSessionActive = sessionStorage.getItem("SESSION_ACTIVE"); // Tab chưa tắt
 
-            // [FIX] Lấy ID an toàn
-            const id = getSafeUserId(storedUser);
-            
-            if (id) {
-                console.log("AuthContext: Found ID in storage, fetching details...", id);
-                try {
-                    // Gọi API lấy thông tin mới nhất
-                    const fullUser = await userApi.getUserById(id);
-                    console.log("AuthContext: Details fetched", fullUser);
-
-                    setUser(fullUser);
-                    authStorage.setUser(fullUser);
-                } catch (apiError) {
-                    console.warn("AuthContext: Failed to fetch user details", apiError);
-                }
-            } else {
-                console.warn("AuthContext: No User ID found in storage", storedUser);
-            }
-          }
+        // Nếu KHÔNG phải ghi nhớ VÀ KHÔNG có cờ session (nghĩa là đã tắt tab mở lại)
+        if (!isPersistent && !isSessionActive) {
+             console.warn("AuthProvider: Session restored by Browser but invalid by App Logic -> Force Logout");
+             // Ném lỗi để nhảy xuống catch bên dưới -> Logout
+             throw new Error("Force Logout: Tab Closed"); 
         }
+
+        // Nếu qua được ải trên thì set user
+        console.log("AuthProvider: Session Valid", userFromCookie);
+        setUser(userFromCookie);
+        authStorage.setUser(userFromCookie); 
+
       } catch (error) {
-        console.error("Auth Init Error:", error);
-        authStorage.clear();
+        console.warn("AuthProvider: No valid session or Force Logout", error);
+        
+        // Xử lý dọn dẹp sạch sẽ
         setUser(null);
+        authStorage.clear();
+        
+        // Dọn dẹp luôn cờ hiệu để chắc chắn
+        localStorage.removeItem("IS_PERSISTENT");
+        sessionStorage.removeItem("SESSION_ACTIVE");
+        
+        // Nếu lỗi do Force Logout hoặc Token hết hạn, gọi API Logout cho sạch Cookie
+        try {
+             await authApi.logout(); 
+        } catch(e) {
+            // API lỗi thì kệ, client đã clear rồi
+        }
       } finally {
         setIsLoading(false);
       }
@@ -73,30 +75,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // 2. Refresh User
   const refreshUser = async () => {
-    // Lấy user từ state hoặc storage
-    const currentUser = user || authStorage.getUser();
-    
-    // [FIX] Lấy ID an toàn
-    const id = getSafeUserId(currentUser);
-
-    if (id) {
-        try {
-            console.log("AuthContext: Refreshing user data for ID:", id);
-            const latestUser = await userApi.getUserById(id);
-            setUser(latestUser);
-            authStorage.setUser(latestUser);
-        } catch (error) {
-            console.error("Failed to refresh user:", error);
-        }
-    } else {
-        console.warn("AuthContext: Cannot refresh, missing User ID");
+    try {
+        const latestUser = await authApi.getMe();
+        setUser(latestUser);
+        authStorage.setUser(latestUser);
+    } catch (error) {
+        console.error("Failed to refresh user:", error);
     }
   };
 
-  const logout = () => {
-    authStorage.clear();
-    setUser(null);
-    router.replace("/login");
+  // 3. Logout
+  const logout = async () => {
+    try {
+        await authApi.logout(); 
+    } catch (err) {
+        console.error("Logout API error", err);
+    } finally {
+        authStorage.clear();
+        setUser(null);
+        // Xóa cờ hiệu
+        localStorage.removeItem("IS_PERSISTENT");
+        sessionStorage.removeItem("SESSION_ACTIVE");
+        
+        router.replace("/login");
+    }
   };
 
   return (
