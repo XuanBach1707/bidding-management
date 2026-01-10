@@ -1,3 +1,4 @@
+"use client";
 import { BiddingList } from "@/widgets/bidding-list";
 
 export const OpportunitiesPage = () => {

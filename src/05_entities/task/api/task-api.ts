@@ -15,7 +15,7 @@ export const taskApi = {
 
   // Lấy task của tôi
   getMyTasks: (): Promise<Task[]> => {
-    return http.get("/tasks/user/me");
+    return http.get("/tasks/user/me/");
   },
 
   // Lấy danh sách task được giao (Sidebar nhân viên)
