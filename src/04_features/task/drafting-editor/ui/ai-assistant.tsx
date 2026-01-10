@@ -3,6 +3,7 @@ import { Bot, Send, X, Wand2, Sparkles } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Input } from "@/shared/ui/input";
+import { cn } from "@/shared/lib/utils"; // Import thêm cn để xử lý class gọn hơn
 
 // Mock Data giữ nguyên
 const MOCK_DATA_MAPPING: Record<string, string> = {
@@ -84,52 +85,54 @@ export const AiAssistant = ({ isOpen, onClose, currentHtml, onApplyChanges }: Ai
 
   return (
     <>
-      {/* ĐÃ XÓA LỚP PHỦ MỜ (OVERLAY) ĐỂ NGƯỜI DÙNG TƯƠNG TÁC ĐƯỢC */}
-
       {/* SIDEBAR CONTAINER - Fixed Right */}
       <div 
-        className={`fixed top-0 right-0 h-full w-[400px] bg-white shadow-[-5px_0_15px_-5px_rgba(0,0,0,0.1)] z-[999] transform transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={cn(
+          "fixed top-0 right-0 h-full w-[400px] bg-white z-[999] transform transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200 shadow-2xl",
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        )}
       >
           {/* HEADER */}
-          <div className="p-4 border-b flex items-center justify-between bg-white">
-            <div className="flex items-center gap-2 text-purple-700">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+            <div className="flex items-center gap-2 text-[#009d98]">
                 <Sparkles className="w-5 h-5" />
-                <h3 className="font-bold text-lg">AI Assistant</h3>
+                <h3 className="font-bold text-lg text-slate-800">AI Assistant</h3>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-slate-700">
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-slate-700 hover:bg-slate-100">
                 <X className="w-5 h-5" />
             </Button>
           </div>
 
-          {/* Quick Actions */}
-          <div className="p-4 bg-purple-50 space-y-2 border-b border-purple-100">
-             <p className="text-xs text-purple-600 mb-2 font-medium">Gợi ý nhanh:</p>
+          {/* Quick Actions - Chuyển từ Purple sang Slate/Teal tinh tế */}
+          <div className="p-4 bg-slate-50/80 space-y-2 border-b border-slate-100 shrink-0">
+             <p className="text-xs text-slate-500 mb-2 font-bold uppercase tracking-wide">Gợi ý nhanh:</p>
              <div className="space-y-2">
-                <button className="w-full text-left text-sm bg-white p-2 rounded border border-purple-100 text-slate-600 hover:border-purple-300 hover:text-purple-700 transition-colors flex items-center gap-2">
-                    ✨ Viết giới thiệu năng lực
+                <button className="w-full text-left text-sm bg-white p-2.5 rounded border border-slate-200 text-slate-600 hover:border-[#009d98] hover:text-[#009d98] hover:bg-[#009d98]/5 transition-colors flex items-center gap-2 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 opacity-70" /> Viết giới thiệu năng lực
                 </button>
-                <button className="w-full text-left text-sm bg-white p-2 rounded border border-purple-100 text-slate-600 hover:border-purple-300 hover:text-purple-700 transition-colors flex items-center gap-2">
-                    ✨ Cam kết tiến độ & chất lượng
+                <button className="w-full text-left text-sm bg-white p-2.5 rounded border border-slate-200 text-slate-600 hover:border-[#009d98] hover:text-[#009d98] hover:bg-[#009d98]/5 transition-colors flex items-center gap-2 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 opacity-70" /> Cam kết tiến độ & chất lượng
                 </button>
              </div>
           </div>
 
           {/* CHAT AREA */}
-          <ScrollArea className="flex-1 p-4 bg-slate-50/50">
-            <div className="space-y-4">
+          <ScrollArea className="flex-1 p-4 bg-slate-50/30">
+            <div className="space-y-4 pb-4">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'ai' && (
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2 mt-1 shrink-0 border border-purple-200">
-                      <Bot className="w-4 h-4 text-purple-600" />
+                    <div className="w-8 h-8 rounded-full bg-[#009d98]/10 flex items-center justify-center mr-2 mt-1 shrink-0 border border-[#009d98]/20">
+                      <Bot className="w-4 h-4 text-[#009d98]" />
                     </div>
                   )}
                   
-                  <div className={`max-w-[85%] p-3 text-sm rounded-2xl ${
+                  <div className={cn(
+                    "max-w-[85%] p-3 text-sm rounded-2xl shadow-sm",
                     msg.role === 'user' 
-                      ? 'bg-purple-600 text-white rounded-br-none' 
-                      : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'
-                  }`}>
+                      ? 'bg-[#009d98] text-white rounded-br-none' 
+                      : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none'
+                  )}>
                     {msg.text}
                     {msg.isAction && (
                       <div className="mt-3 pt-3 border-t border-slate-100">
@@ -137,7 +140,7 @@ export const AiAssistant = ({ isOpen, onClose, currentHtml, onApplyChanges }: Ai
                           variant="outline" 
                           size="sm" 
                           onClick={handleAutoFill}
-                          className="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 gap-2"
+                          className="w-full bg-[#009d98]/5 hover:bg-[#009d98]/10 text-[#009d98] border-[#009d98]/30 gap-2 h-8"
                         >
                           <Wand2 className="w-3.5 h-3.5" /> Tự điền dữ liệu
                         </Button>
@@ -146,15 +149,16 @@ export const AiAssistant = ({ isOpen, onClose, currentHtml, onApplyChanges }: Ai
                   </div>
                 </div>
               ))}
+              
               {isTyping && (
-                <div className="flex justify-start">
-                   <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2 mt-1">
-                      <Bot className="w-4 h-4 text-purple-600" />
+                <div className="flex justify-start animate-in fade-in duration-300">
+                   <div className="w-8 h-8 rounded-full bg-[#009d98]/10 flex items-center justify-center mr-2 mt-1 shrink-0">
+                      <Bot className="w-4 h-4 text-[#009d98]" />
                     </div>
                     <div className="bg-white border border-slate-200 p-3 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-1">
-                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                      <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
                     </div>
                 </div>
               )}
@@ -163,19 +167,19 @@ export const AiAssistant = ({ isOpen, onClose, currentHtml, onApplyChanges }: Ai
           </ScrollArea>
 
           {/* INPUT AREA */}
-          <div className="p-4 bg-white border-t">
+          <div className="p-4 bg-white border-t border-slate-200 shrink-0">
             <div className="relative">
                 <Input 
-                placeholder="Viết đoạn giới thiệu công ty..." 
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="pr-10 border-slate-300 focus-visible:ring-purple-500"
+                  placeholder="Nhập yêu cầu của bạn..." 
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  className="pr-10 border-slate-200 focus-visible:ring-[#009d98] focus-visible:border-[#009d98]"
                 />
                 <Button 
                     size="icon" 
                     onClick={handleSend} 
-                    className="absolute right-1 top-1 h-8 w-8 bg-purple-600 hover:bg-purple-700"
+                    className="absolute right-1 top-1 h-8 w-8 bg-[#009d98] hover:bg-[#008580] text-white rounded-md"
                 >
                     <Send className="w-4 h-4" />
                 </Button>

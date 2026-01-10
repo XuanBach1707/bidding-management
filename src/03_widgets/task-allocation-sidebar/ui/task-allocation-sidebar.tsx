@@ -10,12 +10,13 @@ import {
   CheckCircle2 
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+// Nếu chưa có Tooltip component thì dùng title native, ở đây giữ nguyên import nếu dự án có sẵn
 import { 
   Tooltip, 
   TooltipContent, 
   TooltipProvider, 
   TooltipTrigger 
-} from "@/shared/ui/tooltip"; // Giả sử bạn có tooltip, nếu không có thể dùng title HTML cơ bản
+} from "@/shared/ui/tooltip"; 
 
 interface TaskAllocationSidebarProps {
   currentTaskId: number | null;
@@ -88,7 +89,7 @@ export const TaskAllocationSidebar = ({
     return Object.values(groups);
   }, [tasks]);
 
-  // Effect: Tự động mở Group chứa task đang được chọn (currentTaskId)
+  // Effect: Tự động mở Group chứa task đang được chọn
   useEffect(() => {
     if (currentTaskId && tasks.length > 0) {
       const activeTask = tasks.find(t => t.id === currentTaskId);
@@ -106,9 +107,8 @@ export const TaskAllocationSidebar = ({
          const firstPId = firstTask.biddingProjectId || 0;
          setExpandedProjects(new Set([firstPId]));
     }
-  }, [currentTaskId, tasks]); // Chỉ chạy khi danh sách task hoặc selection thay đổi
+  }, [currentTaskId, tasks]);
 
-  // Hàm toggle đóng/mở dự án
   const toggleProject = (projectId: number) => {
     setExpandedProjects(prev => {
       const newSet = new Set(prev);
@@ -123,24 +123,24 @@ export const TaskAllocationSidebar = ({
 
   // --- 3. RENDER ---
   return (
-    <div className="w-[320px] border-r bg-white flex flex-col h-full shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+    <div className="w-[320px] border-r border-slate-200 bg-white flex flex-col h-full shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
       {/* HEADER */}
-      <div className="p-4 border-b bg-white shrink-0">
-        <h2 className="font-bold text-gray-800 uppercase text-xs tracking-wide flex items-center gap-2">
-          <Briefcase className="w-4 h-4 text-blue-600" />
+      <div className="p-4 border-b border-slate-100 bg-white shrink-0">
+        <h2 className="font-bold text-slate-800 uppercase text-xs tracking-wider flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-[#009d98]" />
           Nhiệm vụ cần phân bổ
         </h2>
       </div>
 
       {/* LIST */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-gray-200">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
         {isLoading && tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2 text-gray-400">
-             <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent animate-spin rounded-full"></div>
-             <span className="text-xs">Đang tải dữ liệu...</span>
+          <div className="flex flex-col items-center justify-center h-40 gap-3 text-slate-400">
+             <div className="w-5 h-5 border-2 border-[#009d98] border-t-transparent animate-spin rounded-full"></div>
+             <span className="text-xs font-medium">Đang tải dữ liệu...</span>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">
+          <div className="p-8 text-center text-slate-400 text-sm italic">
              Không có công việc nào.
           </div>
         ) : (
@@ -148,46 +148,41 @@ export const TaskAllocationSidebar = ({
             const isExpanded = expandedProjects.has(group.projectId);
 
             return (
-              <div key={group.projectId} className="rounded-lg border border-gray-100 bg-white shadow-sm overflow-hidden select-none">
+              <div key={group.projectId} className="rounded-lg border border-slate-100 bg-white shadow-sm overflow-hidden select-none">
                 
                 {/* --- PROJECT HEADER (Clickable) --- */}
                 <div 
                     onClick={() => toggleProject(group.projectId)}
                     className={cn(
                         "px-3 py-2.5 cursor-pointer flex items-center gap-2 transition-colors",
-                        isExpanded ? "bg-gray-50 border-b border-gray-100" : "bg-white hover:bg-gray-50"
+                        isExpanded ? "bg-slate-50 border-b border-slate-100" : "bg-white hover:bg-slate-50"
                     )}
-                    // Fallback title native nếu không dùng Tooltip component
                     title={group.projectName} 
                 >
-                    {/* Icon mũi tên xoay */}
                     {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+                        <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
                     ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
                     )}
 
-                    {/* Icon Folder */}
                     {isExpanded ? (
-                        <FolderOpen className="w-4 h-4 text-blue-500 shrink-0" />
+                        <FolderOpen className="w-4 h-4 text-[#009d98] shrink-0" />
                     ) : (
-                        <Folder className="w-4 h-4 text-gray-400 shrink-0" />
+                        <Folder className="w-4 h-4 text-slate-400 shrink-0" />
                     )}
 
-                    {/* Tên dự án: 1 dòng + ... */}
-                    <span className="text-xs font-bold text-gray-700 uppercase truncate flex-1">
+                    <span className="text-xs font-bold text-slate-700 uppercase truncate flex-1 tracking-tight">
                         {group.projectName}
                     </span>
                     
-                    {/* Số lượng task (Badge nhỏ) */}
-                    <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded-full font-medium shrink-0">
+                    <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold shrink-0 min-w-[20px] text-center">
                         {group.tasks.length}
                     </span>
                 </div>
 
                 {/* --- TASKS LIST (Collapsible) --- */}
                 {isExpanded && (
-                    <div className="bg-gray-50/50 py-1">
+                    <div className="bg-slate-50/30 py-1">
                         {group.tasks.map((task) => {
                             const isActive = task.id === currentTaskId;
                             return (
@@ -195,26 +190,28 @@ export const TaskAllocationSidebar = ({
                                     key={task.id}
                                     onClick={() => onSelectTask(task)}
                                     className={cn(
-                                        "relative cursor-pointer transition-all pl-9 pr-3 py-2.5", // pl-9 để thụt vào
-                                        "border-l-[3px]", // Viền trái chỉ trạng thái
+                                        "relative cursor-pointer transition-all pl-9 pr-3 py-2.5 mx-1 rounded-md mb-0.5 group",
                                         isActive 
-                                            ? "bg-blue-50/80 border-blue-600" 
-                                            : "border-transparent hover:bg-gray-100 hover:border-gray-300"
+                                            ? "bg-[#009d98]/10 text-[#009d98]" 
+                                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                                     )}
                                 >
-                                    {/* Tên Task */}
+                                    {/* Indicator Pattern Chuẩn */}
+                                    {isActive && (
+                                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-2/3 bg-[#009d98] rounded-r-md" />
+                                    )}
+
                                     <h3 className={cn(
-                                        "text-xs font-medium leading-snug mb-1.5 line-clamp-2",
-                                        isActive ? "text-blue-700" : "text-gray-700"
+                                        "text-xs font-semibold leading-snug mb-1.5 line-clamp-2",
+                                        isActive ? "text-[#009d98]" : "text-slate-700 group-hover:text-slate-900"
                                     )}>
                                         {task.taskName}
                                     </h3>
 
-                                    {/* Meta info */}
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 opacity-90">
                                         <span className={cn(
-                                            "text-[10px] flex items-center gap-1",
-                                            isActive ? "text-blue-500" : "text-gray-400"
+                                            "text-[10px] flex items-center gap-1 font-medium",
+                                            isActive ? "text-[#009d98]" : "text-slate-400"
                                         )}>
                                             <Clock className="w-3 h-3" />
                                             {task.deadline 
@@ -223,7 +220,10 @@ export const TaskAllocationSidebar = ({
                                         </span>
 
                                         {task.subTasks && task.subTasks.length > 0 && (
-                                            <span className="text-[10px] bg-white border px-1 rounded text-gray-500 flex items-center gap-1">
+                                            <span className={cn(
+                                                "text-[10px] px-1 rounded flex items-center gap-1 font-bold",
+                                                isActive ? "bg-white/50 text-[#009d98]" : "bg-white border border-slate-200 text-slate-500"
+                                            )}>
                                                 <CheckCircle2 className="w-3 h-3" />
                                                 {task.subTasks.length}
                                             </span>

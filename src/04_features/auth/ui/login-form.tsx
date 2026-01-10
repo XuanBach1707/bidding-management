@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Eye, EyeOff } from "lucide-react"; // Bỏ ArrowRight vì ảnh mẫu không có
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { useToast } from "@/shared/lib/hooks/use-toast"; 
-import { authStorage } from "@/shared/lib";
-import { authApi, LoginRequest, LoginRequestSchema } from "../api/auth.api"; 
+import { authStorage } from "@/shared/lib/auth"; 
+import { authApi, LoginRequest, LoginRequestSchema } from "@/features/auth/api/auth.api"; 
 
 export function LoginForm() {
   const router = useRouter();
@@ -22,22 +22,43 @@ export function LoginForm() {
 
   const form = useForm<LoginRequest>({
     resolver: zodResolver(LoginRequestSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { 
+        email: "", 
+        password: "", 
+        rememberMe: false 
+    },
   });
 
   const loginMutation = useMutation({
     mutationFn: (data: LoginRequest) => authApi.login(data),
     onSuccess: (data) => {
-      authStorage.setToken(data.accessToken);
-      if (data.refreshToken) authStorage.setRefreshToken(data.refreshToken);
-      if (data.expiresIn) authStorage.setExpiresAt(data.expiresIn);
-      if (data.user) authStorage.setUser(data.user);
+      // 1. Lưu User Info vào storage hiển thị (như cũ)
+      if (data.user) {
+          authStorage.setUser(data.user);
+      }
+
+      // 2. [THÊM MỚI] XỬ LÝ CỜ HIỆU SESSION
+      // Lấy giá trị checkbox hiện tại
+      const isRemember = form.getValues("rememberMe"); 
+
+      if (isRemember) {
+          // Trường hợp GHI NHỚ: Đánh dấu vào LocalStorage (Bền vững)
+          localStorage.setItem("IS_PERSISTENT", "true");
+          // Xóa cờ session cũ để tránh nhầm lẫn
+          sessionStorage.removeItem("SESSION_ACTIVE"); 
+      } else {
+          // Trường hợp KHÔNG GHI NHỚ: Đánh dấu vào SessionStorage (Tắt tab là mất)
+          sessionStorage.setItem("SESSION_ACTIVE", "true");
+          // Xóa cờ bền vững cũ
+          localStorage.removeItem("IS_PERSISTENT"); 
+      }
 
       toast({
         title: "Đăng nhập thành công",
         description: "Đang chuyển hướng...",
         className: "bg-[#20a19c] text-white border-none shadow-lg",
       });
+      
       router.push("/dashboard"); 
     },
     onError: (error: any) => {
@@ -102,19 +123,29 @@ export function LoginForm() {
           )}
         />
 
-        {/* Options Row */}
+        {/* Checkbox Remember Me */}
         <div className="flex items-center justify-between pt-1">
-           <div className="flex items-center gap-2">
-              <Checkbox 
-                id="remember" 
-                className="border-slate-300 w-5 h-5 data-[state=checked]:bg-[#20a19c] data-[state=checked]:border-[#20a19c] rounded"
-              />
-              <label htmlFor="remember" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
-                Ghi nhớ đăng nhập
-              </label>
-           </div>
-           {/* Trong ảnh mẫu (Screenshot 2) không thấy nút Quên mật khẩu, nhưng nếu cần thì có thể uncomment dòng dưới */}
-           {/* <a href="#" className="text-sm font-semibold text-[#20a19c] hover:underline">Quên mật khẩu?</a> */}
+           <FormField
+              control={form.control}
+              name="rememberMe"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={loginMutation.isPending}
+                      className="border-slate-300 w-5 h-5 data-[state=checked]:bg-[#20a19c] data-[state=checked]:border-[#20a19c] rounded"
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm text-slate-500 font-medium cursor-pointer select-none">
+                      Ghi nhớ đăng nhập <span className="text-xs italic font-normal ml-1"></span>
+                    </FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
         </div>
 
         {/* Submit Button */}
@@ -126,11 +157,10 @@ export function LoginForm() {
           {loginMutation.isPending ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 
           ) : (
-              "Đăng nhập hệ thống"
+              "Đăng nhập"
           )}
         </Button>
         
-        {/* New Footer */}
         <div className="pt-6 text-center">
           <p className="text-sm text-slate-500">
             Bạn gặp sự cố đăng nhập? <a href="#" className="text-[#20a19c] font-semibold hover:underline">Liên hệ IT Support</a>

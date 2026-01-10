@@ -16,6 +16,7 @@ import { Badge } from "@/shared/ui/badge";
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"; 
+import { cn } from "@/shared/lib/utils"; // Import cn
 
 import { Task } from "@/entities/task";
 import { Template, templateApi } from "@/entities/template";
@@ -34,7 +35,7 @@ type Step = "SELECT" | "EDITOR";
 type EditorMode = "RICH_TEXT" | "RAW_HTML"; 
 type ViewMode = "PREVIEW" | "CODE";        
 
-// --- HELPERS ---
+// --- HELPERS (Giữ nguyên) ---
 const extractContentFromHtml = (fullHtml: string) => {
   if (!fullHtml) return "";
   if (!fullHtml.includes("<body")) return fullHtml;
@@ -157,7 +158,6 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
 
   // HANDLERS
   const handleSelectTemplate = (tplContent: string) => {
-    // [FIX] Nếu chọn blank, set mặc định thẻ p rỗng để tránh lỗi parser
     setFullHtmlContent(tplContent || "<p></p>");
     setStep("EDITOR");
     setEditorMode("RICH_TEXT"); 
@@ -230,7 +230,7 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
     }
   };
 
-  // --- RENDER 1: SELECT (ĐẦY ĐỦ GIAO DIỆN) ---
+  // --- RENDER 1: SELECT (GIAO DIỆN CHỌN MẪU) ---
   if (step === "SELECT" && !isReadOnly) {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
@@ -242,9 +242,9 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
         </div>
 
         <Tabs defaultValue="template" className="w-full">
-            <TabsList className="grid w-full max-w-[400px] grid-cols-2 mb-6">
-                <TabsTrigger value="template">Mẫu văn bản</TabsTrigger>
-                <TabsTrigger value="draft">Bản nháp đã lưu</TabsTrigger>
+            <TabsList className="grid w-full max-w-[400px] grid-cols-2 mb-6 bg-slate-100">
+                <TabsTrigger value="template" className="data-[state=active]:bg-white data-[state=active]:text-[#009d98] font-bold">Mẫu văn bản</TabsTrigger>
+                <TabsTrigger value="draft" className="data-[state=active]:bg-white data-[state=active]:text-[#009d98] font-bold">Bản nháp đã lưu</TabsTrigger>
             </TabsList>
 
             <TabsContent value="template">
@@ -252,12 +252,12 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                   {/* Card tạo mới */}
                   <div 
                     onClick={() => handleSelectTemplate("")}
-                    className="cursor-pointer border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center min-h-[180px] hover:border-blue-500 hover:bg-blue-50 transition-all bg-white"
+                    className="cursor-pointer border border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center min-h-[180px] hover:border-[#009d98] hover:bg-[#009d98]/5 transition-all bg-white group"
                   >
-                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-400">
+                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3 text-slate-400 group-hover:text-[#009d98] group-hover:bg-white border border-transparent group-hover:border-[#009d98]/20 transition-colors">
                       <Plus className="w-6 h-6" />
                     </div>
-                    <h4 className="font-bold text-slate-700">Tạo văn bản trống</h4>
+                    <h4 className="font-bold text-slate-700 group-hover:text-[#009d98]">Tạo văn bản trống</h4>
                   </div>
 
                   {/* List mẫu */}
@@ -269,17 +269,17 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                     <div 
                       key={tpl.id}
                       onClick={() => handleSelectTemplate(tpl.content)}
-                      className="group cursor-pointer border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-blue-500 transition-all bg-white flex flex-col min-h-[180px] relative overflow-hidden"
+                      className="group cursor-pointer border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-[#009d98] hover:ring-1 hover:ring-[#009d98]/20 transition-all bg-white flex flex-col min-h-[180px] relative overflow-hidden"
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded flex items-center justify-center">
+                        <div className="w-8 h-8 bg-slate-100 text-slate-600 rounded flex items-center justify-center group-hover:bg-[#009d98] group-hover:text-white transition-colors">
                           <FileText className="w-4 h-4" />
                         </div>
-                        <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 font-normal">{tpl.category}</Badge>
+                        <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 font-normal group-hover:bg-[#009d98]/10 group-hover:text-[#009d98]">{tpl.category}</Badge>
                       </div>
-                      <h4 className="font-bold text-slate-800 mb-2 text-sm line-clamp-2 group-hover:text-blue-700">{tpl.title}</h4>
+                      <h4 className="font-bold text-slate-800 mb-2 text-sm line-clamp-2 group-hover:text-[#009d98]">{tpl.title}</h4>
                       <p className="text-xs text-slate-500 line-clamp-3 mb-4 flex-1">{tpl.description}</p>
-                      <div className="flex items-center text-blue-600 text-xs font-medium mt-auto group-hover:translate-x-1 transition-transform">
+                      <div className="flex items-center text-[#009d98] text-xs font-bold mt-auto opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
                         Sử dụng mẫu <ChevronRight className="w-3 h-3 ml-1" />
                       </div>
                     </div>
@@ -289,7 +289,7 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
 
             <TabsContent value="draft">
                <div className="border border-slate-200 rounded-xl p-10 bg-white flex flex-col items-center justify-center text-center min-h-[300px]">
-                  <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mb-4">
+                  <div className="w-16 h-16 bg-[#009d98]/10 text-[#009d98] rounded-full flex items-center justify-center mb-4">
                       <History className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-2">Tiếp tục công việc</h3>
@@ -300,7 +300,7 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                     size="lg" 
                     onClick={handleLoadDraft} 
                     disabled={isLoadingDraft}
-                    className="bg-orange-600 hover:bg-orange-700 min-w-[200px]"
+                    className="bg-[#009d98] hover:bg-[#008580] min-w-[200px]"
                   >
                      {isLoadingDraft ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
                      {isLoadingDraft ? "Đang tải dữ liệu..." : "Mở bản nháp"}
@@ -320,11 +320,11 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
             style={{ marginRight: isAiOpen ? "400px" : "0" }}
         >
             {/* TOOLBAR */}
-            <div className="flex items-center justify-between mb-4 bg-white p-2 rounded-lg border shadow-sm sticky top-0 z-10">
+            <div className="flex items-center justify-between mb-4 bg-white p-2 rounded-lg border border-slate-200 shadow-sm sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                     {!isReadOnly && (
                         <>
-                            <Button variant="ghost" size="sm" onClick={() => setStep("SELECT")} className="text-slate-600 gap-2 hover:text-slate-900">
+                            <Button variant="ghost" size="sm" onClick={() => setStep("SELECT")} className="text-slate-600 gap-2 hover:text-slate-900 hover:bg-slate-100">
                                 <ArrowLeft className="w-4 h-4" /> Chọn mẫu khác
                             </Button>
                             <div className="h-4 w-[1px] bg-slate-200 mx-2"></div>
@@ -334,7 +334,12 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                     <div className="flex bg-slate-100 p-1 rounded-md">
                         <button 
                             onClick={() => setEditorMode("RICH_TEXT")}
-                            className={`text-xs flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all ${editorMode === 'RICH_TEXT' ? 'bg-white shadow text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={cn(
+                                "text-xs flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all",
+                                editorMode === 'RICH_TEXT' 
+                                    ? 'bg-white shadow text-[#009d98] font-bold' 
+                                    : 'text-slate-500 hover:text-slate-700'
+                            )}
                         >
                             <FileType className="w-3.5 h-3.5" /> Soạn thảo
                         </button>
@@ -343,7 +348,12 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                                 setEditorMode("RAW_HTML");
                                 setViewMode("CODE");
                             }}
-                            className={`text-xs flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all ${editorMode === 'RAW_HTML' ? 'bg-white shadow text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={cn(
+                                "text-xs flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all",
+                                editorMode === 'RAW_HTML' 
+                                    ? 'bg-white shadow text-[#009d98] font-bold' 
+                                    : 'text-slate-500 hover:text-slate-700'
+                            )}
                         >
                             <Code className="w-3.5 h-3.5" /> HTML Code
                         </button>
@@ -356,7 +366,12 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                             size="sm" 
                             variant={isAiOpen ? "secondary" : "default"}
                             onClick={() => setIsAiOpen(!isAiOpen)} 
-                            className={`gap-2 shadow-sm transition-all ${isAiOpen ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                            className={cn(
+                                "gap-2 shadow-sm transition-all border",
+                                isAiOpen 
+                                    ? 'bg-[#009d98]/10 text-[#009d98] border-[#009d98]/20' 
+                                    : 'bg-[#009d98] hover:bg-[#008580] text-white border-transparent'
+                            )}
                         >
                             <Sparkles className="w-4 h-4" /> AI Trợ lý
                         </Button>
@@ -364,14 +379,14 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
 
                     <Button 
                       size="sm" variant="outline" onClick={handleExportDocx} disabled={isExporting}
-                      className="gap-2 text-blue-700 border-blue-200 hover:bg-blue-50"
+                      className="gap-2 text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-[#009d98] hover:border-[#009d98]"
                     >
                         {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
                         Xuất Word
                     </Button>
 
                     {!isReadOnly && editorMode === "RAW_HTML" && (
-                        <Button size="sm" onClick={() => handleSaveApi(fullHtmlContent)} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 gap-2 min-w-[100px]">
+                        <Button size="sm" onClick={() => handleSaveApi(fullHtmlContent)} disabled={isSaving} className="bg-[#009d98] hover:bg-[#008580] gap-2 min-w-[100px]">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             {isSaving ? "Đang lưu..." : "Lưu lại"}
                         </Button>
@@ -390,11 +405,11 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
                         </Alert>
                     )}
                     
-                    <div className="bg-white border rounded-lg shadow-sm overflow-hidden min-h-[600px]">
+                    <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden min-h-[600px]">
                         <div style={isReadOnly ? { pointerEvents: "none", opacity: 1 } : {}}>
                             <RichTextEditor 
                                 initialContent={parsedData.bodyContent} 
-                                css={parsedData.editorCss}             
+                                css={parsedData.editorCss}            
                                 onBack={() => setStep("SELECT")}
                                 onSave={handleRichTextSave}             
                                 isSaving={isSaving}
@@ -407,19 +422,19 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
 
             {/* AREA 2: RAW HTML EDITOR */}
             {editorMode === "RAW_HTML" && (
-                <div className="bg-white border rounded-lg shadow-sm overflow-hidden flex flex-col h-[calc(100vh-180px)] min-h-[600px]">
-                    <div className="p-2 border-b bg-slate-50 flex justify-end gap-2">
+                <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col h-[calc(100vh-180px)] min-h-[600px]">
+                    <div className="p-2 border-b border-slate-200 bg-slate-50 flex justify-end gap-2">
                         <Button 
                             variant="ghost" size="sm" 
                             onClick={() => setViewMode("PREVIEW")}
-                            className={viewMode === "PREVIEW" ? "bg-slate-200" : ""}
+                            className={viewMode === "PREVIEW" ? "bg-slate-200 text-slate-800" : "text-slate-500"}
                         >
                             <MonitorPlay className="w-3.5 h-3.5 mr-1" /> Xem trước
                         </Button>
                         <Button 
                             variant="ghost" size="sm" 
                             onClick={() => setViewMode("CODE")}
-                            className={viewMode === "CODE" ? "bg-slate-200" : ""}
+                            className={viewMode === "CODE" ? "bg-slate-200 text-slate-800" : "text-slate-500"}
                         >
                             <Code className="w-3.5 h-3.5 mr-1" /> Mã nguồn
                         </Button>

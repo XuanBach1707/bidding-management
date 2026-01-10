@@ -16,7 +16,7 @@ import {
   Bold, Italic, List, ListOrdered, 
   ArrowLeft, Save, Loader2, 
   Table as TableIcon, Plus, Trash2, Columns, Rows,
-  ScissorsLineDashed, ImageIcon 
+  ScissorsLineDashed, ImageIcon, Check
 } from 'lucide-react';
 
 // --- UI SHARED ---
@@ -83,28 +83,35 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   };
 
   return (
-    <div className="border-b bg-slate-50 p-2 flex flex-wrap gap-1 items-center sticky top-0 z-20">
-      <Toggle size="sm" pressed={editor.isActive('bold')} onPressedChange={() => editor.chain().focus().toggleBold().run()}>
-        <Bold className="h-4 w-4" />
-      </Toggle>
-      <Toggle size="sm" pressed={editor.isActive('italic')} onPressedChange={() => editor.chain().focus().toggleItalic().run()}>
-        <Italic className="h-4 w-4" />
-      </Toggle>
-      <Separator orientation="vertical" className="h-6 mx-1" />
-      <Toggle size="sm" pressed={editor.isActive('bulletList')} onPressedChange={() => editor.chain().focus().toggleBulletList().run()}>
-        <List className="h-4 w-4" />
-      </Toggle>
-      <Toggle size="sm" pressed={editor.isActive('orderedList')} onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}>
-        <ListOrdered className="h-4 w-4" />
-      </Toggle>
-      <Separator orientation="vertical" className="h-6 mx-1" />
+    <div className="border-b border-slate-200 bg-slate-50/80 backdrop-blur px-2 py-1.5 flex flex-wrap gap-1 items-center sticky top-0 z-20 shadow-sm">
+      <div className="flex bg-white border border-slate-200 rounded-md p-0.5">
+          <Toggle size="sm" className="h-8 w-8 data-[state=on]:bg-[#009d98]/10 data-[state=on]:text-[#009d98]" pressed={editor.isActive('bold')} onPressedChange={() => editor.chain().focus().toggleBold().run()}>
+            <Bold className="h-4 w-4" />
+          </Toggle>
+          <Toggle size="sm" className="h-8 w-8 data-[state=on]:bg-[#009d98]/10 data-[state=on]:text-[#009d98]" pressed={editor.isActive('italic')} onPressedChange={() => editor.chain().focus().toggleItalic().run()}>
+            <Italic className="h-4 w-4" />
+          </Toggle>
+      </div>
+      
+      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-300" />
+      
+      <div className="flex bg-white border border-slate-200 rounded-md p-0.5">
+          <Toggle size="sm" className="h-8 w-8" pressed={editor.isActive('bulletList')} onPressedChange={() => editor.chain().focus().toggleBulletList().run()}>
+            <List className="h-4 w-4" />
+          </Toggle>
+          <Toggle size="sm" className="h-8 w-8" pressed={editor.isActive('orderedList')} onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered className="h-4 w-4" />
+          </Toggle>
+      </div>
+
+      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-300" />
 
       {/* TABLE TOOLS */}
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-              <TableIcon className="h-4 w-4 text-blue-600" />
+            <Button variant="ghost" size="sm" className="h-9 px-2 hover:bg-blue-50 hover:text-blue-600" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+              <TableIcon className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Chèn bảng 3x3</TooltipContent>
@@ -112,21 +119,21 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
       </TooltipProvider>
 
       {editor.isActive('table') && (
-        <div className="flex bg-white border rounded ml-2 px-1 gap-1">
-           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Thêm cột"><Columns className="h-3 w-3" /><Plus className="h-2 w-2 mb-2 -ml-1" /></Button>
-           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => editor.chain().focus().deleteColumn().run()} title="Xóa cột"><Columns className="h-3 w-3 text-red-500" /><Trash2 className="h-2 w-2 mb-2 -ml-1 text-red-500" /></Button>
-           <Separator orientation="vertical" className="h-4 mt-1.5" />
-           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => editor.chain().focus().addRowAfter().run()} title="Thêm dòng"><Rows className="h-3 w-3" /><Plus className="h-2 w-2 -mt-2 -ml-1" /></Button>
-           <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => editor.chain().focus().deleteRow().run()} title="Xóa dòng"><Rows className="h-3 w-3 text-red-500" /><Trash2 className="h-2 w-2 -mt-2 -ml-1 text-red-500" /></Button>
-           <Separator orientation="vertical" className="h-4 mt-1.5" />
-           <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => editor.chain().focus().deleteTable().run()} title="Xóa bảng"><Trash2 className="h-3 w-3" /></Button>
+        <div className="flex bg-white border border-slate-200 rounded-md ml-2 px-1 gap-0.5 shadow-sm">
+           <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Thêm cột"><Columns className="h-3 w-3" /><Plus className="h-2 w-2 mb-2 -ml-1" /></Button>
+           <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-red-600" onClick={() => editor.chain().focus().deleteColumn().run()} title="Xóa cột"><Columns className="h-3 w-3 text-slate-400 group-hover:text-red-600" /><Trash2 className="h-2 w-2 mb-2 -ml-1" /></Button>
+           <Separator orientation="vertical" className="h-4 mt-2 mx-1" />
+           <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => editor.chain().focus().addRowAfter().run()} title="Thêm dòng"><Rows className="h-3 w-3" /><Plus className="h-2 w-2 -mt-2 -ml-1" /></Button>
+           <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-red-600" onClick={() => editor.chain().focus().deleteRow().run()} title="Xóa dòng"><Rows className="h-3 w-3 text-slate-400 group-hover:text-red-600" /><Trash2 className="h-2 w-2 -mt-2 -ml-1" /></Button>
+           <Separator orientation="vertical" className="h-4 mt-2 mx-1" />
+           <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => editor.chain().focus().deleteTable().run()} title="Xóa bảng"><Trash2 className="h-4 w-4" /></Button>
         </div>
       )}
-      <Separator orientation="vertical" className="h-6 mx-1" />
+      <Separator orientation="vertical" className="h-6 mx-1 bg-slate-300" />
 
-      <Button variant="ghost" size="sm" onClick={addImage}><ImageIcon className="h-4 w-4 text-green-600" /></Button>
+      <Button variant="ghost" size="sm" className="h-9 px-2 hover:text-green-600 hover:bg-green-50" onClick={addImage}><ImageIcon className="h-4 w-4" /></Button>
       
-      <Button variant="ghost" size="sm" onClick={() => editor.chain().focus().insertContent('<div class="page-break"></div>').run()}><ScissorsLineDashed className="h-4 w-4 text-orange-500" /></Button>
+      <Button variant="ghost" size="sm" className="h-9 px-2 hover:text-orange-600 hover:bg-orange-50" onClick={() => editor.chain().focus().insertContent('<div class="page-break"></div>').run()}><ScissorsLineDashed className="h-4 w-4" /></Button>
     </div>
   );
 };
@@ -161,25 +168,22 @@ export const RichTextEditor = ({
     immediatelyRender: false, 
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[800px] p-[20mm] bg-white shadow-sm mx-auto my-4 border',
+        // [QUAN TRỌNG] Style khổ giấy A4
+        class: 'prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[297mm] p-[20mm] bg-white shadow-lg mx-auto my-8 border border-slate-200 print:shadow-none print:border-0',
         style: 'width: 210mm;' 
       },
     },
   });
 
-  // [FIX] Đồng bộ dữ liệu khi API trả về hoặc khi chuyển đổi template
   useEffect(() => {
-    // Chỉ check editor tồn tại và initialContent không undefined (cho phép chuỗi rỗng)
     if (editor && typeof initialContent !== 'undefined') {
       const currentContent = editor.getHTML();
-      // So sánh để tránh loop, nhưng phải đảm bảo set nếu đang là khởi tạo
       if (currentContent !== initialContent) {
          editor.commands.setContent(initialContent);
       }
     }
   }, [initialContent, editor]);
 
-  // Đồng bộ trạng thái ReadOnly
   useEffect(() => {
     if (editor) {
       editor.setEditable(!isReadOnly);
@@ -194,36 +198,47 @@ export const RichTextEditor = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-100/50">
+    <div className="flex flex-col h-full bg-slate-100">
        <style>{css}</style>
 
        {!isReadOnly && (
-           <div className="flex items-center justify-between p-4 bg-white border-b shadow-sm sticky top-0 z-30">
-              <Button variant="ghost" size="sm" onClick={onBack} className="gap-2 text-slate-600">
+           <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
+              <Button variant="outline" size="sm" onClick={onBack} className="gap-2 text-slate-600 border-slate-200 hover:text-[#009d98] hover:border-[#009d98]">
                  <ArrowLeft className="w-4 h-4" /> Quay lại
               </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 italic mr-2">
-                   Chế độ soạn thảo nâng cao
+              
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider hidden sm:inline-block">
+                   Soạn thảo trực tuyến (A4)
                 </span>
-                <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-blue-600 gap-2 min-w-[100px]">
+                <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-[#009d98] hover:bg-[#008580] text-white font-bold shadow-sm gap-2 min-w-[120px]">
                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                   {isSaving ? "Đang lưu..." : "Lưu lại"}
+                   {isSaving ? "Đang lưu..." : "Lưu văn bản"}
                 </Button>
               </div>
            </div>
        )}
 
-       <div className="flex-1 overflow-y-auto relative">
-          <div className="max-w-screen-lg mx-auto pb-20">
+       <div className="flex-1 overflow-y-auto relative bg-slate-100/50">
+          <div className="max-w-[230mm] mx-auto pb-20">
+             
+             {/* Toolbar nằm ngay trên tờ giấy */}
              {!isReadOnly && (
-                <div className="sticky top-0 z-20 my-4 mx-auto w-[210mm] rounded-t-lg overflow-hidden border border-b-0 shadow-sm">
+                <div className="sticky top-4 z-20 my-4 mx-auto w-[210mm] rounded-t-lg overflow-hidden border border-slate-200 border-b-0 shadow-sm">
                    <EditorToolbar editor={editor} />
                 </div>
              )}
-             <div className="editor-wrapper">
+             
+             {/* Paper Container */}
+             <div className="editor-wrapper transition-all duration-300">
                 <EditorContent editor={editor} />
              </div>
+             
+             {!isReadOnly && (
+                <p className="text-center text-xs text-slate-400 mt-4">
+                   Hết trang 1
+                </p>
+             )}
           </div>
        </div>
     </div>

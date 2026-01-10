@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Sparkles, ArrowRight, Bot, FileText, File } from "lucide-react";
 import { http } from "@/shared/api";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { cn } from "@/shared/lib/utils";
 
-// [FIX 1]: Cập nhật Interface theo camelCase (do Interceptor convert từ task_name -> taskName)
+// [FIX 1]: Cập nhật Interface theo camelCase
 interface DraftItem {
   id: number;
   taskName: string; 
@@ -29,7 +30,6 @@ export const QuickAccessWidget = () => {
       try {
         setLoadingDrafts(true);
         // Gọi API: GET /drafting/my-drafts
-        // Interceptor sẽ trả về mảng object đã convert key sang camelCase
         const res: any = await http.get<DraftItem[]>("/drafting/my-drafts");
         
         // Kiểm tra an toàn dữ liệu trả về
@@ -47,10 +47,8 @@ export const QuickAccessWidget = () => {
     fetchDrafts();
   }, []);
 
-  // --- LOGIC 2: Điều hướng [FIX QUAN TRỌNG] ---
+  // --- LOGIC 2: Điều hướng ---
   const handleNavigateToWorkspace = (taskId: number) => {
-    // Chuyển hướng sang trang MyTasks và gắn taskId vào URL
-    // Trang MyTasks sẽ đọc param này và tự động mở TaskDetailPanel
     router.push(`/my-tasks?taskId=${taskId}`); 
   };
 
@@ -75,19 +73,19 @@ export const QuickAccessWidget = () => {
   return (
     <div className="space-y-6">
       
-      {/* --- AI WIDGET --- */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-lg shadow-blue-200 p-5 text-white relative overflow-hidden group">
+      {/* --- AI WIDGET (Teal Gradient) --- */}
+      <div className="bg-gradient-to-br from-[#009d98] to-[#007a76] rounded-xl shadow-lg shadow-[#009d98]/20 p-6 text-white relative overflow-hidden group transition-all hover:shadow-[#009d98]/40">
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm border border-white/10">
-              <Sparkles className="w-5 h-5 text-yellow-300" />
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm border border-white/20 shadow-inner">
+              <Sparkles className="w-5 h-5 text-yellow-300 fill-yellow-300" />
             </div>
             <h3 className="font-bold text-lg tracking-tight">Trợ lý AI</h3>
           </div>
-          <p className="text-blue-100 text-sm mb-4 leading-relaxed">
-            Hỗ trợ soạn thảo, tóm tắt và phân tích hồ sơ thầu.
+          <p className="text-white/90 text-sm mb-5 leading-relaxed font-medium">
+            Hỗ trợ soạn thảo, tóm tắt và phân tích hồ sơ thầu thông minh.
           </p>
-          <div className="relative">
+          <div className="relative group/input">
             <input 
               type="text" 
               value={aiPrompt}
@@ -95,65 +93,68 @@ export const QuickAccessWidget = () => {
               onKeyDown={(e) => e.key === 'Enter' && handleAiAsk()}
               placeholder={isAiLoading ? "Đang xử lý..." : "Nhập yêu cầu..."}
               disabled={isAiLoading}
-              className="w-full bg-white/10 border border-white/20 rounded-lg pl-3 pr-10 py-2.5 text-sm text-white placeholder:text-blue-200 focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-white/30 transition-all"
+              className="w-full bg-white/10 border border-white/30 rounded-lg pl-4 pr-12 py-3 text-sm text-white placeholder:text-white/60 focus:outline-none focus:bg-white/20 focus:border-white/50 transition-all shadow-inner"
             />
             <button 
               onClick={handleAiAsk}
               disabled={isAiLoading}
-              className="absolute right-1 top-1 p-1.5 bg-white text-blue-600 rounded-md hover:bg-blue-50 transition-colors shadow-sm"
+              className="absolute right-1.5 top-1.5 p-1.5 bg-white text-[#009d98] rounded-md hover:bg-white/90 transition-colors shadow-sm disabled:opacity-50"
             >
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700"></div>
-        <div className="absolute top-0 right-0 p-3 opacity-20">
-          <Bot className="w-16 h-16 text-white" />
+        
+        {/* Decorative Elements */}
+        <div className="absolute -bottom-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
+        <div className="absolute top-4 right-4 p-3 opacity-10 transform group-hover:scale-110 transition-transform duration-500">
+          <Bot className="w-20 h-20 text-white" />
         </div>
       </div>
 
       {/* --- RECENT DRAFTS WIDGET --- */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <div className="flex justify-between items-center mb-4">
-           <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-             <FileText className="w-4 h-4 text-slate-500" />
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-[300px]">
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+           <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase tracking-wide">
+             <div className="p-1.5 bg-slate-100 rounded-md">
+                <FileText className="w-4 h-4 text-slate-500" />
+             </div>
              Tiếp tục làm việc
            </h3>
         </div>
 
-        <div className="space-y-3">
+        <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-2">
           {loadingDrafts ? (
-            // Skeleton Loading
-            <>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </>
+            <div className="space-y-3 pt-2">
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
           ) : drafts.length > 0 ? (
-            // List Real Data
             drafts.map((draft) => (
               <div 
                 key={draft.id} 
                 onClick={() => handleNavigateToWorkspace(draft.id)}
-                className="flex items-center gap-3 cursor-pointer group p-2 hover:bg-slate-50 rounded-lg -mx-2 transition-colors"
+                className="flex items-center gap-3 cursor-pointer group p-3 hover:bg-[#009d98]/5 rounded-lg border border-transparent hover:border-[#009d98]/20 transition-all"
               >
-                <div className="w-8 h-8 rounded flex items-center justify-center bg-blue-100 text-blue-600 border border-blue-200">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-slate-100 text-slate-500 border border-slate-200 group-hover:bg-white group-hover:text-[#009d98] group-hover:border-[#009d98]/30 transition-colors">
                   <File className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  {/* [FIX 2]: Sử dụng taskName thay vì task_name */}
-                  <p className="text-sm font-medium text-slate-700 truncate group-hover:text-blue-600 transition-colors">
+                  <p className="text-sm font-bold text-slate-700 truncate group-hover:text-[#009d98] transition-colors">
                     {draft.taskName || "Bản nháp không tên"}
                   </p>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
                     ID: {draft.id} • Nhấn để mở
                   </p>
                 </div>
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-[#009d98] opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
               </div>
             ))
           ) : (
-             <div className="text-center text-xs text-slate-400 py-4">
-               Bạn chưa có bản nháp nào.
+             <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                <FileText className="w-10 h-10 mb-2 opacity-20" />
+                <span className="text-xs italic">Bạn chưa có bản nháp nào.</span>
              </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns"; // Import format date
-import { Calendar as CalendarIcon } from "lucide-react"; // Import icon
+import { format } from "date-fns"; 
+import { Calendar as CalendarIcon, X } from "lucide-react"; 
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { 
   taskApi, 
@@ -19,6 +19,16 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Calendar } from "@/shared/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Input } from "@/shared/ui/input";
+import { Textarea } from "@/shared/ui/textarea";
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from "@/shared/ui/select";
+import { Label } from "@/shared/ui/label";
 
 interface DetailSubtaskModalProps {
   isOpen: boolean;
@@ -129,7 +139,7 @@ export const DetailSubtaskModal = ({
 
       await taskApi.update(existingTask.id, payload);
 
-      toast({ title: "Thành công", description: "Đã cập nhật công việc" });
+      toast({ title: "Thành công", description: "Đã cập nhật công việc", className: "bg-green-600 text-white" });
       onSuccess(); 
       onClose();
     } catch (error) {
@@ -156,68 +166,77 @@ export const DetailSubtaskModal = ({
   const isViewMode = !!existingTask;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-[900px] max-w-[95vw] overflow-hidden flex flex-col h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-2xl w-[900px] max-w-[95vw] overflow-hidden flex flex-col h-[90vh] animate-in slide-in-from-bottom-4 duration-300 border border-slate-200">
         
         {/* HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
-          <h2 className="text-lg font-semibold text-gray-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-slate-50/50">
+          <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight">
             {isViewMode ? `Cập nhật công việc #${existingTask.id}` : "Tạo công việc mới"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-full">
+             <X className="w-5 h-5" />
+          </Button>
         </div>
 
         {/* BODY */}
-        <div className="flex-1 overflow-y-auto p-6 flex gap-6">
-          <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto p-6 flex gap-8">
+          {/* Main Content (Left) */}
+          <div className="flex-1 flex flex-col gap-6">
             {/* Tên việc */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">TÊN CÔNG VIỆC <span className="text-red-500">*</span></label>
-              <input 
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Tên công việc <span className="text-red-500">*</span></Label>
+              <Input 
                 value={taskName}
                 onChange={(e) => setTaskName(e.target.value)}
-                className="w-full border p-2 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full font-medium text-slate-900 border-slate-200 focus:ring-[#009d98] focus:border-[#009d98]"
+                placeholder="Nhập tên công việc..."
               />
             </div>
 
             {/* Mô tả */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">MÔ TẢ CHI TIẾT</label>
-              <textarea
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Mô tả chi tiết</Label>
+              <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full border rounded-md p-2 outline-none text-sm min-h-[100px] resize-none"
+                className="w-full border-slate-200 focus:ring-[#009d98] min-h-[120px] resize-none text-sm bg-slate-50/50 focus:bg-white transition-colors"
+                placeholder="Mô tả yêu cầu công việc..."
               />
             </div>
 
-            {/* Comment Section */}
+            {/* Comment Section (Chỉ hiện khi Edit) */}
             {isViewMode && <TaskCommentSection taskId={existingTask.id} />}
           </div>
 
-          {/* SIDEBAR SETTINGS */}
-          <div className="w-[300px] space-y-4 border-l pl-6 shrink-0">
+          {/* Sidebar Settings (Right) */}
+          <div className="w-[300px] space-y-6 border-l border-slate-100 pl-8 shrink-0">
             
             {/* Status */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">TRẠNG THÁI</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full border rounded p-2 text-sm bg-white"
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Trạng thái</Label>
+              <Select 
+                value={status} 
+                onValueChange={(val) => setStatus(val as TaskStatus)} 
                 disabled={!isViewMode}
               >
-                <option value="OPEN">⚪ Mới (Open)</option>
-                <option value="ASSIGNED">🔵 Đã giao (Assigned)</option>
-                <option value="IN_PROGRESS">🚧 Đang làm (In Progress)</option>
-                <option value="PENDING_REVIEW">🟣 Chờ duyệt (Pending Review)</option>
-                <option value="COMPLETED">🟢 Hoàn thành (Completed)</option>
-                <option value="REJECTED">🔴 Từ chối (Rejected)</option>
-              </select>
+                <SelectTrigger className="w-full border-slate-200 bg-white h-10">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="OPEN">⚪ Mới (Open)</SelectItem>
+                    <SelectItem value="ASSIGNED">🔵 Đã giao (Assigned)</SelectItem>
+                    <SelectItem value="IN_PROGRESS">🚧 Đang làm (In Progress)</SelectItem>
+                    <SelectItem value="PENDING_REVIEW">🟣 Chờ duyệt (Pending Review)</SelectItem>
+                    <SelectItem value="COMPLETED">🟢 Hoàn thành (Completed)</SelectItem>
+                    <SelectItem value="REJECTED">🔴 Từ chối (Rejected)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Assignee */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">NGƯỜI THỰC HIỆN</label>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Người thực hiện</Label>
               <AssigneeSelect 
                 unitId={parentUnitId}
                 value={assigneeId}
@@ -227,29 +246,33 @@ export const DetailSubtaskModal = ({
             </div>
 
             {/* Priority */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">ĐỘ ƯU TIÊN</label>
-              <select 
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full border rounded p-2 text-sm bg-white"
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Độ ưu tiên</Label>
+              <Select 
+                value={priority} 
+                onValueChange={(val) => setPriority(val as TaskPriority)}
               >
-                <option value="LOW">🔵 Thấp</option>
-                <option value="MEDIUM">🟡 Trung bình</option>
-                <option value="HIGH">🔴 Cao</option>
-              </select>
+                <SelectTrigger className="w-full border-slate-200 bg-white h-10">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="LOW">🔵 Thấp</SelectItem>
+                    <SelectItem value="MEDIUM">🟡 Trung bình</SelectItem>
+                    <SelectItem value="HIGH">🔴 Cao</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* [SỬA] Deadline với Calendar Popover */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">HẠN CHÓT</label>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Hạn chót</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full pl-3 text-left font-normal border-gray-200",
-                      !deadline && "text-muted-foreground"
+                      "w-full pl-3 text-left font-normal border-slate-200 h-10 hover:bg-slate-50",
+                      !deadline && "text-slate-400"
                     )}
                   >
                     {deadline ? (
@@ -274,43 +297,47 @@ export const DetailSubtaskModal = ({
             </div>
 
             {/* Task Type */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">LOẠI CÔNG VIỆC</label>
-              <select 
-                value={taskType}
-                onChange={(e) => setTaskType(e.target.value as TaskType)}
-                className="w-full border rounded p-2 text-sm bg-white"
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-500 uppercase">Loại công việc</Label>
+              <Select 
+                value={taskType} 
+                onValueChange={(val) => setTaskType(val as TaskType)}
               >
-                <option value="DRAFTING">✍️ Soạn thảo</option>
-                <option value="SELECTION">📂 Chọn tài liệu</option>
-                <option value="AUTO">🤖 Tự động</option>
-              </select>
+                <SelectTrigger className="w-full border-slate-200 bg-white h-10">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="DRAFTING">✍️ Soạn thảo</SelectItem>
+                    <SelectItem value="SELECTION">📂 Chọn tài liệu</SelectItem>
+                    <SelectItem value="AUTO">🤖 Tự động</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
         {/* FOOTER */}
-        <div className="border-t px-6 py-4 flex justify-end gap-3 bg-gray-50 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
+        <div className="border-t border-slate-100 px-6 py-4 flex justify-end gap-3 bg-slate-50/50 shrink-0">
+          <Button variant="outline" onClick={onClose} className="border-slate-200 text-slate-600 hover:text-slate-800">
             Đóng
-          </button>
+          </Button>
           
           {isViewMode ? (
-             <button 
+             <Button 
                onClick={handleUpdate}
                disabled={isUpdating}
-               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+               className="bg-[#009d98] hover:bg-[#008580] text-white font-bold shadow-md"
              >
                {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
-             </button>
+             </Button>
           ) : (
-            <button 
+            <Button 
               onClick={handleCreate}
               disabled={isSubmitting || !taskName.trim()}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+              className="bg-[#009d98] hover:bg-[#008580] text-white font-bold shadow-md"
             >
               {isSubmitting ? "Đang tạo..." : "Tạo công việc"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

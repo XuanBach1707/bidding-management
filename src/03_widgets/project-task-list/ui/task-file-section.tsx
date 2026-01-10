@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react";
 import { 
   Loader2, FileText, Folder, ExternalLink, 
-  AlertCircle, ChevronRight, Home, ArrowLeft, RefreshCw 
+  AlertCircle, ChevronRight, Home, ArrowLeft, RefreshCw, FolderOpen
 } from "lucide-react";
 import { driveApi, DriveItem } from "@/entities/drive";
 import { cn } from "@/shared/lib/utils";
 
 interface TaskFileSectionProps {
   rootFolderId: string | null | undefined;
-  rootFolderName?: string; // Tên dự án để hiển thị ở Breadcrumb gốc
-  taskName?: string; // (Optional) Nếu cần logic highlight folder, nhưng giờ ta làm explorer thuần
+  rootFolderName?: string; 
+  taskName?: string; 
 }
 
 // Struct cho Breadcrumb
@@ -88,22 +88,22 @@ export const TaskFileSection = ({ rootFolderId, rootFolderName = "Kho tài liệ
 
   if (!rootFolderId) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-        <Folder className="w-10 h-10 mb-3 opacity-30" />
-        <span className="text-sm font-medium">Chưa liên kết Google Drive</span>
+      <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+        <FolderOpen className="w-12 h-12 mb-3 opacity-20" />
+        <span className="text-sm font-bold text-slate-500">Chưa liên kết kho tài liệu</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col h-[500px]">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-[500px] overflow-hidden">
       
       {/* 1. TOOLBAR & BREADCRUMBS */}
       <div className="flex items-center gap-2 p-3 border-b border-slate-100 bg-slate-50/50">
         <button 
             onClick={handleBack}
             disabled={breadcrumbs.length <= 1}
-            className="p-1.5 rounded-md hover:bg-slate-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="p-1.5 rounded-md hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:bg-transparent transition-all border border-transparent hover:border-slate-200"
         >
             <ArrowLeft className="w-4 h-4 text-slate-600" />
         </button>
@@ -121,8 +121,10 @@ export const TaskFileSection = ({ rootFolderId, rootFolderName = "Kho tài liệ
                         <span 
                             onClick={() => !isLast && handleBreadcrumbClick(index)}
                             className={cn(
-                                "max-w-[150px] truncate transition-colors",
-                                isLast ? "font-bold text-slate-800 cursor-default" : "text-slate-500 hover:text-blue-600 cursor-pointer hover:underline"
+                                "max-w-[150px] truncate transition-colors text-xs",
+                                isLast 
+                                    ? "font-bold text-slate-800 cursor-default bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm" 
+                                    : "text-slate-500 hover:text-[#009d98] cursor-pointer hover:underline font-medium"
                             )}
                             title={crumb.name}
                         >
@@ -133,28 +135,28 @@ export const TaskFileSection = ({ rootFolderId, rootFolderName = "Kho tài liệ
             })}
         </div>
 
-        <button onClick={fetchFolderContent} className="p-1.5 rounded-md hover:bg-slate-200 text-slate-500" title="Làm mới">
-            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+        <button onClick={fetchFolderContent} className="p-1.5 rounded-md hover:bg-white hover:shadow-sm text-slate-500 transition-all border border-transparent hover:border-slate-200" title="Làm mới">
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin text-[#009d98]")} />
         </button>
       </div>
 
       {/* 2. CONTENT LIST */}
-      <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-2 custom-scrollbar bg-slate-50/30">
         {loading ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                <span className="text-xs">Đang tải dữ liệu...</span>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-[#009d98]" />
+                <span className="text-xs font-bold text-slate-500">Đang tải dữ liệu...</span>
             </div>
         ) : error ? (
             <div className="flex flex-col items-center justify-center h-full text-red-500 gap-2">
                 <AlertCircle className="w-8 h-8 opacity-80" />
-                <span className="text-sm">{error}</span>
-                <button onClick={fetchFolderContent} className="text-xs underline">Thử lại</button>
+                <span className="text-sm font-medium">{error}</span>
+                <button onClick={fetchFolderContent} className="text-xs underline hover:text-red-700">Thử lại</button>
             </div>
         ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
-                <Folder className="w-12 h-12 mb-2" />
-                <span className="text-sm">Thư mục trống</span>
+                <FolderOpen className="w-12 h-12 mb-2 text-slate-300" />
+                <span className="text-sm font-medium">Thư mục trống</span>
             </div>
         ) : (
             <div className="grid grid-cols-1 gap-1">
@@ -163,13 +165,13 @@ export const TaskFileSection = ({ rootFolderId, rootFolderName = "Kho tài liệ
                     <div 
                         key={item.id}
                         onClick={() => handleEnterFolder(item)}
-                        className="group flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors border border-transparent hover:border-blue-100"
+                        className="group flex items-center gap-3 p-3 rounded-lg hover:bg-white cursor-pointer transition-all border border-transparent hover:border-slate-200 hover:shadow-sm"
                     >
-                        <Folder className="w-5 h-5 text-yellow-500 fill-yellow-500/20" />
+                        <Folder className="w-5 h-5 text-slate-400 fill-slate-100 group-hover:text-[#009d98] group-hover:fill-[#009d98]/10 transition-colors" />
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-700 truncate group-hover:text-blue-700">{item.name}</p>
+                            <p className="text-sm font-bold text-slate-700 truncate group-hover:text-[#009d98]">{item.name}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400" />
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#009d98]" />
                     </div>
                 ))}
 
@@ -180,19 +182,19 @@ export const TaskFileSection = ({ rootFolderId, rootFolderName = "Kho tài liệ
                         href={item.webViewLink || item.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
+                        className="group flex items-center gap-3 p-3 rounded-lg hover:bg-white transition-all border border-transparent hover:border-slate-200 hover:shadow-sm"
                     >
                         <div className="relative">
-                            <FileText className="w-5 h-5 text-blue-500" />
+                            <FileText className="w-5 h-5 text-slate-500 group-hover:text-[#009d98]" />
                             {/* Badge Tag nếu có */}
                             {item.tag && (
-                                <span className="absolute -top-1.5 -right-2 text-[8px] bg-orange-100 text-orange-600 px-1 rounded-sm font-bold border border-orange-200">
+                                <span className="absolute -top-1.5 -right-2 text-[8px] bg-[#009d98]/10 text-[#009d98] px-1 rounded-sm font-bold border border-[#009d98]/20">
                                     {item.tag}
                                 </span>
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-700 truncate group-hover:text-blue-600">{item.name}</p>
+                            <p className="text-sm font-medium text-slate-700 truncate group-hover:text-[#009d98]">{item.name}</p>
                         </div>
                         <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500" />
                     </a>
@@ -202,8 +204,8 @@ export const TaskFileSection = ({ rootFolderId, rootFolderName = "Kho tài liệ
       </div>
       
       {/* Footer Info */}
-      <div className="p-2 border-t border-slate-100 bg-slate-50 text-[10px] text-slate-400 text-center">
-         Hiển thị {items.length} mục trong thư mục hiện tại
+      <div className="p-2 border-t border-slate-100 bg-slate-50 text-[10px] text-slate-400 text-center font-medium">
+          Hiển thị {items.length} mục
       </div>
     </div>
   );

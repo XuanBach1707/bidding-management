@@ -1,6 +1,6 @@
 import React from "react";
 import { format } from "date-fns";
-import { Trash2, FileText, CheckCircle2, Calendar as CalendarIcon } from "lucide-react"; 
+import { Trash2, FileText, CheckCircle2, Calendar as CalendarIcon, AlertCircle } from "lucide-react"; 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -25,19 +25,22 @@ interface TaskSectionRowProps {
   onUpdateTask: (id: string, field: keyof TempTask, value: any) => void;
   onAddSubTask: (parentId: string) => void;
   onRemoveTask: (id: string) => void;
+  
+  // [MỚI] Prop để báo hiệu cần hiển thị lỗi
+  showValidationErrors: boolean; 
 }
 
 export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
   index, sectionId, sectionName, parentTask, subTasks,
   boards, departmentsCache,
   onBoardChange, onDepartmentChange, onUpdateTask, onAddSubTask, onRemoveTask,
+  showValidationErrors
 }) => {
 
   const renderRightSideContent = (task: TempTask | undefined, isParent: boolean) => {
     if (!task) return null;
 
-    // --- CASE 1: CÓ FILE TỰ ĐỘNG (HSPL, BCTC...) ---
-    // Sẽ hiển thị file thay vì form nhập liệu
+    // --- CASE 1: CÓ FILE TỰ ĐỘNG ---
     if (task.files && task.files.length > 0) {
       return (
         <div className="col-span-7 flex items-center gap-2 overflow-x-auto py-1">
@@ -62,9 +65,13 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
     const assignedUnitId = task.assignments[0]?.assignedUnitId;
     const availableDepartments = selectedBoardId ? (departmentsCache[selectedBoardId] || []) : [];
 
-    // Logic Group: Task cha có subtask con đi kèm
     const isGroup = isParent && subTasks.length > 0;
     const isAssignable = !isGroup;
+
+    // [LOGIC MỚI] Check lỗi cho từng trường
+    const isBoardError = showValidationErrors && isAssignable && !selectedBoardId;
+    const isDeptError = showValidationErrors && isAssignable && !assignedUnitId;
+    const isDateError = showValidationErrors && isAssignable && !task.deadline;
 
     return (
       <>
@@ -73,7 +80,11 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
             {isAssignable ? (
                 <>
                     <Select value={selectedBoardId ? String(selectedBoardId) : undefined} onValueChange={(val) => onBoardChange(task.id, val)}>
-                    <SelectTrigger className="h-7 text-[11px] border-slate-200 bg-white px-2 focus:ring-0">
+                    <SelectTrigger className={cn(
+                        "h-7 text-[11px] border-slate-200 bg-white px-2 focus:ring-0",
+                        // [MỚI] Highlight đỏ nếu lỗi
+                        isBoardError && "border-red-500 bg-red-50"
+                    )}>
                         <SelectValue placeholder="Chọn Ban..." />
                     </SelectTrigger>
                     <SelectContent className="z-[9999]">
@@ -84,7 +95,12 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
                     </Select>
 
                     <Select value={assignedUnitId ? String(assignedUnitId) : undefined} onValueChange={(val) => onDepartmentChange(task.id, val)} disabled={!selectedBoardId}>
-                    <SelectTrigger className={cn("h-7 text-[11px] border-none bg-slate-100/50 px-2 focus:ring-0 shadow-none", !selectedBoardId && "opacity-50")}>
+                    <SelectTrigger className={cn(
+                        "h-7 text-[11px] border-none bg-slate-100/50 px-2 focus:ring-0 shadow-none",
+                        !selectedBoardId && "opacity-50",
+                        // [MỚI] Highlight đỏ nếu lỗi
+                        isDeptError && "border border-red-500 bg-red-50"
+                    )}>
                         <SelectValue placeholder={selectedBoardId ? "Chọn Phòng..." : "(--)"} />
                     </SelectTrigger>
                     <SelectContent className="z-[9999]">
@@ -103,7 +119,6 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
 
         {/* 2. Deadline (Col-2) */}
         <div className="col-span-2 pt-0.5">
-            {/* [SỬA ĐỔI] Nếu là Group thì KHÔNG hiển thị Deadline */}
             {!isGroup ? (
                 <Popover>
                     <PopoverTrigger asChild>
@@ -113,10 +128,12 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
                         className={cn(
                             "h-8 w-full justify-start text-xs px-2 hover:bg-slate-100", 
                             "border border-slate-200 bg-white", 
-                            !task.deadline && "text-slate-400"
+                            !task.deadline && "text-slate-400",
+                            // [MỚI] Highlight đỏ nếu lỗi
+                            isDateError && "border-red-500 bg-red-50 text-red-500"
                         )}
                     >
-                        <CalendarIcon className="mr-2 h-3.5 w-3.5 text-slate-500" />
+                        <CalendarIcon className={cn("mr-2 h-3.5 w-3.5", isDateError ? "text-red-500" : "text-slate-500")} />
                         {task.deadline ? format(task.deadline, "dd/MM/yyyy") : "Hạn chót..."}
                     </Button>
                     </PopoverTrigger>
@@ -131,7 +148,6 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
                     </PopoverContent>
                 </Popover>
             ) : (
-                // Placeholder cho Group
                 <div className="h-8 w-full flex items-center justify-center">
                    <span className="text-[10px] text-slate-300">--</span>
                 </div>
@@ -167,7 +183,16 @@ export const TaskSectionRow: React.FC<TaskSectionRowProps> = ({
         <div key={sub.id} className="grid grid-cols-12 gap-4 p-2 items-start hover:bg-slate-50 border-l-4 border-l-transparent transition-colors">
           <div className="col-span-5 flex items-center gap-2 pl-8 pt-1">
             <span className="text-xs font-medium text-slate-400 mt-1.5">{index + 1}.{subIndex + 1}</span>
-            <Input value={sub.name} onChange={(e) => onUpdateTask(sub.id, "name", e.target.value)} placeholder="Tên công việc..." className="h-8 text-sm border-transparent bg-transparent focus:bg-white px-2 w-full" />
+            <Input 
+                value={sub.name} 
+                onChange={(e) => onUpdateTask(sub.id, "name", e.target.value)} 
+                placeholder="Tên công việc..." 
+                className={cn(
+                    "h-8 text-sm border-transparent bg-transparent focus:bg-white px-2 w-full",
+                    // [MỚI] Highlight đỏ tên task con nếu trống
+                    showValidationErrors && !sub.name.trim() && "border-b border-red-500 rounded-none bg-red-50"
+                )} 
+            />
           </div>
           {renderRightSideContent(sub, false)}
         </div>
