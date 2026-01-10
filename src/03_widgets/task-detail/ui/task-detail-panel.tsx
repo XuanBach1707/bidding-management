@@ -50,7 +50,7 @@ export const TaskDetailPanel = ({
                    {task.projectName || "Dự án Global"}
                  </span>
                  <span className="mx-2 text-slate-300">/</span>
-                 <span className="text-slate-400 font-normal">Task ID: <span className="font-mono font-bold text-slate-600">#{task.id}</span></span>
+                
              </div>
         </div>
 

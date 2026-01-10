@@ -29,20 +29,31 @@ interface InitialParams {
   page?: number;
   size?: number;
   search?: string;
+  status?: string;
 }
 
 export const useBiddingList = (
-  initialParams: InitialParams = { page: 1, size: 9, search: '' }
+  initialParams: InitialParams = { page: 1, size: 9, search: '', status: '' }
 ): UseBiddingListReturn => {
   const [items, setItems] = useState<BiddingPackage[]>([]);
+  
   const [meta, setMeta] = useState({
     total: 0,
     page: initialParams.page || 1,
     size: initialParams.size || 9,
     pages: 0,
   });
+
   const [searchQuery, setSearchQuery] = useState(initialParams.search || '');
-  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  /**
+   * FIX: Khởi tạo filters từ initialParams.status ngay lập tức.
+   * Dùng Type Assertion 'as' để tránh lỗi Record<string, string> của TS.
+   */
+  const [filters, setFilters] = useState<Record<string, string>>(
+    (initialParams.status ? { status: initialParams.status } : {}) as Record<string, string>
+  );
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,16 +65,13 @@ export const useBiddingList = (
       const skip = (page - 1) * size; 
       const statusParam = currentFilters['status'];
 
-      // [LOGIC MỚI]: Xử lý gọi nhiều API nếu status có dấu phẩy
       let responseData: { items: BiddingPackage[], total: number } = { items: [], total: 0 };
 
+      // [LOGIC XỬ LÝ NHIỀU STATUS SONG SONG]
       if (statusParam && statusParam.includes(',')) {
-        // 1. Tách các status: "NEW,INTERESTED" -> ["NEW", "INTERESTED"]
         const statuses = statusParam.split(',').map(s => s.trim());
         
-        // 2. Gọi song song (Parallel Requests)
         const promises = statuses.map(status => {
-           // Tạo bản sao filter nhưng ghi đè status đơn lẻ
            const singleFilter = { ...currentFilters, status };
            return http.get<any, BiddingPackageListResponse>('/bidding-packages', {
               params: { limit, skip, search: search || undefined, ...singleFilter }
@@ -72,9 +80,6 @@ export const useBiddingList = (
 
         const responses = await Promise.all(promises);
 
-        // 3. Gộp kết quả
-        // Lưu ý: Việc gộp này có thể khiến số lượng item hiển thị > size (VD: 9 + 9 = 18 item)
-        // Nhưng với nghiệp vụ cần xem hết thì chấp nhận được.
         let combinedItems: BiddingPackage[] = [];
         let combinedTotal = 0;
 
@@ -82,19 +87,16 @@ export const useBiddingList = (
            if (res.success && res.data) {
               const parsed = BiddingPackagePaginatedSchema.safeParse(res.data);
               if (parsed.success) {
-                 combinedItems = [...combinedItems, ...parsed.data.items];
-                 combinedTotal += parsed.data.total;
+                  combinedItems = [...combinedItems, ...parsed.data.items];
+                  combinedTotal += parsed.data.total;
               }
            }
         }
         
-        // (Tùy chọn) Sort lại theo ngày tạo nếu cần thiết để danh sách merged trông hợp lý
-        // combinedItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
         responseData = { items: combinedItems, total: combinedTotal };
 
       } else {
-        // [LOGIC CŨ]: Gọi 1 API bình thường
+        // [LOGIC GỌI 1 API BÌNH THƯỜNG]
         const body = await http.get<any, BiddingPackageListResponse>('/bidding-packages', {
           params: { limit, skip, search: search || undefined, ...currentFilters }
         });
@@ -103,11 +105,10 @@ export const useBiddingList = (
         
         const parseResult = BiddingPackagePaginatedSchema.safeParse(body.data);
         if (parseResult.success) {
-           responseData = parseResult.data;
+            responseData = parseResult.data;
         }
       }
 
-      // Cập nhật State
       setItems(responseData.items);
       setMeta({ 
         total: responseData.total, 
@@ -125,8 +126,20 @@ export const useBiddingList = (
     }
   }, []);
 
+  /**
+   * FIX: Dòng 131 - Dùng Type Assertion để TS không bắt bẻ object rỗng.
+   */
   useEffect(() => {
-    fetchData(meta.page, meta.size, searchQuery, filters);
+    const initialFilters = (initialParams.status 
+      ? { status: initialParams.status } 
+      : {}) as Record<string, string>;
+
+    fetchData(
+      meta.page, 
+      meta.size, 
+      searchQuery, 
+      initialFilters
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 

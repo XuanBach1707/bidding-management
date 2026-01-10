@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { format } from "date-fns"; 
 import { Calendar as CalendarIcon, Plus } from "lucide-react"; 
@@ -10,7 +12,6 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Calendar } from "@/shared/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
-import { Input } from "@/shared/ui/input";
 import { 
   Select, 
   SelectContent, 
@@ -36,9 +37,13 @@ export const QuickSubtaskForm = ({
   const [taskName, setTaskName] = useState("");
   const [taskType, setTaskType] = useState<TaskType>("DRAFTING");
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
-  
-  // [SỬA] Đổi state deadline sang kiểu Date | undefined để dùng với Calendar
   const [deadline, setDeadline] = useState<Date | undefined>(undefined);
+
+  // Logic validate: Chỉ cho phép submit khi có cả Tên và Nhân viên
+  const canSubmit = taskName.trim().length > 0 && assigneeId !== null;
+  
+  // Trạng thái hiển thị lỗi cho AssigneeSelect (Khi gõ tên mà chưa chọn NV)
+  const hasAssigneeError = taskName.trim().length > 0 && !assigneeId;
 
   const { createSubtask, isSubmitting } = useCreateSubtask({
     parentId,
@@ -54,17 +59,20 @@ export const QuickSubtaskForm = ({
   });
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && taskName.trim()) {
+    // Chỉ cho phép Enter khi đã thỏa mãn validate
+    if (e.key === "Enter" && canSubmit && !isSubmitting) {
       handleSubmit();
     }
   };
 
   const handleSubmit = () => {
+    if (!canSubmit) return;
+
     createSubtask({
       taskName,
       taskType,
       assigneeId,
-      // [SỬA] Convert Date object sang string khi gửi API
+      // Convert Date object sang string khi gửi API
       deadline: deadline ? deadline.toISOString() : "" 
     });
   };
@@ -108,13 +116,15 @@ export const QuickSubtaskForm = ({
           unitId={parentUnitId}
           value={assigneeId}
           onChange={setAssigneeId}
-          className="h-8 text-xs" // Class cha
+          className="h-8 text-xs"
           disabled={isSubmitting}
           placeholder="-- Chọn NV --"
+          // Truyền prop error đã sửa ở file AssigneeSelect trước đó
+          error={hasAssigneeError}
         />
       </div>
 
-      {/* [SỬA] Date Picker với Calendar của Shadcn */}
+      {/* Date Picker với Calendar của Shadcn */}
       <div className="w-[130px]">
         <Popover>
           <PopoverTrigger asChild>
@@ -139,7 +149,7 @@ export const QuickSubtaskForm = ({
               mode="single"
               selected={deadline}
               onSelect={setDeadline}
-              // 👇 CHẶN NGÀY QUÁ KHỨ Ở ĐÂY
+              // CHẶN NGÀY QUÁ KHỨ
               disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
               initialFocus
             />
@@ -151,9 +161,15 @@ export const QuickSubtaskForm = ({
       <Button
         size="icon"
         onClick={handleSubmit}
-        disabled={isSubmitting || !taskName.trim()}
-        className="h-8 w-8 bg-[#009d98] hover:bg-[#008580] text-white shrink-0 rounded-md"
-        title="Tạo nhanh (Enter)"
+        // Disabled khi đang submit hoặc chưa chọn xong (Tên + Nhân viên)
+        disabled={isSubmitting || !canSubmit}
+        className={cn(
+          "h-8 w-8 shrink-0 rounded-md transition-all",
+          canSubmit 
+            ? "bg-[#009d98] hover:bg-[#008580] text-white" 
+            : "bg-slate-200 text-slate-400 cursor-not-allowed"
+        )}
+        title={!canSubmit ? "Vui lòng nhập tên và chọn nhân viên" : "Tạo nhanh (Enter)"}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </Button>
