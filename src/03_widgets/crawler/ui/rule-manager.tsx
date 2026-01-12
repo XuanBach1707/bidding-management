@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Loader2, Search, Filter, AlertCircle, Tags } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Search, AlertCircle, Tags, X, ChevronDown } from "lucide-react";
 import * as z from "zod";
 
+// --- UI IMPORTS (Giữ nguyên) ---
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
@@ -21,20 +22,57 @@ import {
 } from "@/shared/ui/form";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/shared/ui/select"; 
+} from "@/shared/ui/select";
 import { useToast } from "@/shared/lib/hooks/use-toast";
-import { Badge } from "@/shared/ui/badge"; 
-import { Separator } from "@/shared/ui/separator";
+import { Badge } from "@/shared/ui/badge";
 
 import { ruleApi, ruleSchema, type Rule } from "@/entities/crawler";
 
-// --- HELPERS ---
+// ==========================================
+// 1. ZOD SCHEMAS & TYPES
+// ==========================================
+
+export const scheduleSchema = z.object({
+  id: z.number().optional(),
+  sourceUrl: z.string().url("URL nguồn không hợp lệ").min(1, "URL nguồn là bắt buộc"),
+  cronExpression: z.string().min(1, "Cron expression là bắt buộc"),
+  description: z.string().optional().default(""),
+  isActive: z.boolean().default(true),
+});
+
+export type Schedule = z.infer<typeof scheduleSchema>;
+
+export const ruleSchema = z.object({
+  id: z.number().optional(),
+  ruleName: z.string().min(1, "Tên luật không được để trống"),
+  businessField: z.string().min(1, "Lĩnh vực kinh doanh là bắt buộc"),
+  
+  keywordsInclude: z.array(z.string()).default([]),
+  keywordsExclude: z.array(z.string()).default([]),
+  
+  minBudget: z.coerce.number().min(0).default(0),
+  maxBudget: z.coerce.number().min(0).default(0),
+  
+  locations: z.array(z.string()).default([]), 
+  priority: z.coerce.number().int().min(1).default(1),
+});
+
+export type CrawlerRuleFormValues = z.infer<typeof ruleSchema>;
+
+// ==========================================
+// 2. HELPER COMPONENTS & FUNCTIONS
+// ==========================================
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
-// Helper hiển thị Range Ngân sách (Style mới)
+const readMoneyToText = (number: number) => {
+  if (!number) return "";
+  const config = { style: 'currency', currency: 'VND' } as const;
+  return new Intl.NumberFormat('vi-VN', config).format(number);
+};
+
 const BudgetDisplay = ({ min, max }: { min: any, max: any }) => {
   const minNum = Number(min) || 0;
   const maxNum = Number(max) || 0;
@@ -57,17 +95,10 @@ const BudgetDisplay = ({ min, max }: { min: any, max: any }) => {
   );
 };
 
-const readMoneyToText = (number: number) => {
-  if (!number) return "";
-  const config = { style: 'currency', currency: 'VND' } as const; 
-  return new Intl.NumberFormat('vi-VN', config).format(number); 
-};
-
-// --- PRIORITY CONFIG ---
 const PRIORITY_OPTIONS = [
   { value: 1, label: "1 - Rất Cao (Ưu tiên nhất)", color: "bg-red-100 text-red-700 hover:bg-red-100 border-red-200" },
   { value: 2, label: "2 - Cao", color: "bg-orange-100 text-orange-700 hover:bg-orange-100 border-orange-200" },
-  { value: 3, label: "3 - Trung bình", color: "bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200" }, // Màu mặc định
+  { value: 3, label: "3 - Trung bình", color: "bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200" },
   { value: 4, label: "4 - Thấp", color: "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200" },
   { value: 5, label: "5 - Rất Thấp", color: "bg-slate-50 text-slate-500 hover:bg-slate-50 border-slate-200" },
 ];
@@ -81,27 +112,15 @@ const PriorityBadge = ({ value }: { value: number }) => {
   );
 };
 
-// --- ARRAY INPUT (Giao diện mới) ---
-interface ArrayInputProps {
-  value?: string[];
-  onChange: (value: string[]) => void;
-  placeholder?: string;
-}
-
-const ArrayInput = ({ value = [], onChange, placeholder }: ArrayInputProps) => {
+const ArrayInput = ({ value = [], onChange, placeholder }: { value?: string[]; onChange: (val: string[]) => void; placeholder?: string }) => {
   const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    if (Array.isArray(value)) {
-      setInputValue(value.join(", "));
-    }
+    if (Array.isArray(value)) setInputValue(value.join(", "));
   }, [value]);
 
   const handleBlur = () => {
-    if (!inputValue.trim()) {
-      onChange([]);
-      return;
-    }
+    if (!inputValue.trim()) { onChange([]); return; }
     const arr = inputValue.split(",").map((s) => s.trim()).filter((s) => s !== "");
     onChange(arr);
     setInputValue(arr.join(", "));
@@ -116,7 +135,6 @@ const ArrayInput = ({ value = [], onChange, placeholder }: ArrayInputProps) => {
         onBlur={handleBlur}
         className="min-h-[60px] resize-none focus-visible:ring-[#009d98]"
       />
-      {/* Preview Tags */}
       <div className="flex flex-wrap gap-1.5 min-h-[24px]">
         {value.length > 0 && value.map((item, idx) => (
             <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
@@ -128,7 +146,151 @@ const ArrayInput = ({ value = [], onChange, placeholder }: ArrayInputProps) => {
   );
 };
 
-type CrawlerRuleFormValues = z.infer<typeof ruleSchema>;
+// --- COMPONENT PROVINCE MULTI-SELECT ---
+interface Province {
+  name: string;
+  code: number;
+}
+
+const ProvinceMultiSelect = ({ value = [], onChange }: { value?: string[]; onChange: (val: string[]) => void }) => {
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("https://provinces.open-api.vn/api/?depth=1");
+        const data = await res.json();
+        setProvinces(data);
+      } catch (error) {
+        console.error("Failed to fetch provinces", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (provinceName: string) => {
+    if (!value.includes(provinceName)) {
+      onChange([...value, provinceName]);
+    }
+    setSearch(""); 
+    inputRef.current?.focus(); 
+  };
+
+  const handleRemove = (provinceName: string) => {
+    onChange(value.filter((item) => item !== provinceName));
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && search === "" && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
+  };
+
+  const filteredProvinces = useMemo(() => {
+    return provinces.filter(
+      (p) => 
+        !value.includes(p.name) && 
+        p.name.toLowerCase().includes(search.toLowerCase()) 
+    );
+  }, [provinces, value, search]);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div 
+        className="flex flex-wrap items-center gap-1.5 p-2 min-h-[42px] w-full rounded-md border border-slate-200 bg-white ring-offset-white focus-within:ring-2 focus-within:ring-[#009d98] focus-within:ring-offset-2 transition-all cursor-text"
+        onClick={() => {
+          setOpen(true);
+          inputRef.current?.focus();
+        }}
+      >
+        {value.map((item, idx) => (
+          <Badge 
+            key={idx} 
+            variant="secondary" 
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 pl-2 pr-1 py-0.5 flex items-center gap-1 h-7"
+          >
+            {item}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation(); 
+                handleRemove(item);
+              }}
+              className="rounded-full p-0.5 hover:bg-slate-300 text-slate-400 hover:text-red-500 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </Badge>
+        ))}
+
+        <input
+          ref={inputRef}
+          type="text"
+          className="flex-1 min-w-[120px] bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400"
+          placeholder={value.length === 0 ? "Chọn tỉnh thành..." : ""}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+        />
+        
+        <div className="mr-1">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400 opacity-50"/>}
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute z-50 top-[calc(100%+4px)] left-0 w-full rounded-md border border-slate-200 bg-white shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
+          <div className="max-h-[250px] overflow-y-auto p-1">
+            {filteredProvinces.length > 0 ? (
+              filteredProvinces.map((p) => (
+                <div
+                  key={p.code}
+                  className="flex items-center w-full px-2 py-2 text-sm text-slate-700 rounded-sm cursor-pointer hover:bg-slate-100 hover:text-[#009d98] transition-colors"
+                  onClick={() => handleSelect(p.name)}
+                >
+                  {p.name}
+                </div>
+              ))
+            ) : (
+              <div className="py-6 text-center text-sm text-slate-500">
+                {search ? "Không tìm thấy tỉnh nào" : "Đã chọn tất cả"}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {value.length === 0 && <p className="text-[10px] text-slate-400 mt-1 italic pl-1">Để trống trường này nếu muốn tìm toàn quốc</p>}
+    </div>
+  );
+};
+
+// ==========================================
+// 3. MAIN COMPONENT
+// ==========================================
 
 export const CrawlerRuleManager = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -141,13 +303,28 @@ export const CrawlerRuleManager = () => {
     queryFn: ruleApi.getAll,
   });
 
-  const form = useForm({
+  const form = useForm<CrawlerRuleFormValues>({
     resolver: zodResolver(ruleSchema),
     defaultValues: {
-      ruleName: "", businessField: "", keywordsInclude: [], keywordsExclude: [],
-      minBudget: 0, maxBudget: 0, locations: [], priority: 3, 
+      ruleName: "", 
+      businessField: "", 
+      keywordsInclude: [], 
+      keywordsExclude: [],
+      minBudget: 0, 
+      maxBudget: 0, 
+      locations: [], 
+      priority: 3, 
     },
   });
+
+  // --- LOGIC KIỂM TRA PRIORITY ĐÃ DÙNG ---
+  const usedPriorities = useMemo(() => {
+    if (!rules || !Array.isArray(rules)) return [];
+    // Nếu đang Edit, bỏ qua priority của chính rule đang edit
+    return rules
+      .filter((r) => r.id !== editingId)
+      .map((r) => r.priority);
+  }, [rules, editingId]);
 
   // --- MUTATIONS ---
   const createMutation = useMutation({
@@ -187,10 +364,14 @@ export const CrawlerRuleManager = () => {
   const handleEdit = (item: Rule) => {
     setEditingId(item.id!);
     form.reset({
-      ruleName: item.ruleName, businessField: item.businessField,
-      keywordsInclude: item.keywordsInclude || [], keywordsExclude: item.keywordsExclude || [],
-      minBudget: item.minBudget, maxBudget: item.maxBudget,
-      locations: item.locations || [], priority: item.priority
+      ruleName: item.ruleName, 
+      businessField: item.businessField,
+      keywordsInclude: item.keywordsInclude || [], 
+      keywordsExclude: item.keywordsExclude || [],
+      minBudget: item.minBudget, 
+      maxBudget: item.maxBudget,
+      locations: item.locations || [], 
+      priority: item.priority
     });
     setIsOpen(true);
   };
@@ -198,13 +379,23 @@ export const CrawlerRuleManager = () => {
   const handleCreate = () => {
     setEditingId(null);
     form.reset({
-      ruleName: "", businessField: "", keywordsInclude: [], keywordsExclude: [],
-      minBudget: 0, maxBudget: 0, locations: [], priority: 3, 
+      ruleName: "", 
+      businessField: "", 
+      keywordsInclude: [], 
+      keywordsExclude: [],
+      minBudget: 0, 
+      maxBudget: 0, 
+      locations: [], 
+      // Tìm priority trống đầu tiên để làm default (UX tốt hơn)
+      priority: (() => {
+         const used = rules?.map(r => r.priority) || [];
+         const available = [3, 2, 4, 1, 5].find(p => !used.includes(p));
+         return available || 3;
+      })(),
     });
     setIsOpen(true);
   };
 
-  // --- LOADING STATE ---
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200">
         <Loader2 className="h-8 w-8 text-[#009d98] animate-spin mb-4" />
@@ -257,23 +448,38 @@ export const CrawlerRuleManager = () => {
                         </FormItem>
                       )}
                     />
+                    
                     <FormField
                       control={form.control}
                       name="businessField"
                       render={({ field }) => (
                         <FormItem className="col-span-2 md:col-span-1">
-                          <FormLabel className="text-slate-700 font-bold">Lĩnh vực</FormLabel>
-                          <FormControl><Input {...field} placeholder="VD: Công nghệ thông tin" className="bg-white" value={field.value as string} /></FormControl>
+                          <FormLabel className="text-slate-700 font-bold">Lĩnh vực <span className="text-red-500">*</span></FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Chọn lĩnh vực" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Xây lắp">Xây lắp</SelectItem>
+                              <SelectItem value="Hàng hóa">Hàng hóa</SelectItem>
+                              <SelectItem value="Hỗn hợp">Hỗn hợp</SelectItem>
+                              <SelectItem value="Phi tư vấn">Phi tư vấn</SelectItem>
+                              <SelectItem value="Tư vấn">Tư vấn</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={form.control}
                       name="priority"
                       render={({ field }) => (
                         <FormItem className="col-span-2">
-                          <FormLabel className="text-slate-700 font-bold">Độ ưu tiên</FormLabel>
+                          <FormLabel className="text-slate-700 font-bold">Độ ưu tiên (Duy nhất)</FormLabel>
                           <Select value={field.value?.toString()} onValueChange={(val) => field.onChange(Number(val))}>
                             <FormControl>
                               <SelectTrigger className="bg-white">
@@ -281,16 +487,26 @@ export const CrawlerRuleManager = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {PRIORITY_OPTIONS.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value.toString()}>
-                                   <div className="flex items-center gap-2">
-                                      <div className={`w-3 h-3 rounded-full ${opt.color.split(' ')[0].replace('bg-', 'bg-')}`}></div>
-                                      {opt.label}
-                                   </div>
-                                </SelectItem>
-                              ))}
+                              {PRIORITY_OPTIONS.map((opt) => {
+                                const isDisabled = usedPriorities.includes(opt.value);
+                                return (
+                                  <SelectItem key={opt.value} value={opt.value.toString()} disabled={isDisabled} className={isDisabled ? "opacity-50" : ""}>
+                                     <div className="flex items-center justify-between w-full min-w-[200px]">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-3 h-3 rounded-full ${opt.color.split(' ')[0].replace('bg-', 'bg-')}`}></div>
+                                            {opt.label}
+                                        </div>
+                                        {isDisabled && <span className="text-[10px] text-red-400 font-medium ml-2">(Đã dùng)</span>}
+                                     </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
+                          {/* Hiển thị lỗi nếu user cố tình chọn (dù UI đã chặn) hoặc khi edit bị conflict */}
+                          {usedPriorities.includes(field.value) && editingId === null && (
+                             <FormMessage className="text-red-500">Độ ưu tiên này đã được sử dụng bởi luật khác.</FormMessage>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -328,6 +544,7 @@ export const CrawlerRuleManager = () => {
                         </FormItem>
                       )}
                     />
+                    
                     <FormField
                       control={form.control}
                       name="locations"
@@ -335,8 +552,9 @@ export const CrawlerRuleManager = () => {
                         <FormItem className="col-span-2">
                           <FormLabel className="text-slate-700 font-bold">Địa điểm / Tỉnh thành</FormLabel>
                           <FormControl>
-                              <ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: Hà Nội, Đà Nẵng, Hồ Chí Minh" />
+                             <ProvinceMultiSelect value={field.value as string[]} onChange={field.onChange} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -357,7 +575,7 @@ export const CrawlerRuleManager = () => {
                         </FormItem>
                       )}
                     />
-                     <FormField
+                      <FormField
                       control={form.control}
                       name="maxBudget"
                       render={({ field }) => (
@@ -385,7 +603,7 @@ export const CrawlerRuleManager = () => {
         </Dialog>
       </div>
 
-      {/* --- TABLE LIST --- */}
+      {/* --- TABLE LIST (GIỮ NGUYÊN) --- */}
       <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
         <Table>
           <TableHeader className="bg-slate-50">
