@@ -9,11 +9,11 @@ import { vi } from 'date-fns/locale';
 import { biddingProjectApi, BiddingProject } from '@/entities/bidding-project';
 import { taskApi } from '@/entities/task';
 
-// UI
+// UI Libs
 import { 
-  ArrowLeft, Trash2, Calendar, Building2, 
+  ArrowLeft, Trash2, Calendar, 
   Clock, Info, MoreVertical,
-  PieChart, ExternalLink, AlertTriangle, Layers
+  PieChart, ExternalLink, AlertTriangle, Layers, Trophy
 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useToast } from "@/shared/lib/hooks/use-toast";
@@ -28,16 +28,17 @@ import {
 } from "@/shared/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/ui/alert-dialog";
 import { Badge } from "@/shared/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { cn } from "@/shared/lib/utils";
 
-// Widget
+// Widgets & Features
 import { ProjectTaskList } from "@/widgets/project-task-list";
+import { BiddingResultTab } from "@/features/bidding-project/project-details"; 
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// Danh sách task đặc biệt (chỉ cần file là xong)
 const FILE_ONLY_TASKS = ["Hồ sơ pháp lý", "Hồ sơ tài chính"];
 
 export default function BiddingProjectDetailPage({ params }: PageProps) {
@@ -73,7 +74,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
     enabled: !!projectId,
   });
 
-  // --- 3. CALCULATE STATS ---
+  // --- 3. LOGIC XỬ LÝ SỐ LIỆU & TRẠNG THÁI ---
   const stats = useMemo(() => {
     if (!tasks || tasks.length === 0) return { progress: 0, timeLeft: "Chưa có deadline", isUrgent: false, timeBarPercent: 0, daysLeft: 0 };
 
@@ -114,22 +115,38 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
             timeBarPercent = 100; 
         } else {
             timeLeftString = formatDistanceToNow(minDeadline, { locale: vi, addSuffix: true });
-            
             if (daysRemaining > 7) {
-                isUrgent = false;
-                timeBarPercent = 25; 
+                isUrgent = false; timeBarPercent = 25; 
             } else if (daysRemaining > 3) {
-                isUrgent = false; 
-                timeBarPercent = 60;
+                isUrgent = false; timeBarPercent = 60;
             } else {
-                isUrgent = true;
-                timeBarPercent = 90;
+                isUrgent = true; timeBarPercent = 90;
             }
         }
     }
 
     return { progress: progressPercent, timeLeft: timeLeftString, isUrgent, timeBarPercent, daysLeft: daysRemaining };
   }, [tasks]);
+
+  // --- [NEW] 4. LOGIC XÁC ĐỊNH TAB MẶC ĐỊNH & DỮ LIỆU KẾT QUẢ ---
+  
+  // Lấy HSMT ID từ gói thầu đầu tiên
+  const targetHsmtId = useMemo(() => {
+      if (!project?.packages?.length) return null;
+      return project.packages[0].hsmtId; 
+  }, [project]);
+
+  // Kiểm tra xem có nên hiển thị Tab Kết quả hay không
+  const shouldShowResultTab = useMemo(() => {
+      if (!project) return false;
+      const isClosedState = project.status === 'CLOSED' || project.status === 'COMPLETED';
+      return isClosedState && !!targetHsmtId;
+  }, [project, targetHsmtId]);
+
+  // Kiểm tra xem đây có phải là "Dự án cũ chỉ để xem" (Legacy) hay không
+  const isLegacyMode = useMemo(() => {
+      return shouldShowResultTab && (!tasks || tasks.length === 0);
+  }, [shouldShowResultTab, tasks]);
 
   // --- DELETE HANDLER ---
   const handleDelete = async () => {
@@ -174,7 +191,6 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                 </Button>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                        {/* Đã xóa Badge ID */}
                         <Badge className={cn(
                             "text-[10px] font-bold border-0 uppercase tracking-wider",
                             project.status === 'ACTIVE' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-blue-500 text-white"
@@ -187,7 +203,6 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     </h1>
                     
                     <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
-                        {/* Đã xóa thông tin Chủ trì */}
                         <div className="flex items-center gap-1.5">
                             <Calendar className="w-4 h-4 text-slate-400" /> 
                             <span>Tạo ngày: <span className="text-slate-900">{new Date(project.createdAt).toLocaleDateString('vi-VN')}</span></span>
@@ -199,9 +214,9 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-3 shrink-0 mt-2">
                 <Dialog>
                     <DialogTrigger asChild>
-                         <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:border-[#009d98] hover:text-[#009d98] gap-2 hidden md:flex">
+                          <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:border-[#009d98] hover:text-[#009d98] gap-2 hidden md:flex">
                             <Info className="w-4 h-4" /> Chi tiết gói thầu
-                         </Button>
+                          </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl">
                         <DialogHeader>
@@ -235,7 +250,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     </DialogContent>
                 </Dialog>
 
-                {/* Drive Button (Primary Action) */}
+                {/* Drive Button */}
                 <Button 
                     className="gap-2 bg-[#009d98] hover:bg-[#008580] shadow-md font-bold h-9 px-5 transition-all active:scale-95"
                     onClick={() => {
@@ -284,7 +299,6 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-              
               {/* 1. DEADLINE CARD */}
               <div className={cn(
                   "col-span-2 md:col-span-1 rounded-xl p-4 border shadow-sm transition-all relative overflow-hidden flex flex-col justify-center h-[90px]",
@@ -309,10 +323,10 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                         style={{ width: `${stats.timeBarPercent}%` }}
                     ></div>
                 </div>
-             </div>
+              </div>
 
-             {/* 2. PROGRESS CARD */}
-             <div className="col-span-2 md:col-span-1 bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-center relative overflow-hidden h-[90px]">
+              {/* 2. PROGRESS CARD */}
+              <div className="col-span-2 md:col-span-1 bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-center relative overflow-hidden h-[90px]">
                 <PieChart className="absolute right-3 top-3 w-10 h-10 text-[#009d98] opacity-[0.08]" />
                 <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">Tiến độ tổng thể</h3>
                 <div className="flex items-baseline gap-1">
@@ -322,27 +336,68 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                 <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
                     <div className="bg-[#009d98] h-full rounded-full transition-all duration-1000" style={{ width: `${stats.progress}%` }}></div>
                 </div>
-             </div>
+              </div>
 
-             {/* 3. Placeholder Stats */}
-             <div className="hidden md:flex col-span-2 bg-slate-50/50 rounded-xl border border-slate-200 border-dashed p-4 items-center justify-center text-xs font-medium text-slate-400 gap-2 h-[90px]">
-                 <Layers className="w-5 h-5 opacity-50" />
-                 <span>Khu vực dành cho thống kê mở rộng (Nhân sự / Ngân sách / Rủi ro)</span>
-             </div>
-
+              {/* 3. Placeholder Stats */}
+              <div className="hidden md:flex col-span-2 bg-slate-50/50 rounded-xl border border-slate-200 border-dashed p-4 items-center justify-center text-xs font-medium text-slate-400 gap-2 h-[90px]">
+                  <Layers className="w-5 h-5 opacity-50" />
+                  <span>Khu vực dành cho thống kê mở rộng (Nhân sự / Ngân sách / Rủi ro)</span>
+              </div>
           </div>
 
         </div>
       </div>
 
-      {/* --- 2. MAIN CONTENT (Task List) --- */}
-      <div className="flex-1 overflow-hidden relative bg-slate-50">
-         <div className="h-full max-w-7xl mx-auto border-x border-slate-200 bg-white shadow-sm">
-             <ProjectTaskList 
-                projectId={projectId} 
-                driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
-                projectName={project.name}
-             />
+      {/* --- 2. MAIN CONTENT WITH TABS (SCROLLABLE FIX) --- */}
+      <div className="flex-1 overflow-hidden relative bg-slate-50 flex flex-col">
+         <div className="h-full max-w-7xl mx-auto w-full border-x border-slate-200 bg-white shadow-sm flex flex-col">
+             
+             {/* TABS CONTROLLER */}
+             <Tabs defaultValue={isLegacyMode ? "result" : "roadmap"} className="flex-1 flex flex-col overflow-hidden">
+                  
+                  {/* Sticky Tab Header */}
+                  <div className="border-b px-6 pt-4 bg-white sticky top-0 z-10 shrink-0">
+                      <TabsList className="bg-slate-100 p-1 w-full sm:w-auto h-10">
+                          
+                          {/* Tab 1: Roadmap */}
+                          {!isLegacyMode && (
+                              <TabsTrigger value="roadmap" className="gap-2 px-4 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all">
+                                  <Layers className="w-3.5 h-3.5" /> TIẾN ĐỘ & HỒ SƠ
+                              </TabsTrigger>
+                          )}
+
+                          {/* Tab 2: Kết quả LCNT */}
+                          {shouldShowResultTab && (
+                              <TabsTrigger value="result" className="gap-2 px-4 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-[#009d98] data-[state=active]:shadow-sm transition-all">
+                                  <Trophy className="w-3.5 h-3.5" /> KẾT QUẢ LCNT
+                              </TabsTrigger>
+                          )}
+                      </TabsList>
+                  </div>
+
+                  {/* Tab Contents (Scrollable Area) */}
+                  <div className="flex-1 overflow-y-auto bg-slate-50/30 relative">
+                      
+                      {/* Content 1: Roadmap - Widget này thường cần full màn hình */}
+                      {!isLegacyMode && (
+                          <TabsContent value="roadmap" className="m-0 h-full data-[state=inactive]:hidden">
+                               <ProjectTaskList 
+                                  projectId={projectId} 
+                                  driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
+                                  projectName={project.name}
+                               />
+                          </TabsContent>
+                      )}
+
+                      {/* Content 2: Kết quả LCNT - Cho phép dãn chiều cao tự động */}
+                      {shouldShowResultTab && targetHsmtId && (
+                          <TabsContent value="result" className="m-0 min-h-full h-auto p-6 data-[state=inactive]:hidden animate-in fade-in zoom-in-95 duration-300 pb-24">
+                               <BiddingResultTab hsmtId={targetHsmtId} />
+                          </TabsContent>
+                      )}
+                  </div>
+             </Tabs>
+
          </div>
       </div>
 

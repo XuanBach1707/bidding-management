@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { taskApi, CreateTaskDto, TaskPriority, TaskType } from "@/entities/task";
+import { taskApi, CreateTaskDto, TaskPriority, TaskType, TaskStatus } from "@/entities/task";
 import { useToast } from "@/shared/lib/hooks/use-toast";
 
 interface UseCreateSubtaskProps {
   parentId: number;
   biddingProjectId: number;
-  parentUnitId: number; // ID phòng ban của Task cha (để thừa kế)
+  parentUnitId: number; 
   onSuccess?: () => void;
 }
 
@@ -22,10 +22,11 @@ export const useCreateSubtask = ({
     taskName: string;
     taskType: TaskType;
     assigneeId?: number | null;
-    deadline?: string; // YYYY-MM-DD
+    deadline?: string; 
     description?: string;
     priority?: TaskPriority;
-    attachmentUrl?: string; // Input từ form thường là string đơn
+    attachmentUrl?: string;
+    status?: TaskStatus; // [MỚI] Chấp nhận status truyền vào
   }) => {
     if (!values.taskName.trim()) {
       toast({ title: "Lỗi", description: "Tên công việc không được để trống", variant: "destructive" });
@@ -34,30 +35,19 @@ export const useCreateSubtask = ({
 
     setIsSubmitting(true);
     try {
-      // Construct Payload đúng chuẩn API
       const payload: CreateTaskDto = {
         biddingProjectId,
         parentTaskId: parentId,
         taskName: values.taskName,
         taskType: values.taskType,
-        
-        // Deadline: Convert sang ISO nếu có
         deadline: values.deadline ? new Date(values.deadline).toISOString() : undefined,
-        
         description: values.description,
         priority: values.priority || "MEDIUM",
-        
-        // Subtask tag là null/undefined
         tag: undefined, 
-
-        // --- SỬA Ở ĐÂY: Thêm trường attachmentUrl ---
-        // Convert từ string (nếu có) sang mảng string [] để khớp với DTO
         attachmentUrl: values.attachmentUrl ? [values.attachmentUrl] : [],
-        // ------------------------------------------
         
-        // Logic gán người
         assignments: [{
-          assignedUnitId: parentUnitId, // Thừa kế unit từ cha
+          assignedUnitId: parentUnitId,
           assignedUserId: values.assigneeId || null,
           assignmentType: "MAIN",
           requiredRole: "SPECIALIST",
@@ -65,10 +55,10 @@ export const useCreateSubtask = ({
           isAccepted: false
         }],
         
-        // Các trường mặc định khác
-        status: "OPEN",
+        // [SỬA] Không khóa cứng OPEN nữa, lấy từ values hoặc mặc định OPEN
+        status: values.status || "OPEN",
         sourceType: "USER",
-        assigneeId: values.assigneeId, // Có thể cần gửi cả ở root level tùy BE logic
+        assigneeId: values.assigneeId, 
       };
 
       await taskApi.create(payload);

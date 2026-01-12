@@ -6,7 +6,6 @@ import { z } from "zod";
 export interface CreateBiddingProjectDto {
   name: string;
   status?: string;
-  // Interceptor sẽ tự đổi cái này thành 'source_package_id' khi gửi request
   sourcePackageId: number; 
 }
 
@@ -14,7 +13,16 @@ export interface CreateBiddingProjectDto {
 // 2. ENTITIES (Dữ liệu nhận về - Đã qua Interceptor camelCase)
 // =============================================================================
 
-// Khớp với JSON: { "hsmt_id": 9, "trang_thai": "BIDDING", ... }
+// [MỚI] Interface thống kê (Stats) trả về từ API List
+export interface BiddingProjectStats {
+  deadline: string | null;      // ISO Date
+  progress: number;             // 0.0 - 100.0
+  totalTasks: number;
+  completedTasks: number;
+  participantCount: number;
+  // priority: string; // Bỏ qua như yêu cầu
+}
+
 export interface BiddingPackage {
   hsmtId: number;        
   maTbmt: string;
@@ -22,18 +30,25 @@ export interface BiddingPackage {
   trangThai: string;      
   ngayDangTai: string;
   
-  // Các trường bổ sung
+  // [CẬP NHẬT] Các trường thông tin bổ sung
+  thoiDiemDongThau?: string; // Thời điểm đóng thầu
+  chuDauTu?: string;         // Chủ đầu tư
+  diaDiem?: string;          // Địa điểm
+  linhVuc?: string;          // Lĩnh vực (Xây lắp, Hàng hóa...)
+  
   maKhlcnt?: string;      
   benMoiThau?: string;    
-  linhVuc?: string;
 }
 
 export interface BiddingProject {
   id: number;
   name: string;
-  status: string;        // "New", "COMPLETED", ...
+  status: string;        
   hostId: number;
+  
   bidTeamLeaderId: number;
+  // [CẬP NHẬT] Tên Leader
+  bidTeamLeaderName?: string;
   
   driveFolderId?: string; 
   
@@ -41,9 +56,14 @@ export interface BiddingProject {
   updatedAt: string;
   
   packages?: BiddingPackage[]; 
+  
+  // [CẬP NHẬT] Object stats đi kèm
+  stats?: BiddingProjectStats;
 }
 
-// [MỚI] Schema & Type cho Nhân sự (Để phục vụ màn hình danh sách nhân viên)
+// =============================================================================
+// 3. SCHEMA & TYPE CHO NHÂN SỰ
+// =============================================================================
 export const ProjectPersonnelSchema = z.object({
   userId: z.number(),           
   fullName: z.string(),         

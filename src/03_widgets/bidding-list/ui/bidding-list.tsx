@@ -12,8 +12,16 @@ import {
   BiddingCardSkeleton 
 } from "@/entities/bidding";
 
-// Config giữ nguyên tham chiếu bộ nhớ
-const INITIAL_PARAMS = { page: 1, size: 9 };
+/**
+ * FIX LỖI 1: Đưa status mặc định vào INITIAL_PARAMS.
+ * Việc này đảm bảo ngay khi hook useBiddingList khởi tạo, 
+ * nó sẽ gọi API với đúng filter "Chờ xử lý", không còn tình trạng load "Tất cả".
+ */
+const INITIAL_PARAMS = { 
+  page: 1, 
+  size: 9, 
+  status: "NEW,INTERESTED" 
+};
 
 export const BiddingList = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,14 +37,16 @@ export const BiddingList = () => {
     handleChangeFilter 
   } = useBiddingList(INITIAL_PARAMS);
 
+  /**
+   * FIX LỖI 2: Chỉ giữ lại handleSearch trong effect này.
+   * Xóa dòng handleChangeFilter("status", ...) cũ để khi người dùng gõ search,
+   * kết quả vẫn nằm đúng ở tab hiện tại (không bị ép về tab pending).
+   */
   useEffect(() => {
     handleSearch(debouncedSearch);
-    // Mặc định load tab pending khi mount
-    handleChangeFilter("status", "NEW,INTERESTED");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
-  // Logic Tabs: Chỉ còn 2 trường hợp
   const handleTabChange = (value: string) => {
     let statusParam = "";
     if (value === "pending") {
@@ -44,7 +54,6 @@ export const BiddingList = () => {
     } else if (value === "approved") {
       statusParam = "BIDDING";
     }
-    // Không còn case "else" (Tất cả) nữa
     handleChangeFilter("status", statusParam); 
   };
 
@@ -71,7 +80,7 @@ export const BiddingList = () => {
           />
         </div>
 
-        {/* Tabs: Đã bỏ tab "Tất cả" */}
+        {/* Tabs: Khớp defaultValue với INITIAL_PARAMS */}
         <Tabs defaultValue="pending" onValueChange={handleTabChange} className="w-full md:w-auto">
           <TabsList className="bg-slate-100 h-10 p-1 grid grid-cols-2 w-full md:w-auto">
             <TabsTrigger 
