@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+// [CẬP NHẬT] Đường dẫn Server mới (Cloudflare Tunnel)
+const BACKEND_URL = "https://converted-drop-forward-railroad.trycloudflare.com";
+
 const FORCE_SLASH_PATHS = [
   '/bidding-packages',
   '/packages_req',
@@ -34,14 +37,14 @@ const nextConfig: NextConfig = {
       // -> Ép phải có dấu / ở cuối destination
       forceSlashRules.push({
         source: `/api-proxy${path}`, 
-        destination: `http://26.112.109.171:8000${path}/`, 
+        destination: `${BACKEND_URL}${path}/`, 
       });
 
       // RULE 2: Xử lý trường hợp có path con (VD: /users/123)
-      // -> Dùng :slug* bình thường, có dấu / ngăn cách rõ ràng để Next.js không lỗi
+      // -> Dùng :slug* bình thường, có dấu / ngăn cách rõ ràng
       forceSlashRules.push({
         source: `/api-proxy${path}/:slug*`,
-        destination: `http://26.112.109.171:8000${path}/:slug*`,
+        destination: `${BACKEND_URL}${path}/:slug*`,
       });
     });
 
@@ -49,16 +52,16 @@ const nextConfig: NextConfig = {
       // 1. Nhúng danh sách rules đã sinh ra ở trên
       ...forceSlashRules,
 
-      // 2. Auth (Giữ nguyên)
+      // 2. Auth
       {
         source: '/api-proxy/auth/:path*',
-        destination: 'http://26.112.109.171:8000/auth/:path*',
+        destination: `${BACKEND_URL}/auth/:path*`,
       },
       
       // 3. Catch-all cho các API khác (Tasks, Drive...)
       {
         source: '/api-proxy/:path*',
-        destination: 'http://26.112.109.171:8000/:path*',
+        destination: `${BACKEND_URL}/:path*`,
       },
     ];
   },
