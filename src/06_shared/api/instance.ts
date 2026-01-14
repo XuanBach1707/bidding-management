@@ -4,7 +4,7 @@ import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestCo
 import camelcaseKeys from 'camelcase-keys';
 import snakecaseKeys from 'snakecase-keys';
 import { authStorage } from '@/shared/lib/auth';
-import { FORCE_SLASH_PATHS } from './config'; 
+// Đã xóa import FORCE_SLASH_PATHS vì logic này đã chuyển sang Proxy
 
 // [CẤU HÌNH CỨNG]
 const BASE_URL = "/api-proxy";
@@ -48,16 +48,10 @@ http.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const customConfig = config as CustomAxiosConfig;
 
-    // --- [LOGIC: TỰ ĐỘNG THÊM SLASH] ---
-    if (config.url && !config.url.startsWith('http')) {
-        const [path, query] = config.url.split('?');
-        const needsSlash = FORCE_SLASH_PATHS.some(keyword => path.includes(keyword));
-
-        if (needsSlash && !path.endsWith('/')) {
-            const newPath = `${path}/`;
-            config.url = query ? `${newPath}?${query}` : newPath;
-        }
-    }
+    // -------------------------------------------------------------
+    // 🗑️ ĐÃ XÓA LOGIC SLASH TẠI ĐÂY
+    // Việc xử lý URL/Slash giờ do Middleware (proxy.ts) đảm nhận.
+    // -------------------------------------------------------------
 
     // Xử lý Header Skip Transform
     const skipHeader = config.headers?.[SKIP_TRANSFORM_HEADER];
@@ -68,8 +62,8 @@ http.interceptors.request.use(
 
     // Xử lý FormData & URLSearchParams (Bỏ qua transform)
     if (config.data instanceof FormData || config.data instanceof URLSearchParams) {
-        if (config.data instanceof FormData) delete config.headers['Content-Type'];
-        return customConfig;
+      if (config.data instanceof FormData) delete config.headers['Content-Type'];
+      return customConfig;
     }
 
     // --- [LOGIC CHÍNH: SNAKE CASE VỚI CƠ CHẾ CỨU CÁNH] ---
@@ -79,9 +73,9 @@ http.interceptors.request.use(
         const snakedData = snakecaseKeys(config.data as any, { deep: true });
 
         if (config.headers?.['Content-Type'] === 'application/x-www-form-urlencoded') {
-            config.data = new URLSearchParams(snakedData).toString();
+          config.data = new URLSearchParams(snakedData).toString();
         } else {
-            config.data = snakedData;
+          config.data = snakedData;
         }
       } catch (err) {
         /**

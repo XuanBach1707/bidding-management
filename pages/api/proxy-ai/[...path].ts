@@ -12,7 +12,7 @@ const proxy = httpProxy.createProxyServer();
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   return new Promise<void>((resolve, reject) => {
-    const target = 'https://valley-cheers-analyses-nodes.trycloudflare.com'; // Đường dẫn Server mới (Cloudflare Tunnel)
+    const target = 'http://10.10.0.158:43210'; // Đường dẫn Server mới (Cloudflare Tunnel)
 
 
     // [FIX QUAN TRỌNG]
