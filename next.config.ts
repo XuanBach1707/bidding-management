@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // [CẬP NHẬT] Đường dẫn Server mới (Cloudflare Tunnel)
-const BACKEND_URL = "http://10.11.1.2:43210";
+const BACKEND_URL = "https://valley-cheers-analyses-nodes.trycloudflare.com";
 
 const FORCE_SLASH_PATHS = [
   '/bidding-packages',
@@ -29,19 +29,17 @@ const nextConfig: NextConfig = {
   },
 
   async rewrites() {
-    // Mảng chứa tất cả các rules được sinh ra
+    // Mảng chứa tất cả các rules được sinh ra cho slash
     const forceSlashRules: any[] = [];
 
     FORCE_SLASH_PATHS.forEach((path) => {
-      // RULE 1: Xử lý trường hợp gọi đúng tên module (VD: /users)
-      // -> Ép phải có dấu / ở cuối destination
+      // RULE 1: Xử lý trường hợp gọi đúng tên module
       forceSlashRules.push({
         source: `/api-proxy${path}`, 
         destination: `${BACKEND_URL}${path}/`, 
       });
 
-      // RULE 2: Xử lý trường hợp có path con (VD: /users/123)
-      // -> Dùng :slug* bình thường, có dấu / ngăn cách rõ ràng
+      // RULE 2: Xử lý trường hợp có path con
       forceSlashRules.push({
         source: `/api-proxy${path}/:slug*`,
         destination: `${BACKEND_URL}${path}/:slug*`,
@@ -49,7 +47,18 @@ const nextConfig: NextConfig = {
     });
 
     return [
-      // 1. Nhúng danh sách rules đã sinh ra ở trên
+      // -----------------------------------------------------------
+      // 🔥 [RULE MỚI - QUAN TRỌNG] 🔥
+      // Điều hướng riêng module AI sang Custom Proxy API (để đợi 5 phút)
+      // Client gọi: /api-proxy/ai-bidding/... 
+      // -> Next.js lái sang: /api/proxy-ai/ai-bidding/... (File pages/api/proxy-ai/[...path].ts)
+      // -----------------------------------------------------------
+      {
+        source: '/api-proxy/ai-bidding/:path*',
+        destination: '/api/proxy-ai/ai-bidding/:path*',
+      },
+
+      // 1. Nhúng danh sách rules slash đã sinh ra ở trên
       ...forceSlashRules,
 
       // 2. Auth
