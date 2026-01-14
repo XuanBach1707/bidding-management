@@ -1,8 +1,16 @@
+/**
+ * ⚠️ TECHNICAL DEBT:
+ * Backend API không thống nhất trailing slash.
+ * Middleware này tồn tại để normalize request.
+ * Phải xóa khi Backend thống nhất contract.
+ */
+
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // --- CẤU HÌNH ---
-const BACKEND_URL = process.env.BACKEND_URL || "http://10.10.0.158:43210";
+const BACKEND_URL = process.env.BACKEND_URL || "http://10.11.0.232:43210/";
 
 // Danh sách các module bắt buộc có slash khi gọi endpoint gốc (List)
 const FORCE_SLASH_PATHS = [
