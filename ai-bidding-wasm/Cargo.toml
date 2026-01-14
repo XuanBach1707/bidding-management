@@ -1,0 +1,12 @@
+[package]
+name = "ai-bidding-wasm"
+version = "0.1.0"
+edition = "2021"
+
+# Quan trọng: Khai báo kiểu thư viện là dynamic library cho C/Wasm
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Thư viện thần thánh giúp Rust nói chuyện với JS
+wasm-bindgen = "0.2"
