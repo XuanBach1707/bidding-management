@@ -1,0 +1,1 @@
+export { BiddingChatWindow } from './ui/bidding-chat-window';

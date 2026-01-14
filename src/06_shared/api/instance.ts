@@ -19,7 +19,7 @@ interface CustomAxiosConfig extends InternalAxiosRequestConfig {
 export const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 100000,
+  timeout: 300000,
   withCredentials: true,
 });
 

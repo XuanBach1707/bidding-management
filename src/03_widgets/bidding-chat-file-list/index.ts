@@ -1,0 +1,1 @@
+export { BiddingChatFileList } from './ui/bidding-chat-file-list';
