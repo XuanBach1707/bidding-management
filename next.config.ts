@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // [CẬP NHẬT] Đường dẫn Server mới (Cloudflare Tunnel)
-const BACKEND_URL = "https://converted-drop-forward-railroad.trycloudflare.com";
+const BACKEND_URL = "http://10.11.1.2:43210";
 
 const FORCE_SLASH_PATHS = [
   '/bidding-packages',

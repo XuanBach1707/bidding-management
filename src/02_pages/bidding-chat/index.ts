@@ -1,0 +1,1 @@
+export { BiddingChatPage } from './ui/bidding-chat-page';
