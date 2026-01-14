@@ -3,20 +3,20 @@ import {
   Search, 
   Briefcase, 
   Database, 
-  Settings, 
+  // Settings, 
   Users, 
   Bot,
-  Filter,
+  // Filter,
   History,
   CheckSquare,
   PlayCircle,
   ShieldCheck,
-  UserCog,
+  // UserCog,
   FolderClock, 
   ClipboardCheck,
-  // [MỚI] Thêm icon cho 3 menu mới
   PieChart, 
   FolderOpen,
+  Sparkles, // [MỚI] Icon cho Trợ lý AI
   type LucideIcon 
 } from "lucide-react";
 
@@ -24,22 +24,21 @@ export interface SidebarRoute {
   title: string;
   href?: string;
   icon?: LucideIcon;
-  roles?: string[]; // Mảng chứa các role được phép xem
+  roles?: string[]; 
   children?: SidebarRoute[];
 }
 
-// Định nghĩa Constant cho Role để tránh gõ sai (Typo)
 const ROLES = {
   ADMIN: "ADMIN",
-  MANAGER: "MANAGER",          // Giám đốc / Quản lý chung
-  BID_MANAGER: "BID_MANAGER",  // Trưởng phòng thầu
-  SPECIALIST: "SPECIALIST",    // Trưởng phòng chuyên môn (Cập nhật quyền quản lý)
-  ENGINEER: "ENGINEER",        // Nhân viên kỹ thuật
-  JKAN: "JKAN",                // Role mới (Ngang hàng Engineer)
+  MANAGER: "MANAGER",          
+  BID_MANAGER: "BID_MANAGER",  
+  SPECIALIST: "SPECIALIST",    
+  ENGINEER: "ENGINEER",        
+  JKAN: "JKAN",                
 };
 
 export const sidebarRoutes: SidebarRoute[] = [
-  // 1. TỔNG QUAN: Ai cũng được vào
+  // 1. TỔNG QUAN
   {
     title: "Tổng quan",
     href: "/dashboard",
@@ -54,8 +53,7 @@ export const sidebarRoutes: SidebarRoute[] = [
     ],
   },
 
-  // 2. CƠ HỘI ĐẤU THẦU: Chỉ dành cho cấp Quản lý & Admin
-  // (Engineer và JKAN không cần thấy mục này để đỡ rối)
+  // 2. CƠ HỘI ĐẤU THẦU
   {
     title: "Cơ hội đấu thầu",
     icon: Search,
@@ -66,16 +64,11 @@ export const sidebarRoutes: SidebarRoute[] = [
         href: "/opportunities", 
         icon: Search 
       },
-      // { 
-      //   title: "Phân tích & Sàng lọc", 
-      //   href: "/opportunities/analysis", 
-      //   icon: Filter 
-      // },
       { 
         title: "Cấu hình Bot", 
         href: "/bot-config", 
         icon: Bot,
-        roles: [ROLES.ADMIN] // Chỉ Admin chỉnh Bot
+        roles: [ROLES.ADMIN] 
       },
     ],
   },
@@ -97,38 +90,32 @@ export const sidebarRoutes: SidebarRoute[] = [
         title: "Dự án đang chạy", 
         href: "/bidding-projects-list",
         icon: PlayCircle,
-        // Ai cũng xem được danh sách dự án
       },
-      // --- KHU VỰC THỰC THI (NHÂN VIÊN) ---
       { 
         title: "Nhiệm vụ của tôi", 
         href: "/my-tasks",
         icon: CheckSquare,
-        // Engineer, JKAN và cả Specialist (nếu trực tiếp làm) cần thấy
         roles: [
             ROLES.ENGINEER, 
             ROLES.JKAN
         ] 
       },
-      // --- KHU VỰC QUẢN LÝ / DUYỆT BÀI ---
       { 
         title: "Duyệt bài", 
         href: "/reviews",
         icon: ClipboardCheck,
-// Chỉ những người có thẩm quyền duyệt (Specialist, Bid Manager, Admin)
         roles: [ROLES.ADMIN, ROLES.BID_MANAGER, ROLES.SPECIALIST] 
       },
       { 
         title: "Nhiệm vụ dự án", 
         href: "/task-allocation",
         icon: History,
-        // Chỉ cấp quản lý mới được vào phân công
         roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.BID_MANAGER, ROLES.SPECIALIST] 
       },
     ],
   },
 
-  // 4. KHO TÀI NGUYÊN: Public cho toàn bộ nhân sự
+  // 4. KHO TÀI NGUYÊN
   {
     title: "Kho Tài nguyên",
     icon: Database,
@@ -159,25 +146,34 @@ export const sidebarRoutes: SidebarRoute[] = [
     ],
   },
 
-  // 5. QUẢN TRỊ NGƯỜI DÙNG: Admin và Giám đốc (Manager)
+  // 5. QUẢN TRỊ NGƯỜI DÙNG
   {
     title: "Quản trị người dùng",
     href: "/users",
-    icon: Users, // Dùng icon Users chuẩn hơn UserCog cho danh sách
+    icon: Users,
     roles: [ROLES.ADMIN, ROLES.MANAGER],
   },
 
-  // 6. CẤU HÌNH HỆ THỐNG: Chỉ Admin
+  // 6. CẤU HÌNH HỆ THỐNG
   {
     title: "Phân quyền (ABAC)", 
     icon: ShieldCheck,
     href: "/abac-config",
     roles: [ROLES.ADMIN],
   },
-  // {
-  //   title: "Hệ thống",
-  //   icon: Settings,
-  //   href: "/settings",
-  //   roles: [ROLES.ADMIN],
-  // },
+
+  // 7. TRỢ LÝ AI (MỚI)
+  {
+    title: "Trợ lý AI",
+    icon: Sparkles, // Dùng icon lấp lánh cho AI
+    href: "/bidding-assistant", // Đường dẫn khớp với Page đã tạo
+    roles: [
+      ROLES.ADMIN, 
+      ROLES.MANAGER, 
+      ROLES.BID_MANAGER, 
+      ROLES.SPECIALIST, 
+      ROLES.ENGINEER, 
+      ROLES.JKAN
+    ], // Full quyền
+  },
 ];

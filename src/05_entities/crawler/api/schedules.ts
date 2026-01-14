@@ -1,5 +1,5 @@
 import { http } from "@/shared/api";
-import { Schedule, ApiResponse } from "../model/schema";
+import { Schedule, ApiResponse } from "../";
 
 const ENDPOINT = "/crawler-config/schedules";
 

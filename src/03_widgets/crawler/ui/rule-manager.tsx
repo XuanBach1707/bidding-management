@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, useWatch } from "react-hook-form";
+// [FIX] Import thêm type Resolver để ép kiểu cho zodResolver
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2, Loader2, Search, AlertCircle, Tags, X, ChevronDown, Building2, MapPin, Home } from "lucide-react";
-import * as z from "zod";
 
 // --- UI IMPORTS ---
 import { Button } from "@/shared/ui/button";
@@ -26,51 +26,21 @@ import {
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { Badge } from "@/shared/ui/badge";
 
-import { ruleApi, type Rule } from "@/entities/crawler";
+// [QUAN TRỌNG] Import từ Entity chuẩn (cấu trúc đã tách file schema/types)
+// Hãy đảm bảo folder entity của bạn tên là 'crawler-config' hoặc sửa đường dẫn này cho khớp
+import { 
+  ruleApi, 
+  ruleSchema, 
+  type Rule, 
+  type ProvinceV2, 
+  type WardV2 
+} from "@/entities/crawler"; 
 
 // ==========================================
-// 1. ZOD SCHEMAS
+// 1. API & HOOKS
 // ==========================================
 
-export const ruleSchema = z.object({
-  id: z.number().optional(),
-  ruleName: z.string().min(1, "Tên luật không được để trống"),
-  businessField: z.string().min(1, "Lĩnh vực kinh doanh là bắt buộc"),
-  
-  keywordsInclude: z.array(z.string()).default([]),
-  keywordsExclude: z.array(z.string()).default([]),
-  
-  minBudget: z.coerce.number().min(0).default(0),
-  maxBudget: z.coerce.number().min(0).default(0),
-  
-  locations: z.array(z.string()).default([]), 
-  investor: z.array(z.string()).default([]),  
-  commune: z.array(z.string()).default([]),   
-  
-  priority: z.coerce.number().int().min(1).default(1),
-});
-
-export type CrawlerRuleFormValues = z.infer<typeof ruleSchema>;
-
-// ==========================================
-// 2. API & HOOKS
-// ==========================================
-
-interface ProvinceV2 {
-  code: number;
-  name: string;
-  wards: WardV2[];
-}
-
-interface WardV2 {
-  code: number;
-  name: string;
-  division_type: string;
-  codename: string;
-  province_code: number;
-}
-
-// Hook lấy danh sách Tỉnh (để chọn locations)
+// Hook lấy danh sách Tỉnh (API V2)
 const useProvincesList = () => {
   return useQuery({
     queryKey: ["provinces-list"],
@@ -83,11 +53,11 @@ const useProvincesList = () => {
   });
 };
 
-// Hook lấy chi tiết xã/phường từ danh sách tỉnh đã chọn (API V2 - Depth 2)
+// Hook lấy chi tiết xã/phường từ danh sách tỉnh đã chọn
 const useCommunesFromProvinces = (selectedProvinceNames: string[]) => {
   const { data: allProvinces } = useProvincesList();
 
-  // 1. Map tên tỉnh sang code
+  // Map tên tỉnh sang code
   const selectedCodes = useMemo(() => {
     if (!allProvinces || selectedProvinceNames.length === 0) return [];
     return allProvinces
@@ -95,28 +65,21 @@ const useCommunesFromProvinces = (selectedProvinceNames: string[]) => {
       .map((p) => p.code);
   }, [allProvinces, selectedProvinceNames]);
 
-  // 2. Fetch API cho tất cả các tỉnh được chọn
   return useQuery({
     queryKey: ["provinces-v2-wards", selectedCodes],
     queryFn: async () => {
       if (selectedCodes.length === 0) return [];
       
-      // Gọi song song API cho từng tỉnh
       const requests = selectedCodes.map(code => 
         fetch(`https://provinces.open-api.vn/api/v2/p/${code}?depth=2`).then(res => res.json())
       );
       
       const results = await Promise.all(requests) as ProvinceV2[];
       
-      // Gộp tất cả xã phường vào 1 mảng duy nhất
       const flatCommunes: { name: string; provinceName: string; filterText: string }[] = [];
-      
       results.forEach(province => {
         if (province.wards && Array.isArray(province.wards)) {
-          province.wards.forEach(ward => {
-             // name: Tên hiển thị & giá trị chọn (VD: Phường Ba Đình)
-             // provinceName: Tên tỉnh để hiển thị phụ chú (VD: Hà Nội)
-             // filterText: Dùng để search (gộp cả tên xã và tỉnh)
+          province.wards.forEach((ward: WardV2) => {
              flatCommunes.push({
                name: ward.name,
                provinceName: province.name,
@@ -125,7 +88,6 @@ const useCommunesFromProvinces = (selectedProvinceNames: string[]) => {
           });
         }
       });
-      
       return flatCommunes;
     },
     enabled: selectedCodes.length > 0,
@@ -134,7 +96,7 @@ const useCommunesFromProvinces = (selectedProvinceNames: string[]) => {
 };
 
 // ==========================================
-// 3. UI COMPONENTS
+// 2. UI COMPONENTS (Helpers)
 // ==========================================
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -167,13 +129,19 @@ const PriorityBadge = ({ value }: { value: number }) => {
 
 const ArrayInput = ({ value = [], onChange, placeholder }: { value?: string[]; onChange: (val: string[]) => void; placeholder?: string }) => {
   const [inputValue, setInputValue] = useState("");
-  useEffect(() => { if (Array.isArray(value)) setInputValue(value.join(", ")); }, [value]);
+  
+  // Sync state khi value props thay đổi
+  useEffect(() => { 
+      if (Array.isArray(value)) setInputValue(value.join(", ")); 
+  }, [value]);
+
   const handleBlur = () => {
     if (!inputValue.trim()) { onChange([]); return; }
     const arr = inputValue.split(",").map((s) => s.trim()).filter((s) => s !== "");
     onChange(arr);
     setInputValue(arr.join(", "));
   };
+
   return (
     <div className="space-y-2">
       <Textarea placeholder={placeholder} value={inputValue} onChange={(e) => setInputValue(e.target.value)} onBlur={handleBlur} className="min-h-[60px] resize-none focus-visible:ring-[#009d98]" />
@@ -223,7 +191,6 @@ const ProvinceMultiSelect = ({ value = [], onChange }: { value?: string[]; onCha
   );
 };
 
-// --- COMPONENT COMMUNE SELECT ĐÃ ĐƯỢC TỐI ƯU ---
 const CommuneMultiSelect = ({ value = [], onChange, provinceNames = [] }: { value?: string[]; onChange: (val: string[]) => void; provinceNames: string[] }) => {
   const { data: communes = [], isLoading } = useCommunesFromProvinces(provinceNames);
   const [search, setSearch] = useState("");
@@ -242,7 +209,6 @@ const CommuneMultiSelect = ({ value = [], onChange, provinceNames = [] }: { valu
   const handleSelect = (name: string) => { if (!value.includes(name)) onChange([...value, name]); setSearch(""); inputRef.current?.focus(); };
   const handleRemove = (name: string) => onChange(value.filter((i) => i !== name));
   
-  // Logic hiển thị: Chỉ hiển thị 100 kết quả đầu tiên để tránh lag nếu danh sách quá dài
   const [filtered, totalResults] = useMemo(() => {
     let result = communes.filter(c => !value.includes(c.name));
     if (search) {
@@ -273,7 +239,6 @@ const CommuneMultiSelect = ({ value = [], onChange, provinceNames = [] }: { valu
                 {filtered.map((c, idx) => (
                     <div key={idx} className="px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer rounded-sm border-b border-slate-50 last:border-0 flex justify-between items-center group" onClick={() => handleSelect(c.name)}>
                         <span>{c.name}</span>
-                        {/* Hiển thị tên Tỉnh nhỏ mờ bên cạnh để dễ phân biệt */}
                         <span className="text-[10px] text-slate-400 group-hover:text-slate-500">{c.provinceName}</span>
                     </div>
                 ))}
@@ -293,7 +258,7 @@ const CommuneMultiSelect = ({ value = [], onChange, provinceNames = [] }: { valu
 };
 
 // ==========================================
-// 4. MAIN COMPONENT
+// 3. MAIN COMPONENT
 // ==========================================
 
 export const CrawlerRuleManager = () => {
@@ -304,18 +269,27 @@ export const CrawlerRuleManager = () => {
 
   const { data: rules, isLoading } = useQuery({ queryKey: ["crawler-rules"], queryFn: ruleApi.getAll });
 
-  const form = useForm<CrawlerRuleFormValues>({
-    resolver: zodResolver(ruleSchema),
+  // [FIX] Truyền Type Rule vào useForm để TS hiểu chính xác cấu trúc Form
+  const form = useForm<Rule>({
+    // [FIX] Thêm 'as Resolver<Rule>' để ép kiểu, bỏ qua lỗi mismatch của Zod
+    resolver: zodResolver(ruleSchema) as Resolver<Rule>, 
     defaultValues: {
-      ruleName: "", businessField: "", 
-      keywordsInclude: [], keywordsExclude: [],
-      minBudget: 0, maxBudget: 0, 
-      locations: [], investor: [], commune: [],
+      ruleName: "", 
+      businessField: "", 
+      keywordsInclude: [], 
+      keywordsExclude: [],
+      minBudget: 0, 
+      maxBudget: 0, 
+      locations: [], 
+      investor: [], 
+      commune: [],
       priority: 3, 
     },
   });
 
   const selectedLocations = useWatch({ control: form.control, name: "locations" });
+  
+  // Logic kiểm tra độ ưu tiên trùng
   const usedPriorities = useMemo(() => {
     if (!rules || !Array.isArray(rules)) return [];
     return rules.filter((r) => r.id !== editingId).map((r) => r.priority);
@@ -347,9 +321,8 @@ export const CrawlerRuleManager = () => {
     },
   });
 
-  const onSubmit = (values: CrawlerRuleFormValues) => {
-    const payload = values as unknown as Rule; 
-    editingId ? updateMutation.mutate({ id: editingId, data: payload }) : createMutation.mutate(payload);
+  const onSubmit = (values: Rule) => {
+    editingId ? updateMutation.mutate({ id: editingId, data: values }) : createMutation.mutate(values);
   };
 
   const handleEdit = (item: Rule) => {
@@ -396,20 +369,59 @@ export const CrawlerRuleManager = () => {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
                 <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                    <FormField control={form.control} name="ruleName" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Tên luật <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} placeholder="VD: Gói thầu IT Miền Bắc" className="bg-white" value={field.value as string} /></FormControl><FormMessage /></FormItem>} />
-                    <FormField control={form.control} name="businessField" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Lĩnh vực <span className="text-red-500">*</span></FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Chọn lĩnh vực" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Xây lắp">Xây lắp</SelectItem><SelectItem value="Hàng hóa">Hàng hóa</SelectItem><SelectItem value="Hỗn hợp">Hỗn hợp</SelectItem><SelectItem value="Phi tư vấn">Phi tư vấn</SelectItem><SelectItem value="Tư vấn">Tư vấn</SelectItem></SelectContent></Select><FormMessage /></FormItem>} />
-                    <FormField control={form.control} name="priority" render={({ field }) => <FormItem className="col-span-2"><FormLabel className="text-slate-700 font-bold">Độ ưu tiên (Duy nhất)</FormLabel><Select value={field.value?.toString()} onValueChange={(val) => field.onChange(Number(val))}><FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Chọn độ ưu tiên" /></SelectTrigger></FormControl><SelectContent>{PRIORITY_OPTIONS.map((opt) => { const isDisabled = usedPriorities.includes(opt.value); return (<SelectItem key={opt.value} value={opt.value.toString()} disabled={isDisabled} className={isDisabled ? "opacity-50" : ""}><div className="flex items-center justify-between w-full min-w-[200px]"><div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${opt.color.split(' ')[0].replace('bg-', 'bg-')}`}></div>{opt.label}</div>{isDisabled && <span className="text-[10px] text-red-400 font-medium ml-2">(Đã dùng)</span>}</div></SelectItem>); })}</SelectContent></Select>{usedPriorities.includes(field.value) && editingId === null && (<FormMessage className="text-red-500">Độ ưu tiên này đã được sử dụng bởi luật khác.</FormMessage>)}</FormItem>} />
+                    <FormField<Rule> control={form.control} name="ruleName" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Tên luật <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} placeholder="VD: Gói thầu IT Miền Bắc" className="bg-white" value={field.value as string} /></FormControl><FormMessage /></FormItem>} />
+                    <FormField<Rule> control={form.control} name="businessField" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Lĩnh vực <span className="text-red-500">*</span></FormLabel><Select onValueChange={field.onChange} value={field.value as string}><FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Chọn lĩnh vực" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Xây lắp">Xây lắp</SelectItem><SelectItem value="Hàng hóa">Hàng hóa</SelectItem><SelectItem value="Hỗn hợp">Hỗn hợp</SelectItem><SelectItem value="Phi tư vấn">Phi tư vấn</SelectItem><SelectItem value="Tư vấn">Tư vấn</SelectItem></SelectContent></Select><FormMessage /></FormItem>} />
+                    <FormField<Rule> 
+                      control={form.control} 
+                      name="priority" 
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel className="text-slate-700 font-bold">Độ ưu tiên (Duy nhất)</FormLabel>
+                          <Select 
+                            value={field.value?.toString()} 
+                            onValueChange={(val) => field.onChange(Number(val))}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Chọn độ ưu tiên" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {PRIORITY_OPTIONS.map((opt) => { 
+                                const isDisabled = usedPriorities.includes(opt.value); 
+                                return (
+                                  <SelectItem key={opt.value} value={opt.value.toString()} disabled={isDisabled} className={isDisabled ? "opacity-50" : ""}>
+                                    <div className="flex items-center justify-between w-full min-w-[200px]">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-full ${opt.color.split(' ')[0].replace('bg-', 'bg-')}`}></div>
+                                        {opt.label}
+                                      </div>
+                                      {isDisabled && <span className="text-[10px] text-red-400 font-medium ml-2">(Đã dùng)</span>}
+                                    </div>
+                                  </SelectItem>
+                                ); 
+                              })}
+                            </SelectContent>
+                          </Select>
+                          
+                          {/* [FIX] Thêm 'as number' để báo cho TS biết đây chắc chắn là số */}
+                          {usedPriorities.includes(field.value as number) && editingId === null && (
+                            <FormMessage className="text-red-500">Độ ưu tiên này đã được sử dụng bởi luật khác.</FormMessage>
+                          )}
+                        </FormItem>
+                      )} 
+                    />
                 </div>
                 <div className="grid grid-cols-2 gap-5">
-                     <FormField control={form.control} name="keywordsInclude" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Tags size={14} /> Từ khóa bao gồm</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: laptop, server" /></FormControl><FormMessage /></FormItem>} />
-                     <FormField control={form.control} name="keywordsExclude" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><AlertCircle size={14} /> Từ khóa loại trừ</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: cũ, hỏng" /></FormControl><FormMessage /></FormItem>} />
-                     <FormField control={form.control} name="locations" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><MapPin size={14} /> Tỉnh / Thành phố</FormLabel><FormControl><ProvinceMultiSelect value={field.value as string[]} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>} />
-                     <FormField control={form.control} name="commune" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Home size={14} /> Phường / Xã (Theo tỉnh)</FormLabel><FormControl><CommuneMultiSelect value={field.value as string[]} onChange={field.onChange} provinceNames={selectedLocations || []} /></FormControl><FormMessage /></FormItem>} />
-                     <FormField control={form.control} name="investor" render={({ field }) => <FormItem className="col-span-2"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Building2 size={14} /> Chủ đầu tư</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: Ban quản lý dự án, EVN..." /></FormControl><FormMessage /></FormItem>} />
+                      <FormField<Rule> control={form.control} name="keywordsInclude" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Tags size={14} /> Từ khóa bao gồm</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: laptop, server" /></FormControl><FormMessage /></FormItem>} />
+                      <FormField<Rule> control={form.control} name="keywordsExclude" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><AlertCircle size={14} /> Từ khóa loại trừ</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: cũ, hỏng" /></FormControl><FormMessage /></FormItem>} />
+                      <FormField<Rule> control={form.control} name="locations" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><MapPin size={14} /> Tỉnh / Thành phố</FormLabel><FormControl><ProvinceMultiSelect value={field.value as string[]} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>} />
+                      <FormField<Rule> control={form.control} name="commune" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Home size={14} /> Phường / Xã (Theo tỉnh)</FormLabel><FormControl><CommuneMultiSelect value={field.value as string[]} onChange={field.onChange} provinceNames={selectedLocations || []} /></FormControl><FormMessage /></FormItem>} />
+                      <FormField<Rule> control={form.control} name="investor" render={({ field }) => <FormItem className="col-span-2"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Building2 size={14} /> Chủ đầu tư</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: Ban quản lý dự án, EVN..." /></FormControl><FormMessage /></FormItem>} />
                 </div>
                 <div className="p-4 rounded-lg border border-dashed border-slate-300 grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="minBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Ngân sách tối thiểu (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-xs font-medium">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
-                    <FormField control={form.control} name="maxBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Ngân sách tối đa (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-xs font-medium">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
+                    <FormField<Rule> control={form.control} name="minBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Ngân sách tối thiểu (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-xs font-medium">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
+                    <FormField<Rule> control={form.control} name="maxBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Ngân sách tối đa (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-xs font-medium">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
                 </div>
                 <DialogFooter>
                    <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Hủy bỏ</Button>
@@ -438,25 +450,32 @@ export const CrawlerRuleManager = () => {
                 <TableRow><TableCell colSpan={6} className="h-40 text-center text-slate-500">Chưa có luật nào được thiết lập. Hãy thêm luật mới để bắt đầu.</TableCell></TableRow>
             ) : (
                 rules.map((item, index) => (
-                  <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors border-slate-100">
+                  // [FIX] Sử dụng id làm key, fallback sang index. Dùng ?? để tránh lỗi undefined
+                  <TableRow key={item.id || index} className="hover:bg-slate-50/80 transition-colors border-slate-100">
                     <TableCell className="text-slate-500 text-xs font-mono">{index + 1}</TableCell>
                     <TableCell>
-                       <div className="font-bold text-slate-800 text-sm">{item.ruleName}</div>
-                       <div className="text-xs text-slate-500 mt-0.5">{item.businessField || "—"}</div>
+                        <div className="font-bold text-slate-800 text-sm">{item.ruleName}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{item.businessField || "—"}</div>
                     </TableCell>
                     <TableCell>
-                       <div className="text-xs space-y-1">
+                        <div className="text-xs space-y-1">
                           {item.locations?.length ? (<div className="flex items-center gap-1 text-slate-700"><MapPin size={10}/> {item.locations.slice(0, 2).join(", ")}{item.locations.length > 2 ? "..." : ""}</div>) : null}
                           {item.investor?.length ? (<div className="flex items-center gap-1 text-slate-600"><Building2 size={10}/> {item.investor.slice(0, 1).join(", ")}{item.investor.length > 1 ? "..." : ""}</div>) : null}
                           {!item.locations?.length && !item.investor?.length && <span className="text-slate-400">—</span>}
-                       </div>
+                        </div>
                     </TableCell>
-                    <TableCell><BudgetDisplay min={item.minBudget} max={item.maxBudget} /></TableCell>
-                    <TableCell><PriorityBadge value={item.priority} /></TableCell>
+                    <TableCell>
+                        {/* [FIX] Fallback giá trị 0 nếu undefined */}
+                        <BudgetDisplay min={item.minBudget ?? 0} max={item.maxBudget ?? 0} />
+                    </TableCell>
+                    <TableCell>
+                         {/* [FIX] Fallback giá trị 3 nếu undefined */}
+                        <PriorityBadge value={item.priority ?? 3} />
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="h-8 w-8 text-slate-500 hover:text-[#009d98] hover:bg-[#009d98]/10"><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(item.id!)} className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => item.id && deleteMutation.mutate(item.id)} className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>

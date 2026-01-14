@@ -1,5 +1,5 @@
 import { http } from "@/shared/api";
-import { Rule, ApiResponse } from "../model/schema";
+import { Rule, ApiResponse } from "../index";
 
 const ENDPOINT = "/crawler-config/rules";
 
