@@ -1,31 +1,9 @@
-/**
- * ⚠️ TECHNICAL DEBT:
- * Backend API không thống nhất trailing slash.
- * Middleware này tồn tại để normalize request.
- * Phải xóa khi Backend thống nhất contract.
- */
-
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // --- CẤU HÌNH ---
-const BACKEND_URL = process.env.BACKEND_URL || "http://10.11.0.232:43210/";
-
-// Danh sách các module bắt buộc có slash khi gọi endpoint gốc (List)
-const FORCE_SLASH_PATHS = [
-  '/bidding-packages',
-  '/packages_req',
-  '/crawler-config',
-  '/organization',
-  '/users',
-  '/system',
-  '/bidding-projects',
-  '/tasks',
-];
-
-// Danh sách con của ABAC bắt buộc có slash
-const ABAC_FORCE_LIST = ['policies', 'attributes'];
+// Loại bỏ dấu / ở cuối để tránh double slash
+const BACKEND_URL = (process.env.BACKEND_URL || "http://10.10.0.158:43210").replace(/\/$/, "");
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -35,53 +13,44 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. XỬ LÝ RIÊNG CHO MODULE AI (Giữ logic cũ của bạn)
-  // Request đến /api-proxy/ai-bidding/... sẽ được chuyển về route nội bộ Next.js
+  // 2. XỬ LÝ RIÊNG CHO MODULE AI
   if (pathname.startsWith('/api-proxy/ai-bidding')) {
-    // Rewrite về: /api/proxy-ai/... (Folder pages/api/proxy-ai trong ảnh của bạn)
     const internalUrl = new URL(pathname.replace('/api-proxy', '/api/proxy-ai'), request.url);
     return NextResponse.rewrite(internalUrl);
   }
 
-  // 3. XỬ LÝ PROXY SANG JAVA BACKEND
+  // 3. XỬ LÝ PROXY SANG BACKEND
   // Lấy path thực tế (bỏ tiền tố /api-proxy)
-  let targetPath = pathname.replace('/api-proxy', ''); // VD: /users
-  
-  // --- LOGIC QUYẾT ĐỊNH THÊM SLASH HAY KHÔNG ---
-  let shouldAddSlash = false;
+  let targetPath = pathname.replace('/api-proxy', '');
 
-  // Rule A: Các path thường (Check exact match)
-  // Chỉ thêm slash nếu path == '/users', không thêm nếu '/users/123'
-  if (FORCE_SLASH_PATHS.some(p => targetPath === p)) {
-     shouldAddSlash = true;
+  // --- [FIX QUAN TRỌNG TẠI ĐÂY] ---
+  // Kiểm tra nếu path kết thúc bằng dấu / và không phải là root (/) thì cắt đi
+  // Ví dụ: /tasks/user/me/  ---> /tasks/user/me
+  if (targetPath.length > 1 && targetPath.endsWith('/')) {
+      targetPath = targetPath.slice(0, -1);
   }
+  // -------------------------------
 
-  // Rule B: Logic ABAC
-  if (targetPath.startsWith('/abac')) {
-    // Tách path: /abac/policies -> ['', 'abac', 'policies']
-    const parts = targetPath.split('/').filter(Boolean);
-    
-    // Nếu path dạng /abac/{entity} và entity nằm trong list bắt buộc -> Thêm Slash
-    if (parts.length === 2 && ABAC_FORCE_LIST.includes(parts[1])) {
-      shouldAddSlash = true;
-    }
-  }
-
-  // Thực hiện thêm slash nếu cần
-  if (shouldAddSlash && !targetPath.endsWith('/')) {
-    targetPath += '/';
-  }
-
-  // 4. CHỐT URL ĐÍCH & REWRITE
+  // 4. CHỐT URL ĐÍCH
   const destinationUrl = `${BACKEND_URL}${targetPath}${search}`;
-  
-  // Debug (Bật lên nếu cần soi xem nó map đi đâu)
-  // console.log(`🚀 [Middleware] ${pathname} -> ${destinationUrl}`);
 
-  return NextResponse.rewrite(new URL(destinationUrl));
+  // =====================================================================
+  // 5. QUAN TRỌNG: BƠM HEADER ĐỂ BE BIẾT NÓ ĐANG NẰM SAU PROXY
+  // =====================================================================
+  const requestHeaders = new Headers(request.headers);
+  
+  requestHeaders.set('X-Forwarded-Host', request.headers.get('host') || '');
+  requestHeaders.set('X-Forwarded-Proto', request.nextUrl.protocol.replace(':', ''));
+  requestHeaders.set('X-Forwarded-Prefix', '/api-proxy');
+
+  // 6. THỰC HIỆN REWRITE KÈM HEADERS MỚI
+  return NextResponse.rewrite(new URL(destinationUrl), {
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
-// Config này giúp Middleware chỉ chạy trên các route api-proxy để tối ưu hiệu năng
 export const config = {
   matcher: '/api-proxy/:path*',
 };

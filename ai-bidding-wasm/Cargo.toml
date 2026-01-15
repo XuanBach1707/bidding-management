@@ -3,10 +3,37 @@ name = "ai-bidding-wasm"
 version = "0.1.0"
 edition = "2021"
 
-# Quan trọng: Khai báo kiểu thư viện là dynamic library cho C/Wasm
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-# Thư viện thần thánh giúp Rust nói chuyện với JS
+# 1. CORE
 wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+
+# 2. SERIALIZATION
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.4"
+
+# 3. HTML & REGEX
+kuchiki = "0.8"
+regex = "1.10"
+
+# 4. DOCX WRITING (Xuất file)
+docx-rs = "0.4"
+
+# --- [MỚI] 5. DOCX READING (Đọc file) ---
+# Để giải nén file .docx
+zip = { version = "0.6", default-features = false, features = ["deflate"] } 
+# Để đọc cấu trúc XML (document.xml) siêu nhanh
+quick-xml = "0.31"
+
+# 6. IMAGE
+image = { version = "0.24", default-features = false, features = ["jpeg", "png", "webp"] }
+
+# 7. BROWSER API
+web-sys = { version = "0.3", features = ["console"] }
+
+[profile.release]
+opt-level = "s" 
+lto = true
