@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 // --- CẤU HÌNH ---
 // Loại bỏ dấu / ở cuối để tránh double slash
-const BACKEND_URL = (process.env.BACKEND_URL || "http://10.10.0.158:43210").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL || "http://26.112.109.171:43210").replace(/\/$/, "");
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

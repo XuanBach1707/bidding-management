@@ -1,15 +1,12 @@
 use wasm_bindgen::prelude::*;
 use kuchiki::traits::TendrilSink;
-use regex::Regex;
 use serde::{Serialize, Deserialize};
-use image::ImageOutputFormat; 
-use std::io::{Cursor, Read, Seek, Write}; 
+use std::io::{Cursor, Read};
 
 // Import cho Export Docx
 use docx_rs::{
-    Docx, Paragraph as DocxPara, Run as DocxRun, Table as DocxTable, 
-    TableRow as DocxRow, TableCell as DocxCell, 
-    TableBorders, BorderType, WidthType
+    Docx, Paragraph as DocxPara, Run as DocxRun, Table as DocxTable,
+    TableRow as DocxRow, TableCell as DocxCell, WidthType
 };
 
 // Import cho Import Docx (Reading)
@@ -173,8 +170,7 @@ pub fn compress_image(image_data: &[u8]) -> Result<Vec<u8>, JsError> {
         img.resize(MAX_IMG_WIDTH, MAX_IMG_HEIGHT, image::imageops::FilterType::Lanczos3)
     } else { img };
     let mut bytes: Vec<u8> = Vec::new();
-    let mut cursor = Cursor::new(&mut bytes);
-    processed_img.write_to(&mut cursor, ImageOutputFormat::Png).map_err(|e| JsError::new(&format!("{}", e)))?;
+    processed_img.write_to(&mut Cursor::new(&mut bytes), image::ImageFormat::Png).map_err(|e| JsError::new(&format!("{}", e)))?;
     Ok(bytes)
 }
 

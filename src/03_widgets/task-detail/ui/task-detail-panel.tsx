@@ -103,9 +103,12 @@ export const TaskDetailPanel = ({
           />
         </TabsContent>
         
-        <TabsContent value="workspace" className="h-full overflow-y-auto p-6 m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200">
-          {/* [QUAN TRỌNG] Truyền isReviewMode xuống WorkspaceTab */}
-          {/* Để kích hoạt chế độ ReadOnly cho Editor và SelectionBrowser */}
+        <TabsContent 
+          value="workspace" 
+          // [SỬA LẠI] Xóa 'p-6' và 'overflow-y-auto' đi. 
+          // Chúng ta muốn Editor tự quản lý scroll bên trong nó.
+          className="h-full m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col"
+        >
           <WorkspaceTab 
             task={task} 
             isReviewMode={isReviewMode} 
