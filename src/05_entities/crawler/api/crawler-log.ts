@@ -3,7 +3,7 @@ import {
   CrawlerLogListItem, 
   CrawlerLogDetail, 
   GetCrawlerLogsParams 
-} from '../model/schema'; // Trỏ đúng về file chứa types bên trên
+} from '../'; // Trỏ đúng về file chứa types bên trên
 
 const ENDPOINT_LOGS = '/crawler-config/logs';
 
