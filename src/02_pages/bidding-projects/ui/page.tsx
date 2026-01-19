@@ -129,21 +129,17 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
   }, [tasks]);
 
   // --- [NEW] 4. LOGIC XÁC ĐỊNH TAB MẶC ĐỊNH & DỮ LIỆU KẾT QUẢ ---
-  
-  // Lấy HSMT ID từ gói thầu đầu tiên
   const targetHsmtId = useMemo(() => {
       if (!project?.packages?.length) return null;
       return project.packages[0].hsmtId; 
   }, [project]);
 
-  // Kiểm tra xem có nên hiển thị Tab Kết quả hay không
   const shouldShowResultTab = useMemo(() => {
       if (!project) return false;
       const isClosedState = project.status === 'CLOSED' || project.status === 'COMPLETED';
       return isClosedState && !!targetHsmtId;
   }, [project, targetHsmtId]);
 
-  // Kiểm tra xem đây có phải là "Dự án cũ chỉ để xem" (Legacy) hay không
   const isLegacyMode = useMemo(() => {
       return shouldShowResultTab && (!tasks || tasks.length === 0);
   }, [shouldShowResultTab, tasks]);
@@ -177,20 +173,22 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
   );
 
   return (
+    // Mobile: h-screen fix cứng (giống PC) để Tabs bên trong scroll độc lập
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 font-sans">
       
       {/* --- 1. HEADER SECTION --- */}
       <div className="bg-white border-b border-slate-200 shadow-sm z-20 flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-6 py-5">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-5">
           
           {/* Top Bar */}
-          <div className="flex justify-between items-start gap-6">
-            <div className="flex items-start gap-4 min-w-0">
-                <Button variant="ghost" size="icon" onClick={() => router.back()} className="mt-1 h-9 w-9 text-slate-400 hover:text-[#009d98] hover:bg-[#009d98]/10 rounded-full transition-colors border border-transparent hover:border-[#009d98]/20">
+          <div className="flex justify-between items-start gap-3 md:gap-6">
+            <div className="flex items-start gap-2 md:gap-4 min-w-0">
+                <Button variant="ghost" size="icon" onClick={() => router.back()} className="mt-1 h-9 w-9 text-slate-400 hover:text-[#009d98] hover:bg-[#009d98]/10 rounded-full transition-colors border border-transparent hover:border-[#009d98]/20 shrink-0">
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
+                
                 <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 mb-1">
                         <Badge className={cn(
                             "text-[10px] font-bold border-0 uppercase tracking-wider",
                             project.status === 'ACTIVE' ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-blue-500 text-white"
@@ -198,45 +196,49 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                             {project.status}
                         </Badge>
                     </div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-snug truncate" title={project.name}>
+                    {/* Tiêu đề: Responsive font size */}
+                    <h1 className="text-lg md:text-2xl font-extrabold tracking-tight text-slate-900 leading-snug truncate pr-2" title={project.name}>
                         {project.name}
                     </h1>
                     
-                    <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-slate-500 font-medium">
+                    <div className="flex flex-wrap items-center gap-4 mt-2 md:mt-3 text-xs text-slate-500 font-medium">
                         <div className="flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4 text-slate-400" /> 
+                            <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 text-slate-400" /> 
                             <span>Tạo ngày: <span className="text-slate-900">{new Date(project.createdAt).toLocaleDateString('vi-VN')}</span></span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0 mt-2">
+            <div className="flex items-center gap-2 md:gap-3 shrink-0 mt-1">
+                {/* Nút Chi tiết gói thầu (Dialog) */}
                 <Dialog>
                     <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:border-[#009d98] hover:text-[#009d98] gap-2 hidden md:flex">
-                            <Info className="w-4 h-4" /> Chi tiết gói thầu
+                          {/* Mobile: Icon only. PC: Text + Icon */}
+                          <Button variant="outline" size="sm" className="text-slate-600 border-slate-200 hover:border-[#009d98] hover:text-[#009d98] h-9 px-2 md:px-4 gap-2">
+                            <Info className="w-4 h-4" /> <span className="hidden md:inline">Chi tiết gói thầu</span>
                           </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
+                    {/* Nội dung Dialog giữ nguyên, tự responsive */}
+                    <DialogContent className="max-w-4xl w-[95%] rounded-xl max-h-[80vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle className="text-lg font-bold text-[#009d98]">Gói thầu liên kết</DialogTitle>
                         </DialogHeader>
-                        <div className="border rounded-md overflow-hidden">
+                        <div className="border rounded-md overflow-x-auto">
                             <Table>
                                 <TableHeader className="bg-slate-50">
                                     <TableRow>
-                                        <TableHead className="w-[120px] font-bold text-slate-700">Mã TBMT</TableHead>
-                                        <TableHead className="font-bold text-slate-700">Tên gói thầu</TableHead>
-                                        <TableHead className="text-right w-[120px] font-bold text-slate-700">Ngày đăng</TableHead>
+                                        <TableHead className="w-[120px] font-bold text-slate-700 whitespace-nowrap">Mã TBMT</TableHead>
+                                        <TableHead className="font-bold text-slate-700 min-w-[200px]">Tên gói thầu</TableHead>
+                                        <TableHead className="text-right w-[120px] font-bold text-slate-700 whitespace-nowrap">Ngày đăng</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {(project.packages || []).map((pkg) => (
                                         <TableRow key={pkg.maTbmt} className="hover:bg-slate-50">
-                                            <TableCell className="font-mono text-[#009d98] font-bold text-xs">{pkg.maTbmt}</TableCell>
-                                            <TableCell className="font-medium text-sm text-slate-700">{pkg.tenGoiThau}</TableCell>
-                                            <TableCell className="text-right text-xs text-slate-500">{new Date(pkg.ngayDangTai).toLocaleDateString('vi-VN')}</TableCell>
+                                            <TableCell className="font-mono text-[#009d98] font-bold text-xs whitespace-nowrap">{pkg.maTbmt}</TableCell>
+                                            <TableCell className="font-medium text-sm text-slate-700 min-w-[200px]">{pkg.tenGoiThau}</TableCell>
+                                            <TableCell className="text-right text-xs text-slate-500 whitespace-nowrap">{new Date(pkg.ngayDangTai).toLocaleDateString('vi-VN')}</TableCell>
                                         </TableRow>
                                     ))}
                                     {(project.packages || []).length === 0 && (
@@ -250,9 +252,9 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     </DialogContent>
                 </Dialog>
 
-                {/* Drive Button */}
+                {/* Drive Button (Ẩn text trên mobile) */}
                 <Button 
-                    className="gap-2 bg-[#009d98] hover:bg-[#008580] shadow-md font-bold h-9 px-5 transition-all active:scale-95"
+                    className="gap-2 bg-[#009d98] hover:bg-[#008580] shadow-md font-bold h-9 px-3 md:px-5 transition-all active:scale-95"
                     onClick={() => {
                         const folderId = project.driveFolderId || (project as any).drive_folder_id;
                         if (folderId) {
@@ -264,9 +266,10 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                     }}
                 >
                     <ExternalLink className="w-4 h-4" /> 
-                    <span className="hidden sm:inline">Mở Drive</span>
+                    <span className="hidden md:inline">Mở Drive</span>
                 </Button>
 
+                {/* Dropdown Menu (Xóa) */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200 text-slate-500 hover:text-slate-800"><MoreVertical className="w-4 h-4" /></Button>
@@ -278,16 +281,16 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                                     <Trash2 className="w-4 h-4 mr-2" /> Xóa dự án
                                 </DropdownMenuItem>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="w-[95%] rounded-xl">
                                 <AlertDialogHeader>
                                     <AlertDialogTitle className="text-red-600">Cảnh báo xóa dữ liệu</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         Bạn có chắc chắn muốn xóa dự án <strong>{project.name}</strong> không? <br/>
-                                        Hành động này không thể hoàn tác và sẽ xóa toàn bộ tiến độ công việc liên quan.
+                                        Hành động này không thể hoàn tác.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel className="border-slate-200">Hủy bỏ</AlertDialogCancel>
+                                <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                                    <AlertDialogCancel className="border-slate-200 mt-0">Hủy bỏ</AlertDialogCancel>
                                     <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 font-bold">Xóa vĩnh viễn</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
@@ -298,7 +301,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-6 md:mt-8">
               {/* 1. DEADLINE CARD */}
               <div className={cn(
                   "col-span-2 md:col-span-1 rounded-xl p-4 border shadow-sm transition-all relative overflow-hidden flex flex-col justify-center h-[90px]",
@@ -338,7 +341,7 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* 3. Placeholder Stats */}
+              {/* 3. Placeholder Stats (Ẩn trên mobile để tiết kiệm chỗ) */}
               <div className="hidden md:flex col-span-2 bg-slate-50/50 rounded-xl border border-slate-200 border-dashed p-4 items-center justify-center text-xs font-medium text-slate-400 gap-2 h-[90px]">
                   <Layers className="w-5 h-5 opacity-50" />
                   <span>Khu vực dành cho thống kê mở rộng (Nhân sự / Ngân sách / Rủi ro)</span>
@@ -348,55 +351,58 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* --- 2. MAIN CONTENT WITH TABS (SCROLLABLE FIX) --- */}
+      {/* --- 2. MAIN CONTENT WITH TABS --- */}
       <div className="flex-1 overflow-hidden relative bg-slate-50 flex flex-col">
          <div className="h-full max-w-7xl mx-auto w-full border-x border-slate-200 bg-white shadow-sm flex flex-col">
              
              {/* TABS CONTROLLER */}
              <Tabs defaultValue={isLegacyMode ? "result" : "roadmap"} className="flex-1 flex flex-col overflow-hidden">
-                  
-                  {/* Sticky Tab Header */}
-                  <div className="border-b px-6 pt-4 bg-white sticky top-0 z-10 shrink-0">
-                      <TabsList className="bg-slate-100 p-1 w-full sm:w-auto h-10">
-                          
-                          {/* Tab 1: Roadmap */}
-                          {!isLegacyMode && (
-                              <TabsTrigger value="roadmap" className="gap-2 px-4 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all">
-                                  <Layers className="w-3.5 h-3.5" /> TIẾN ĐỘ & HỒ SƠ
-                              </TabsTrigger>
-                          )}
+                 
+                 {/* Sticky Tab Header */}
+                 <div className="border-b px-4 md:px-6 pt-3 md:pt-4 bg-white sticky top-0 z-10 shrink-0">
+                     <TabsList className="bg-slate-100 p-1 w-full sm:w-auto h-10 grid grid-cols-2 sm:flex">
+                         
+                         {/* Tab 1: Roadmap */}
+                         {!isLegacyMode && (
+                             <TabsTrigger value="roadmap" className="gap-2 px-2 md:px-4 h-8 text-[10px] md:text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all whitespace-nowrap">
+                                 <Layers className="w-3.5 h-3.5" /> TIẾN ĐỘ & HỒ SƠ
+                             </TabsTrigger>
+                         )}
 
-                          {/* Tab 2: Kết quả LCNT */}
-                          {shouldShowResultTab && (
-                              <TabsTrigger value="result" className="gap-2 px-4 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-[#009d98] data-[state=active]:shadow-sm transition-all">
-                                  <Trophy className="w-3.5 h-3.5" /> KẾT QUẢ LCNT
-                              </TabsTrigger>
-                          )}
-                      </TabsList>
-                  </div>
+                         {/* Tab 2: Kết quả LCNT */}
+                         {shouldShowResultTab && (
+                             <TabsTrigger value="result" className="gap-2 px-2 md:px-4 h-8 text-[10px] md:text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-[#009d98] data-[state=active]:shadow-sm transition-all whitespace-nowrap">
+                                 <Trophy className="w-3.5 h-3.5" /> KẾT QUẢ LCNT
+                             </TabsTrigger>
+                         )}
+                     </TabsList>
+                 </div>
 
-                  {/* Tab Contents (Scrollable Area) */}
-                  <div className="flex-1 overflow-y-auto bg-slate-50/30 relative">
-                      
-                      {/* Content 1: Roadmap - Widget này thường cần full màn hình */}
-                      {!isLegacyMode && (
-                          <TabsContent value="roadmap" className="m-0 h-full data-[state=inactive]:hidden">
-                               <ProjectTaskList 
-                                  projectId={projectId} 
-                                  driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
-                                  projectName={project.name}
-                               />
-                          </TabsContent>
-                      )}
+                 {/* Tab Contents (Scrollable Area) */}
+                 <div className="flex-1 overflow-y-auto bg-slate-50/30 relative">
+                     
+                     {/* Content 1: Roadmap */}
+                     {!isLegacyMode && (
+                         <TabsContent value="roadmap" className="m-0 h-full data-[state=inactive]:hidden">
+                              {/* NOTE: ProjectTaskList là component phức tạp nhất.
+                                 Cần đảm bảo bên trong nó responsive tốt (dùng Card thay Table trên mobile).
+                              */}
+                              <ProjectTaskList 
+                                 projectId={projectId} 
+                                 driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
+                                 projectName={project.name}
+                              />
+                         </TabsContent>
+                     )}
 
-                      {/* Content 2: Kết quả LCNT - Cho phép dãn chiều cao tự động */}
-                      {shouldShowResultTab && targetHsmtId && (
-                          <TabsContent value="result" className="m-0 min-h-full h-auto p-6 data-[state=inactive]:hidden animate-in fade-in zoom-in-95 duration-300 pb-24">
-                               <BiddingResultTab hsmtId={targetHsmtId} />
-                          </TabsContent>
-                      )}
-                  </div>
-             </Tabs>
+                     {/* Content 2: Kết quả LCNT */}
+                     {shouldShowResultTab && targetHsmtId && (
+                         <TabsContent value="result" className="m-0 min-h-full h-auto p-4 md:p-6 data-[state=inactive]:hidden animate-in fade-in zoom-in-95 duration-300 pb-24">
+                              <BiddingResultTab hsmtId={targetHsmtId} />
+                         </TabsContent>
+                     )}
+                 </div>
+            </Tabs>
 
          </div>
       </div>

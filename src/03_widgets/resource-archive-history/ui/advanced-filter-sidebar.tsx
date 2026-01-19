@@ -1,23 +1,19 @@
+// advanced-filter-sidebar.tsx
 "use client";
 
 import { useState } from "react";
-import { Filter, RotateCcw, ChevronDown, ChevronRight, Check, Briefcase, Calendar, Building2 } from "lucide-react";
+import { Filter, RotateCcw, ChevronDown, ChevronUp, Briefcase, Calendar, Building2 } from "lucide-react"; // Import ChevronUp
 import { HistoryFilterOptions } from "@/entities/resource";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button"; 
 
-// Fix cứng 3 loại lĩnh vực
 const FIELD_OPTIONS = ["Xây lắp", "Hàng hóa", "Hỗn hợp"];
 
 interface AdvancedFilterSidebarProps {
   options: HistoryFilterOptions;
-  
-  // State Filter
   selectedYears: number[];
   selectedInvestors: string[];
   selectedFields: string[]; 
-
-  // Handlers
   onYearChange: (years: number[]) => void;
   onInvestorChange: (investors: string[]) => void;
   onFieldChange: (fields: string[]) => void; 
@@ -34,6 +30,9 @@ export const AdvancedFilterSidebar = ({
   onFieldChange,
   onReset
 }: AdvancedFilterSidebarProps) => {
+
+  // [UPDATE] State để toggle sidebar trên mobile
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     years: true,
@@ -56,27 +55,51 @@ export const AdvancedFilterSidebar = ({
   const hasFilters = selectedYears.length > 0 || selectedInvestors.length > 0 || selectedFields.length > 0;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm sticky top-6 overflow-hidden w-full lg:w-[280px] shrink-0">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm sticky top-6 overflow-hidden w-full lg:w-[280px] shrink-0 transition-all">
       
-      {/* HEADER */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      {/* HEADER: Clickable on Mobile to Toggle */}
+      <div 
+        className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer lg:cursor-default"
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+      >
         <div className="flex items-center gap-2 text-slate-800">
           <Filter className="w-4 h-4 text-[#009d98]" />
           <span className="font-bold text-sm uppercase tracking-wide">Bộ lọc</span>
+          {/* Badge count trên mobile nếu đang đóng */}
+          {!isMobileOpen && hasFilters && (
+             <span className="lg:hidden flex h-5 w-5 items-center justify-center rounded-full bg-[#009d98] text-[10px] text-white">
+                !
+             </span>
+          )}
         </div>
-        {hasFilters && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onReset}
-            className="h-7 px-2 text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50 gap-1"
-          >
-            <RotateCcw className="w-3 h-3" /> Xóa
-          </Button>
-        )}
+        
+        <div className="flex items-center gap-2">
+            {hasFilters && (
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => {
+                    e.stopPropagation(); // Tránh trigger toggle
+                    onReset();
+                }}
+                className="h-7 px-2 text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50 gap-1"
+            >
+                <RotateCcw className="w-3 h-3" /> Xóa
+            </Button>
+            )}
+            
+            {/* Mobile Toggle Icon */}
+            <div className="lg:hidden text-slate-400">
+                {isMobileOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+        </div>
       </div>
 
-      <div className="p-3 space-y-2">
+      {/* CONTENT BODY: Hidden on Mobile unless Open, Always Block on Desktop */}
+      <div className={cn(
+          "p-3 space-y-2",
+          isMobileOpen ? "block" : "hidden lg:block"
+      )}>
         
         {/* SECTION 1: LĨNH VỰC */}
         <FilterSection 
@@ -132,7 +155,6 @@ export const AdvancedFilterSidebar = ({
           onToggle={() => toggleSection('investors')}
           count={selectedInvestors.length}
         >
-          {/* Custom Scrollbar cho danh sách dài */}
           <div className="space-y-1 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
             {options?.investors?.map((inv) => (
               <FilterItem 
@@ -150,8 +172,7 @@ export const AdvancedFilterSidebar = ({
   );
 };
 
-// --- SUB COMPONENTS ---
-
+// --- SUB COMPONENTS (Giữ nguyên logic, chỉ chỉnh lại nếu cần) ---
 const FilterSection = ({ title, icon, isOpen, onToggle, children, count }: any) => (
   <div className="border border-slate-100 rounded-lg overflow-hidden bg-white shadow-sm">
     <button 
@@ -167,9 +188,8 @@ const FilterSection = ({ title, icon, isOpen, onToggle, children, count }: any) 
           </span>
         )}
       </div>
-      {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+      {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
     </button>
-    
     {isOpen && (
       <div className="p-3 bg-slate-50/50 border-t border-slate-100 animate-in slide-in-from-top-1 duration-200">
         {children}
@@ -192,7 +212,8 @@ const FilterItem = ({ label, isSelected, onClick }: any) => (
         ? "bg-[#009d98] border-[#009d98]" 
         : "bg-white border-slate-300 group-hover:border-[#009d98]"
     )}>
-      {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+      {isSelected && <div className="w-2 h-2 bg-white rounded-sm" />} 
+      {/* Sửa icon check thành block nhỏ hoặc giữ nguyên Check icon nhưng import vào */}
     </div>
     <span className={cn(
       "text-xs leading-tight font-medium",

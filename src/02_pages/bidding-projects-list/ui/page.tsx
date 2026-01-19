@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { LayoutGrid, Layers, Archive, Loader2, RefreshCcw } from "lucide-react";
+import { LayoutGrid, Layers, Archive, RefreshCcw } from "lucide-react";
 
 // Import API & Types
 import { biddingProjectApi, BiddingProject } from "@/entities/bidding-project";
@@ -74,28 +74,32 @@ export const BiddingProjectsListPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/30">
-      <div className="container mx-auto max-w-6xl py-8 px-4 space-y-8 animate-in fade-in duration-500">
+      <div className="container mx-auto max-w-6xl py-4 md:py-8 px-4 space-y-6 md:space-y-8 animate-in fade-in duration-500">
         
         {/* HEADER SECTION */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="space-y-1">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-                    <div className="p-2 bg-[#009d98]/10 rounded-lg">
+            <div className="space-y-2 md:space-y-1 w-full">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-[#009d98]/10 rounded-lg shrink-0">
                         <LayoutGrid className="h-6 w-6 text-[#009d98]" />
                     </div>
-                    Quản lý Dự án
-                </h1>
-                <p className="text-sm text-slate-500 ml-[52px]">
+                    <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+                        Quản lý Dự án
+                    </h1>
+                </div>
+                {/* Mobile: ml-0. PC: ml-[52px] */}
+                <p className="text-sm text-slate-500 ml-0 md:ml-[52px] leading-relaxed">
                     Theo dõi tiến độ thực hiện hồ sơ thầu tập trung.
                 </p>
             </div>
             
+            {/* Mobile: w-full. PC: w-auto */}
             <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => fetchProjects(true)} 
                 disabled={loading || isRefreshing}
-                className="gap-2 bg-white text-slate-600 border-slate-200 hover:text-[#009d98] hover:border-[#009d98]"
+                className="w-full md:w-auto gap-2 bg-white text-slate-600 border-slate-200 hover:text-[#009d98] hover:border-[#009d98]"
             >
                 <RefreshCcw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 {isRefreshing ? "Đang tải..." : "Làm mới dữ liệu"}
@@ -103,12 +107,12 @@ export const BiddingProjectsListPage = () => {
         </div>
 
         {/* STATS OVERVIEW */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
            {/* Card 1: Active */}
-           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-5 relative overflow-hidden group hover:border-[#009d98]/50 transition-colors">
+           <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-5 relative overflow-hidden group hover:border-[#009d98]/50 transition-colors">
               <div className="absolute right-0 top-0 w-24 h-24 bg-gradient-to-bl from-[#009d98]/10 to-transparent -mr-6 -mt-6 rounded-full blur-xl group-hover:from-[#009d98]/20 transition-all"></div>
               
-              <div className="h-12 w-12 rounded-lg bg-[#009d98]/10 flex items-center justify-center text-[#009d98]">
+              <div className="h-12 w-12 rounded-lg bg-[#009d98]/10 flex items-center justify-center text-[#009d98] shrink-0">
                  <Layers className="h-6 w-6" />
               </div>
               <div className="z-10">
@@ -123,8 +127,8 @@ export const BiddingProjectsListPage = () => {
            </div>
 
            {/* Card 2: Closed */}
-           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-5 relative overflow-hidden hover:border-slate-300 transition-colors">
-              <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+           <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-5 relative overflow-hidden hover:border-slate-300 transition-colors">
+              <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
                  <Archive className="h-6 w-6" />
               </div>
               <div>
@@ -143,15 +147,16 @@ export const BiddingProjectsListPage = () => {
         <div className="space-y-6">
            <Tabs defaultValue="in-progress" className="w-full">
               
-              <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm pb-4 pt-2">
-                  <TabsList className="bg-white border border-slate-200 h-11 p-1 w-full sm:w-auto shadow-sm">
-                    <TabsTrigger value="in-progress" className="gap-2 px-6 h-9 font-semibold data-[state=active]:bg-[#009d98] data-[state=active]:text-white transition-all">
+              {/* Tab List: Mobile Scroll */}
+              <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm pb-4 pt-2 -mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
+                  <TabsList className="bg-white border border-slate-200 h-11 p-1 w-max md:w-auto shadow-sm">
+                    <TabsTrigger value="in-progress" className="gap-2 px-4 md:px-6 h-9 font-semibold data-[state=active]:bg-[#009d98] data-[state=active]:text-white transition-all whitespace-nowrap">
                         Đang thực hiện 
                         <Badge variant="secondary" className="px-1.5 py-0 h-5 text-[10px] bg-slate-100 text-slate-600 group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white ml-1">
                             {inProgressProjects.length}
                         </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="closed" className="gap-2 px-6 h-9 font-semibold data-[state=active]:bg-slate-700 data-[state=active]:text-white transition-all">
+                    <TabsTrigger value="closed" className="gap-2 px-4 md:px-6 h-9 font-semibold data-[state=active]:bg-slate-700 data-[state=active]:text-white transition-all whitespace-nowrap">
                         Lịch sử
                         <Badge variant="secondary" className="px-1.5 py-0 h-5 text-[10px] bg-slate-100 text-slate-600 group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white ml-1">
                             {closedProjects.length}

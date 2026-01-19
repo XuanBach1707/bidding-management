@@ -16,7 +16,6 @@ import { useToast } from "@/shared/lib/hooks/use-toast";
 import { CreateProjectModal } from "@/features/bidding-project/create-project";
 
 // --- NEW FEATURE: AI SUMMARY ---
-// Import từ feature index ta vừa tạo
 import { BiddingAiSummary } from "@/features/bid";
 
 // Entities & Types
@@ -39,13 +38,12 @@ export const OpportunityDetailPage = ({ id }: Props) => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // State quản lý việc đóng/mở Modal khởi tạo dự án
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
 
   const fetchData = async () => {
     try {
       const [detailRes, fileRes] = await Promise.all([
-        getBiddingPackageDetail(Number(id)), // Đảm bảo id là number nếu API yêu cầu
+        getBiddingPackageDetail(Number(id)), 
         getBiddingPackageFiles(Number(id))
       ]);
 
@@ -98,11 +96,13 @@ export const OpportunityDetailPage = ({ id }: Props) => {
   return (
     <div className="flex flex-col h-full bg-slate-50 min-h-screen">
       {/* --- HEADER --- */}
-      <div className="bg-white px-6 py-4 border-b sticky top-0 z-10 shadow-sm">
-        <div className="mb-2 flex items-center gap-2">
-          <Link href="/opportunities" className="flex items-center text-sm text-slate-500 hover:text-primary transition-colors">
+      {/* [UPDATE] px-4 mobile, px-6 desktop */}
+      <div className="bg-white px-4 md:px-6 py-4 border-b sticky top-0 z-10 shadow-sm">
+        <div className="mb-3 md:mb-2 flex flex-wrap items-center gap-2">
+          <Link href="/opportunities" className="flex items-center text-sm text-slate-500 hover:text-primary transition-colors shrink-0">
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Quay lại danh sách
+            <span className="hidden md:inline">Quay lại danh sách</span>
+            <span className="md:hidden">Quay lại</span>
           </Link>
           
           <Badge variant="outline" className="bg-slate-100 text-slate-600 font-normal">
@@ -119,11 +119,12 @@ export const OpportunityDetailPage = ({ id }: Props) => {
         </div>
 
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <h1 className="text-xl font-bold text-slate-900 max-w-4xl leading-relaxed">
+          <h1 className="text-lg md:text-xl font-bold text-slate-900 max-w-4xl leading-snug">
             {data.tenGoiThau || "Đang cập nhật..."}
           </h1>
 
-          <div className="flex gap-2 shrink-0 items-center">
+          {/* [UPDATE] flex-wrap cho nút bấm trên mobile */}
+          <div className="flex flex-wrap gap-2 shrink-0 items-center">
             {isSubmitting && <Loader2 className="h-5 w-5 animate-spin text-slate-400 mr-2" />}
             
             {(data.trangThai !== "BIDDING" && data.trangThai !== "NO_GO") && (
@@ -133,7 +134,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
                     variant="outline" 
                     disabled={isSubmitting}
                     onClick={() => handleDecision("NO_GO")}
-                    className="border-red-200 text-red-600 hover:bg-red-50 gap-2"
+                    className="border-red-200 text-red-600 hover:bg-red-50 gap-2 flex-1 md:flex-none"
                   >
                     <XCircle className="h-4 w-4" /> NO GO
                   </Button>
@@ -144,7 +145,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
                     variant="outline" 
                     disabled={isSubmitting}
                     onClick={() => handleDecision("GO")}
-                    className="border-green-200 text-green-600 hover:bg-green-50 gap-2"
+                    className="border-green-200 text-green-600 hover:bg-green-50 gap-2 flex-1 md:flex-none"
                   >
                     <CheckCircle2 className="h-4 w-4" /> Duyệt (GO)
                   </Button>
@@ -156,7 +157,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
             {data.trangThai === "BIDDING" && data.allowedActions?.includes("CREATE_PROJECT") && (
               <Button 
                 disabled={isSubmitting} 
-                className="bg-primary hover:bg-primary/90 gap-2 shadow-sm"
+                className="bg-primary hover:bg-primary/90 gap-2 shadow-sm w-full md:w-auto"
                 onClick={() => setIsCreateProjectOpen(true)}
               >
                 <FolderOpen className="h-4 w-4" /> Khởi tạo Dự án
@@ -166,25 +167,26 @@ export const OpportunityDetailPage = ({ id }: Props) => {
         </div>
       </div>
 
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-4 md:p-6">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="bg-white border mb-4 w-full justify-start h-auto p-1 overflow-x-auto">
-            <TabsTrigger value="general" className="gap-2 data-[state=active]:bg-slate-100 py-2">
-              <FileText className="h-4 w-4" /> Thông tin chung
+          {/* [UPDATE] Scrollable Tabs */}
+          <TabsList className="bg-white border mb-4 w-full justify-start h-auto p-1 overflow-x-auto no-scrollbar">
+            <TabsTrigger value="general" className="gap-2 data-[state=active]:bg-slate-100 py-2 shrink-0">
+              <FileText className="h-4 w-4" /> Thông tin
             </TabsTrigger>
-            <TabsTrigger value="ai" className="gap-2 py-2">
+            <TabsTrigger value="ai" className="gap-2 py-2 shrink-0">
               <Bot className="h-4 w-4" /> Tóm tắt (AI)
             </TabsTrigger>
-            <TabsTrigger value="health" className="gap-2 py-2">
+            <TabsTrigger value="health" className="gap-2 py-2 shrink-0">
               <Activity className="h-4 w-4" /> Health Check
             </TabsTrigger>
-            <TabsTrigger value="files" className="gap-2 py-2">
+            <TabsTrigger value="files" className="gap-2 py-2 shrink-0">
               <FolderOpen className="h-4 w-4" /> Hồ sơ gốc <Badge variant="secondary" className="ml-1 h-5 px-1.5">{files.length}</Badge>
             </TabsTrigger>
           </TabsList>
 
           {/* TAB 1: THÔNG TIN CHUNG */}
-          <TabsContent value="general" className="space-y-6">
+          <TabsContent value="general" className="space-y-4 md:space-y-6">
             <SectionCard title="Thông tin cơ bản">
               <InfoRow label="Mã TBMT" value={data.maTbmt} />
               <InfoRow label="Ngày đăng tải" value={formatDate(data.ngayDangTai)} />
@@ -236,9 +238,8 @@ export const OpportunityDetailPage = ({ id }: Props) => {
             </SectionCard>
           </TabsContent>
 
-          {/* TAB 2: AI SUMMARY (CẬP NHẬT: SMART COMPONENT) */}
+          {/* TAB 2: AI SUMMARY */}
           <TabsContent value="ai" className="mt-4">
-             {/* Component tự lo việc gọi API getBidAnalysisResult */}
              <BiddingAiSummary hsmtId={data.hsmtId} />
           </TabsContent>
 
@@ -256,14 +257,14 @@ export const OpportunityDetailPage = ({ id }: Props) => {
                   <ul className="space-y-2">
                     {files.map((f) => (
                       <li key={f.fileId} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-md border border-slate-100 transition-all">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-blue-500" />
-                          <div>
-                            <p className="text-sm font-medium text-slate-900">{f.fileName}</p>
-                            <p className="text-xs text-slate-500 uppercase">{f.fileType} • {formatDate(f.uploadDate)}</p>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="h-5 w-5 text-blue-500 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate pr-2">{f.fileName}</p>
+                            <p className="text-xs text-slate-500 uppercase truncate">{f.fileType} • {formatDate(f.uploadDate)}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50" asChild>
+                        <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50 shrink-0" asChild>
                           <a href={f.filePath} target="_blank" rel="noreferrer">Tải về</a>
                         </Button>
                       </li>
@@ -288,7 +289,7 @@ export const OpportunityDetailPage = ({ id }: Props) => {
   );
 };
 
-// --- SUB COMPONENTS (Giữ nguyên không đổi) ---
+// --- SUB COMPONENTS ---
 
 const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="rounded-lg border bg-white overflow-hidden shadow-sm">
@@ -301,9 +302,10 @@ const SectionCard = ({ title, children }: { title: string; children: React.React
   </div>
 );
 
+// [UPDATE] InfoRow Mobile Optimized
 const InfoRow = ({ label, value, isLink, fullWidth }: any) => (
   <div className={`flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 ${fullWidth ? 'col-span-1 md:col-span-2' : ''}`}>
-    <span className="text-sm font-medium text-slate-500 min-w-[160px]">{label}</span>
+    <span className="text-sm font-medium text-slate-500 sm:min-w-[160px]">{label}</span>
     <span className={`text-sm ${isLink ? 'text-blue-600 cursor-pointer hover:underline' : 'text-slate-900'} sm:flex-1 break-words`}>
       {value ?? "--"} 
     </span>

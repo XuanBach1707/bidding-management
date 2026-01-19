@@ -12,9 +12,9 @@ interface ResourceKpiCardsProps {
 export const ResourceKpiCards = ({ stats, isLoading }: ResourceKpiCardsProps) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-xl" />
+          <Skeleton key={i} className="h-28 md:h-32 rounded-xl" />
         ))}
       </div>
     );
@@ -24,17 +24,16 @@ export const ResourceKpiCards = ({ stats, isLoading }: ResourceKpiCardsProps) =>
     {
       title: "Tổng tài liệu",
       value: stats?.totalFiles?.toLocaleString() || "0",
-      subtext: "+12% so với tháng trước",
+      subtext: "+12% tháng trước", // Rút gọn text cho mobile
       trend: "up",
       icon: FileText,
-      // Dùng màu Teal làm chủ đạo cho chỉ số chính
       iconColor: "text-[#009d98]", 
       bgIcon: "bg-[#009d98]/10",
     },
     {
-      title: "Dung lượng sử dụng",
+      title: "Dung lượng", // Rút gọn title
       value: stats?.totalSizeLabel || "45.2 GB", 
-      subtext: "85% tổng dung lượng",
+      subtext: "85% sử dụng",
       trend: "neutral",
       icon: HardDrive,
       iconColor: "text-orange-600",
@@ -43,7 +42,7 @@ export const ResourceKpiCards = ({ stats, isLoading }: ResourceKpiCardsProps) =>
     {
       title: "Hồ sơ dự án",
       value: "156", 
-      subtext: "32 dự án đang chạy",
+      subtext: "32 đang chạy",
       trend: "neutral",
       icon: Briefcase,
       iconColor: "text-purple-600",
@@ -61,28 +60,35 @@ export const ResourceKpiCards = ({ stats, isLoading }: ResourceKpiCardsProps) =>
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    // [UPDATE] grid-cols-2 trên mobile (thay vì 1) để tiết kiệm chiều dọc
+    // gap-3 (nhỏ hơn chút)
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {cards.map((card, index) => (
         <div 
             key={index} 
-            className="bg-white p-5 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+            // [UPDATE] p-4 trên mobile, p-5 trên desktop
+            className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
         >
-          <div className="flex justify-between items-start mb-4">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">{card.title}</span>
-            <div className={`p-2 rounded-lg ${card.bgIcon} ${card.iconColor}`}>
-              <card.icon className="w-5 h-5" />
+          <div className="flex justify-between items-start mb-3 md:mb-4">
+            <span className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-wider truncate mr-1">
+                {card.title}
+            </span>
+            <div className={`p-1.5 md:p-2 rounded-lg ${card.bgIcon} ${card.iconColor} shrink-0`}>
+              <card.icon className="w-4 h-4 md:w-5 md:h-5" />
             </div>
           </div>
           
-          <div className="text-2xl font-black text-slate-800 tabular-nums tracking-tight">
-            {card.value}
-          </div>
-          
-          <div className={`text-xs mt-2 flex items-center font-medium ${
-              card.trend === 'up' ? 'text-emerald-600' : 'text-slate-400'
-          }`}>
-             {card.trend === 'up' && <TrendingUp className="w-3 h-3 mr-1" />}
-             {card.subtext}
+          <div>
+              <div className="text-xl md:text-2xl font-black text-slate-800 tabular-nums tracking-tight truncate">
+                {card.value}
+              </div>
+              
+              <div className={`text-[10px] md:text-xs mt-1 md:mt-2 flex items-center font-medium truncate ${
+                  card.trend === 'up' ? 'text-emerald-600' : 'text-slate-400'
+              }`}>
+                  {card.trend === 'up' && <TrendingUp className="w-3 h-3 mr-1 shrink-0" />}
+                  <span className="truncate">{card.subtext}</span>
+              </div>
           </div>
         </div>
       ))}

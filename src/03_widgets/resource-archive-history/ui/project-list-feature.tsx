@@ -1,3 +1,4 @@
+// project-list-feature.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -6,7 +7,7 @@ import { BiddingHistoryItem, HistoryFilterOptions, resourceApi } from "@/entitie
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { Sheet, SheetContent, SheetTrigger } from "@/shared/ui/sheet"; // Dùng Sheet cho Mobile Filter
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/shared/ui/sheet"; 
 import { AdvancedFilterSidebar } from "./advanced-filter-sidebar";
 import { ArchiveTable } from "./archive-table";
 
@@ -72,7 +73,6 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
 
   const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
 
-  // Reset Handler
   const resetFilters = () => {
     setSelectedYears([]); setSelectedInvestors([]); setSelectedFields([]); setSearchTerm(""); setCurrentPage(1);
   };
@@ -86,39 +86,42 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
     <div className="animate-in fade-in duration-500 pb-10">
       
       {/* HEADER PAGE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#009d98]/10 rounded-xl">
-                <History className="w-6 h-6 text-[#009d98]" />
+            <div className="p-2.5 bg-[#009d98]/10 rounded-xl shrink-0">
+               <History className="w-6 h-6 text-[#009d98]" />
             </div>
             <div>
-                <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Lịch sử Dự án</h2>
-                <p className="text-sm text-slate-500 font-medium">Tra cứu hồ sơ thầu và kết quả thực hiện quá khứ.</p>
+               <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900">Lịch sử Dự án</h2>
+               <p className="text-xs md:text-sm text-slate-500 font-medium line-clamp-1">Tra cứu hồ sơ thầu và kết quả thực hiện.</p>
             </div>
          </div>
          
          {/* Mobile Filter Trigger */}
          <div className="xl:hidden">
             <Sheet>
-                <SheetTrigger asChild>
-                    <Button variant="outline" className="gap-2 border-slate-200">
-                        <Filter className="w-4 h-4" /> Bộ lọc
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0">
-                    <div className="h-full overflow-y-auto p-4">
-                        <AdvancedFilterSidebar 
-                            options={filterOptions}
-                            selectedYears={selectedYears}
-                            selectedInvestors={selectedInvestors}
-                            selectedFields={selectedFields}
-                            onYearChange={handleFilterChange(setSelectedYears)}
-                            onInvestorChange={handleFilterChange(setSelectedInvestors)}
-                            onFieldChange={handleFilterChange(setSelectedFields)}
-                            onReset={resetFilters}
-                        />
-                    </div>
-                </SheetContent>
+               <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full gap-2 border-slate-200 text-slate-700 bg-white shadow-sm">
+                     <Filter className="w-4 h-4" /> Bộ lọc nâng cao
+                  </Button>
+               </SheetTrigger>
+               <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col">
+                  <SheetHeader className="p-4 border-b border-slate-100">
+                      <SheetTitle>Bộ lọc tìm kiếm</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+                     <AdvancedFilterSidebar 
+                        options={filterOptions}
+                        selectedYears={selectedYears}
+                        selectedInvestors={selectedInvestors}
+                        selectedFields={selectedFields}
+                        onYearChange={handleFilterChange(setSelectedYears)}
+                        onInvestorChange={handleFilterChange(setSelectedInvestors)}
+                        onFieldChange={handleFilterChange(setSelectedFields)}
+                        onReset={resetFilters}
+                     />
+                  </div>
+               </SheetContent>
             </Sheet>
          </div>
       </div>
@@ -147,14 +150,15 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#009d98] transition-colors" />
             <Input 
               placeholder="Tìm kiếm theo Tên dự án hoặc Mã TBMT..." 
-              className="pl-10 h-11 bg-white border-slate-200 shadow-sm focus-visible:ring-[#009d98] text-sm rounded-xl"
+              // [UPDATE] text-base on mobile
+              className="pl-10 h-11 bg-white border-slate-200 shadow-sm focus-visible:ring-[#009d98] text-base md:text-sm rounded-xl"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
             {searchTerm && (
               <button 
                 onClick={() => { setSearchTerm(""); setCurrentPage(1); }} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
               >
                 <XCircle className="w-4 h-4" />
               </button>
@@ -162,9 +166,9 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
           </div>
 
           {/* Table Content */}
-          <div className="min-h-[400px]">
+          <div className="min-h-[300px]">
             {isLoading ? (
-                <div className="bg-white p-8 rounded-xl border border-slate-200 space-y-4 shadow-sm">
+                <div className="bg-white p-6 md:p-8 rounded-xl border border-slate-200 space-y-4 shadow-sm">
                     <div className="flex justify-between mb-6">
                         <Skeleton className="h-6 w-32" />
                         <Skeleton className="h-6 w-20 rounded-full" />
@@ -183,8 +187,8 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
           {/* Pagination */}
           {!isLoading && filteredProjects.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-200/50">
-              <div className="text-xs font-medium text-slate-500">
-                Hiển thị <strong>{(currentPage - 1) * itemsPerPage + 1}</strong> - <strong>{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</strong> trong tổng số <strong>{filteredProjects.length}</strong> dự án
+              <div className="text-xs font-medium text-slate-500 text-center sm:text-left">
+                Hiển thị <strong>{(currentPage - 1) * itemsPerPage + 1}</strong> - <strong>{Math.min(currentPage * itemsPerPage, filteredProjects.length)}</strong> / <strong>{filteredProjects.length}</strong> dự án
               </div>
               
               <div className="flex items-center gap-2">
@@ -193,14 +197,13 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
                     size="sm" 
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
                     disabled={currentPage === 1}
-                    className="h-8 w-8 p-0 rounded-lg border-slate-200 hover:border-[#009d98] hover:text-[#009d98]"
+                    className="h-9 w-9 p-0 rounded-lg border-slate-200 hover:border-[#009d98] hover:text-[#009d98]"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 
                 <div className="flex items-center gap-1">
-                    {/* Page Numbers (Simple Logic) */}
-                    <span className="text-sm font-bold text-slate-800 bg-white border border-slate-200 px-3 py-1 rounded-md shadow-sm min-w-[32px] text-center">
+                    <span className="text-sm font-bold text-slate-800 bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm min-w-[32px] text-center">
                         {currentPage}
                     </span>
                     <span className="text-sm text-slate-400 px-1">/</span>
@@ -214,7 +217,7 @@ export const ProjectListFeature = ({ onOpenProject }: ProjectListFeatureProps) =
                     size="sm" 
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
                     disabled={currentPage === totalPages}
-                    className="h-8 w-8 p-0 rounded-lg border-slate-200 hover:border-[#009d98] hover:text-[#009d98]"
+                    className="h-9 w-9 p-0 rounded-lg border-slate-200 hover:border-[#009d98] hover:text-[#009d98]"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

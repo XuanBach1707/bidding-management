@@ -1,5 +1,5 @@
 import { format } from "date-fns"; 
-import { Clock, CheckCircle2, FolderOpen, AlertCircle, FileText } from "lucide-react";
+import { Clock, CheckCircle2, FolderOpen, AlertCircle } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Task, TaskType } from "@/entities/task"; 
 
@@ -26,13 +26,15 @@ export const TaskItem = ({ task, isActive, onClick }: TaskItemProps) => {
     <div
       onClick={onClick}
       className={cn(
-        "cursor-pointer rounded-xl border p-3.5 transition-all duration-200 relative overflow-hidden group",
-        // Active State: Teal Border & Shadow
+        // [UPDATE] Thêm 'active:scale-[0.98]' để tạo hiệu ứng lún xuống khi bấm trên mobile
+        "cursor-pointer rounded-xl border p-3.5 transition-all duration-200 relative overflow-hidden group active:scale-[0.98]",
+        
+        // Active State
         isActive 
           ? "border-[#009d98] bg-[#009d98]/5 shadow-sm ring-1 ring-[#009d98]" 
           : "border-slate-200 bg-white hover:border-[#009d98]/50 hover:shadow-md",
         
-        // Completed/Rejected State: Dimmed
+        // Completed/Rejected State
         (isCompleted || isRejected) && !isActive && "bg-slate-50 opacity-70 hover:opacity-100 grayscale-[0.5]"
       )}
     >
@@ -45,7 +47,6 @@ export const TaskItem = ({ task, isActive, onClick }: TaskItemProps) => {
         {task.deadline && (
           <div className={cn("flex items-center text-[11px] font-medium", 
               (isCompleted || isRejected) ? "text-slate-400" : "text-slate-500",
-              // Highlight deadline nếu chưa xong
               (!isCompleted && !isRejected) && "text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded"
           )}>
             <Clock className="w-3 h-3 mr-1" />
@@ -72,7 +73,8 @@ export const TaskItem = ({ task, isActive, onClick }: TaskItemProps) => {
       {/* Footer: Project */}
       <div className="flex items-center text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2">
         <FolderOpen className="w-3 h-3 mr-1.5 flex-shrink-0 text-slate-400" />
-        <span className="truncate max-w-[180px]" title={task.projectName}>
+        {/* [UPDATE] max-w linh hoạt hơn một chút */}
+        <span className="truncate w-full" title={task.projectName}>
            {task.projectName || "Không có dự án"}
         </span>
       </div>
