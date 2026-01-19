@@ -1,9 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { 
-  FileCode, 
-  FileType, 
-  AlertCircle,
-  Sparkles 
+  FileCode, FileType, AlertCircle, ArrowLeft, Save, Loader2 
 } from "lucide-react";
 
 // Shared UI
@@ -11,15 +8,16 @@ import { Button } from "@/shared/ui/button";
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 
-// Entities
+// Entities & API
 import { Template, templateApi } from "@/entities/template";
+import { draftingApi, DraftMetadata, SaveDraftPayload } from "../api/drafting-api"; // Cần update file api này trước
 
-// Feature Components & Logic
+// Feature Components
 import { TemplateSelector } from "./template-selector";
 import { RichTextEditor } from "./rich-text-editor";
 import { RawHtmlEditor } from "./raw-html-editor"; 
 import { AiAssistant } from "./ai-assistant"; 
-import { draftingApi } from "../api/drafting-api";
+import { DraftingConfigPanel } from "./drafting-config-panel"; // Component mới
 
 // Libs
 import { parseHtmlToEditorData, mergeHtmlFromEditorData } from "../lib/html-processor";
@@ -35,14 +33,15 @@ type EditorMode = "RICH_TEXT" | "RAW_HTML";
 export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
   const { toast } = useToast();
 
-  // --- GLOBAL STATE ---
+  // --- STATE ---
   const [step, setStep] = useState<Step>("SELECT");
   const [editorMode, setEditorMode] = useState<EditorMode>("RICH_TEXT");
-  
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [fullHtmlContent, setFullHtmlContent] = useState("");
   
-  // Data State
+  // State mới cho Metadata
+  const [metadata, setMetadata] = useState<DraftMetadata>({});
+
+  // Data Loading State
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
@@ -56,7 +55,7 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
         const data = await templateApi.getList();
         setTemplates(data);
       } catch (error) {
-        toast({ variant: "destructive", title: "Lỗi", description: "Không tải được danh sách mẫu." });
+        toast({ variant: "destructive", title: "Lỗi", description: "Không tải được mẫu." });
       } finally {
         setIsLoadingTemplates(false);
       }
@@ -64,13 +63,12 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     fetchTemplates();
   }, [toast]);
 
-  // --- 2. LOGIC TÁCH DỮ LIỆU ---
+  // --- 2. HTML PARSER ---
   const parsedData = useMemo(() => {
     return parseHtmlToEditorData(fullHtmlContent);
   }, [fullHtmlContent]);
 
   // --- HANDLERS ---
-  
   const handleSelectTemplate = (content: string) => {
     setFullHtmlContent(content);
     setStep("EDITOR");
@@ -80,18 +78,25 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
   const handleLoadDraft = async () => {
     setIsLoadingDraft(true);
     try {
-      const content = await draftingApi.loadDraft(taskId);
-      if (!content) {
-         toast({ variant: "default", title: "Thông báo", description: "Chưa có bản nháp nào được lưu." });
-         return;
+      const res = await draftingApi.loadDraft(taskId);
+      // Giả sử API trả về { draftContent, metadata }
+      // Nếu API cũ chỉ trả string, code này cần chỉnh lại type casting
+      if (typeof res === 'object' && res.draftContent) {
+          setFullHtmlContent(res.draftContent);
+          if (res.metadata) setMetadata(res.metadata);
+      } else if (typeof res === 'string') {
+          setFullHtmlContent(res); // Fallback cho API cũ
+      } else {
+          toast({ description: "Chưa có bản nháp." });
+          return;
       }
-      setFullHtmlContent(content);
+      
       setStep("EDITOR");
       setEditorMode("RICH_TEXT");
-      toast({ title: "Thành công", description: "Đã tải lại bản nháp.", className: "bg-[#009d98] text-white border-none" });
+      toast({ title: "Đã tải bản nháp", className: "bg-[#009d98] text-white" });
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải bản nháp." });
+      toast({ variant: "destructive", title: "Lỗi", description: "Không tải được bản nháp." });
     } finally {
       setIsLoadingDraft(false);
     }
@@ -101,15 +106,19 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     setStep("SELECT");
   };
 
+  // Logic Save mới: Gửi cả Content + Metadata
   const executeSaveApi = async (contentToSave: string) => {
     setIsSaving(true);
     try {
-      await draftingApi.saveDraft(taskId, contentToSave);
+      const payload: SaveDraftPayload = {
+        content: contentToSave,
+        metadata: metadata
+      };
+      await draftingApi.saveDraft(taskId, payload);
       setFullHtmlContent(contentToSave);
-      toast({ title: "Đã lưu bản nháp", description: "Nội dung đã được đồng bộ lên hệ thống.", className: "bg-[#009d98] text-white border-none" });
+      toast({ title: "Đã lưu", description: "Nội dung và cấu hình đã được lưu." });
     } catch (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Lỗi lưu", description: "Không thể lưu bản nháp." });
+      toast({ variant: "destructive", title: "Lỗi", description: "Không thể lưu." });
     } finally {
       setIsSaving(false);
     }
@@ -121,25 +130,18 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
       executeSaveApi(mergedHtml);
   };
 
-  const handleRawHtmlSave = (newFullHtml: string) => {
-      executeSaveApi(newFullHtml);
-  };
+  const handleRawHtmlSave = (newFullHtml: string) => executeSaveApi(newFullHtml);
 
-  const toggleEditorMode = () => {
-    if (editorMode === "RICH_TEXT") {
-        setEditorMode("RAW_HTML");
-    } else {
-        setEditorMode("RICH_TEXT");
-    }
-  };
-
-  const handleAiApplyChanges = (newHtml: string) => {
-     setFullHtmlContent(newHtml);
-     toast({ title: "AI Assistant", description: "Dữ liệu đã được điền tự động!", className: "bg-purple-600 text-white border-none" });
+  // Logic nhận nội dung từ AI (Append vào nội dung hiện tại)
+  const handleAiGenerated = (aiHtml: string) => {
+     // Đơn giản là nối vào cuối, hoặc chèn vào vị trí con trỏ (phức tạp hơn)
+     // Ở đây ta tạm nối vào cuối body
+     const newBody = parsedData.bodyContent + "<br/>" + aiHtml;
+     const merged = mergeHtmlFromEditorData(parsedData.originalCss, newBody);
+     setFullHtmlContent(merged);
   };
 
   // --- RENDER ---
-  
   if (step === "SELECT") {
     return (
       <TemplateSelector 
@@ -152,82 +154,87 @@ export const DraftingFlow = ({ taskId, taskName }: DraftingFlowProps) => {
     );
   }
 
+  // --- GIAO DIỆN 3 CỘT MỚI ---
   return (
-    <div className="space-y-0 h-full flex flex-col relative bg-white">
+    <div className="h-[calc(100vh-60px)] w-full flex flex-col bg-slate-100 overflow-hidden">
         
-        {/* HEADER BAR (Nằm ngoài Editor để luôn hiển thị mode switcher) */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-6 py-3 border-b border-slate-200 bg-slate-50/50">
+        {/* TOP BAR NHỎ */}
+        <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 shrink-0 h-12">
             <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${editorMode === "RICH_TEXT" ? "bg-blue-100 text-blue-600" : "bg-slate-800 text-slate-300"}`}>
-                    {editorMode === "RICH_TEXT" ? <FileType className="w-5 h-5" /> : <FileCode className="w-5 h-5" />}
-                </div>
-                <div>
-                    <h3 className="font-bold text-slate-800 text-sm line-clamp-1 max-w-[300px]" title={taskName}>
-                        {taskName}
-                    </h3>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
-                        {editorMode === "RICH_TEXT" ? "Trình soạn thảo trực quan" : "Trình sửa mã nguồn HTML"}
-                    </p>
-                </div>
+               <Button variant="ghost" size="sm" onClick={handleBackToSelect} className="text-slate-500 hover:text-slate-800">
+                  <ArrowLeft className="w-4 h-4 mr-1" /> Mẫu
+               </Button>
+               <div className="h-4 w-px bg-slate-200" />
+               <span className="font-bold text-slate-700 text-sm truncate max-w-[300px]">{taskName}</span>
             </div>
 
-            <div className="flex items-center gap-3">
-                {/* Warning Text */}
-                <div className="hidden lg:flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
-                    <AlertCircle className="w-3 h-3" />
-                    <span>Lưu trước khi đổi chế độ</span>
-                </div>
-
-                <Button 
-                    size="sm" 
-                    onClick={() => setIsAiOpen(true)} 
-                    className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-sm border border-purple-500 font-bold h-9"
-                >
-                    <Sparkles className="w-4 h-4" /> AI Trợ lý
-                </Button>
-
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={toggleEditorMode}
-                    className="gap-2 text-slate-600 hover:text-[#009d98] border-slate-200 h-9 font-medium"
-                >
-                    {editorMode === "RICH_TEXT" ? (
-                        <><FileCode className="w-4 h-4" /> Switch to Code</>
-                    ) : (
-                        <><FileType className="w-4 h-4" /> Switch to Visual</>
-                    )}
-                </Button>
+            <div className="flex items-center gap-2">
+               {editorMode === "RICH_TEXT" && (
+                   <div className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Auto-save tắt
+                   </div>
+               )}
+               <Button 
+                 size="sm" 
+                 onClick={() => executeSaveApi(fullHtmlContent)} 
+                 disabled={isSaving}
+                 className="bg-[#009d98] hover:bg-[#008580] text-white h-8"
+               >
+                  {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />} Lưu
+               </Button>
+               <Button 
+                 variant="outline" size="sm" h-8
+                 onClick={() => setEditorMode(m => m === "RICH_TEXT" ? "RAW_HTML" : "RICH_TEXT")}
+                 className="text-xs"
+               >
+                  {editorMode === "RICH_TEXT" ? <FileCode className="w-3 h-3 mr-1"/> : <FileType className="w-3 h-3 mr-1"/>}
+                  {editorMode === "RICH_TEXT" ? "Code" : "Visual"}
+               </Button>
             </div>
         </div>
 
-        {/* EDITOR AREA (Chiếm toàn bộ phần còn lại) */}
-        <div className="flex-1 overflow-hidden relative">
-            {editorMode === "RICH_TEXT" ? (
-                <RichTextEditor 
+        {/* 3-COLUMN LAYOUT */}
+        <div className="flex-1 flex overflow-hidden">
+            
+            {/* 1. LEFT CONFIG */}
+            <DraftingConfigPanel 
+               defaultValues={metadata}
+               onMetadataChange={setMetadata}
+               onAiGenerated={handleAiGenerated}
+            />
+
+            {/* 2. CENTER EDITOR */}
+            <div className="flex-1 overflow-hidden relative flex flex-col min-w-0 bg-slate-100/50">
+               {editorMode === "RICH_TEXT" ? (
+                  <RichTextEditor 
                     initialContent={parsedData.bodyContent}
-                    css={parsedData.editorCss} 
-                    onBack={handleBackToSelect}
+                    css={parsedData.editorCss}
+                    onBack={() => {}} // Đã bỏ nút back trong editor vì có topbar
                     onSave={handleRichTextSave}
                     isSaving={isSaving}
-                />
-            ) : (
-                <RawHtmlEditor 
+                    isReadOnly={false}
+                  />
+               ) : (
+                  <RawHtmlEditor 
                     initialContent={fullHtmlContent}
-                    onBack={handleBackToSelect}
+                    onBack={() => {}} 
                     onSave={handleRawHtmlSave}
                     isSaving={isSaving}
-                />
-            )}
-        </div>
+                  />
+               )}
+            </div>
 
-        {/* AI ASSISTANT SIDEBAR */}
-        <AiAssistant 
-            isOpen={isAiOpen} 
-            onClose={() => setIsAiOpen(false)}
-            currentHtml={fullHtmlContent}
-            onApplyChanges={handleAiApplyChanges}
-        />
+            {/* 3. RIGHT AI */}
+            <div className="w-[350px] shrink-0 border-l border-slate-200 bg-white h-full hidden lg:block">
+               <AiAssistant 
+                 isOpen={true} 
+                 onClose={() => {}}
+                 currentHtml={fullHtmlContent}
+                 onApplyChanges={(html) => setFullHtmlContent(html)}
+                 mode="embedded"
+               />
+            </div>
+        </div>
     </div>
   );
 };

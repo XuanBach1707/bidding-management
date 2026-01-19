@@ -18,21 +18,17 @@ export const DeadlineAlertsWidget = () => {
     const fetchUrgentWork = async () => {
       try {
         setLoading(true);
-        // 1. Gọi API lấy task được giao
         const tasks = await taskApi.getAssignedTasks();
         
-        // 2. Lọc & Sắp xếp
         const sorted = tasks
           .filter((t) => {
-            // Chỉ lấy task chưa xong và có deadline
             if (t.status === "COMPLETED" || !t.deadline) return false;
             return true; 
           })
           .sort((a, b) => {
-             // Sort deadline gần nhất lên đầu
              return new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime();
           })
-          .slice(0, 5); // Lấy top 5 việc gấp nhất
+          .slice(0, 5);
 
         setUrgentTasks(sorted);
       } catch (error) {
@@ -44,12 +40,13 @@ export const DeadlineAlertsWidget = () => {
     fetchUrgentWork();
   }, []);
 
-  if (loading) return <Skeleton className="h-[500px] w-full rounded-xl" />;
+  if (loading) return <Skeleton className="h-[450px] md:h-[500px] w-full rounded-xl" />;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
-      {/* Header: Sắp đến hạn */}
-      <div className="p-4 border-b border-red-100 bg-red-50/50 flex justify-between items-center">
+    // Mobile: h-[450px] cho gọn. PC: h-[500px]
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[450px] md:h-[500px]">
+      {/* Header */}
+      <div className="p-4 border-b border-red-100 bg-red-50/50 flex justify-between items-center shrink-0">
         <h3 className="font-bold text-red-900 flex items-center gap-2 text-sm uppercase tracking-wide">
           <div className="p-1.5 bg-red-100 rounded-md">
              <Flame className="w-4 h-4 text-red-600 fill-red-600" />
@@ -76,30 +73,31 @@ export const DeadlineAlertsWidget = () => {
               return (
                 <div key={task.id} className="p-4 hover:bg-red-50/30 cursor-pointer group transition-colors">
                   
-                  {/* Dòng 1: Badge Mã Dự Án + Badge Thời gian */}
-                  <div className="flex justify-between items-start mb-2.5">
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-tight">
+                  {/* Dòng 1: Badges */}
+                  {/* Mobile Fix: flex-wrap để tránh badges đè nhau khi màn hình nhỏ */}
+                  <div className="flex flex-wrap justify-between items-start gap-2 mb-2.5">
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-tight whitespace-nowrap">
                       {projectCode}
                     </span>
                     <span className={cn(
                       "text-[10px] font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap border uppercase",
                       isOverdue 
-                        ? "bg-red-100 text-red-700 border-red-200 animate-pulse" // Quá hạn: Đỏ đậm
-                        : "bg-orange-50 text-orange-600 border-orange-100" // Sắp đến: Cam
+                        ? "bg-red-100 text-red-700 border-red-200 animate-pulse" 
+                        : "bg-orange-50 text-orange-600 border-orange-100"
                     )}>
                       {isOverdue ? "Quá hạn " : "Hạn: "} {timeLeft}
                     </span>
                   </div>
 
-                  {/* Dòng 2: Tên dự án (Main Title) */}
+                  {/* Dòng 2: Tên dự án */}
                   <h4 
-                    className="text-sm font-bold text-slate-800 line-clamp-2 group-hover:text-red-700 transition-colors mb-1.5"
+                    className="text-sm font-bold text-slate-800 line-clamp-2 group-hover:text-red-700 transition-colors mb-2"
                     title={projectName} 
                   >
                     {projectName}
                   </h4>
 
-                  {/* Dòng 3: Tên Task đang làm (Sub Title) */}
+                  {/* Dòng 3: Tên Task */}
                   <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 group-hover:border-red-100 group-hover:bg-white transition-all">
                     <Briefcase className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
                     <span className="truncate font-medium text-slate-600">{task.taskName}</span>
@@ -119,8 +117,9 @@ export const DeadlineAlertsWidget = () => {
         )}
       </ScrollArea>
       
-      {/* Footer fake link */}
-      <div className="p-3 bg-slate-50 border-t border-slate-200 text-center hover:bg-slate-100 transition-colors cursor-pointer">
+      {/* Footer */}
+      {/* Mobile: p-4 để vùng bấm rộng hơn */}
+      <div className="p-4 md:p-3 bg-slate-50 border-t border-slate-200 text-center hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
          <span className="text-xs font-bold text-[#009d98] hover:underline uppercase tracking-wide">Xem tất cả dự án</span>
       </div>
     </div>

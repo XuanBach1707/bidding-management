@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // --- GIỮ NGUYÊN LOGIC CŨ ---
   // 1. Cấu hình xử lý Slash (Quan trọng để phối hợp với Proxy)
   trailingSlash: false,
   skipTrailingSlashRedirect: true,
@@ -17,6 +18,18 @@ const nextConfig: NextConfig = {
   },
 
   // Lưu ý: Không cần rewrites() nữa vì file proxy.ts đã lo việc đó rồi
+
+  // --- PHẦN THÊM MỚI CHO RUST WASM ---
+  webpack: (config) => {
+    // Bật tính năng asyncWebAssembly để load file .wasm
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true, // Giúp tránh một số lỗi layer khi build
+    };
+
+    return config;
+  },
 };
 
 export default nextConfig;

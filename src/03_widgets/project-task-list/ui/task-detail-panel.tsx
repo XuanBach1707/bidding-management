@@ -1,3 +1,4 @@
+// task-detail-panel.tsx
 "use client";
 
 import React from 'react';
@@ -12,8 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { cn } from "@/shared/lib/utils";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-
-// IMPORTS ENTITIES
 import { taskApi, TASK_TAG_LABEL, TASK_TYPE_LABEL } from "@/entities/task";
 import { commentApi } from "@/entities/comment"; 
 
@@ -23,92 +22,82 @@ interface TaskDetailPanelProps {
   onClose: () => void;
 }
 
-// --- SUB COMPONENT: COMMENT LIST ---
 const TaskCommentsTab = ({ taskId }: { taskId: number }) => {
-    // Gọi API từ commentApi
-    const { data: comments = [], isLoading, isError } = useQuery({
-        queryKey: ["task-comments", taskId],
-        queryFn: () => commentApi.getComments(taskId),
-        staleTime: 0, 
-    });
+  const { data: comments = [], isLoading, isError } = useQuery({
+    queryKey: ["task-comments", taskId],
+    queryFn: () => commentApi.getComments(taskId),
+    staleTime: 0, 
+  });
 
-    if (isLoading) return <div className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#009d98]" /></div>;
-    
-    if (isError) return <div className="p-6 text-center text-red-500 text-xs">Không thể tải nội dung trao đổi.</div>;
+  if (isLoading) return <div className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#009d98]" /></div>;
+  if (isError) return <div className="p-6 text-center text-red-500 text-xs">Không thể tải nội dung.</div>;
 
-    if (comments.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[300px] text-slate-400">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                    <MessageSquare className="w-8 h-8 text-slate-300" />
-                </div>
-                <p className="text-sm font-medium text-slate-500">Chưa có nội dung trao đổi nào.</p>
-            </div>
-        );
-    }
-
+  if (comments.length === 0) {
     return (
-        <div className="space-y-6 p-1">
-            {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-4 items-start group animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {/* Avatar */}
-                    <Avatar className="w-9 h-9 mt-1 border border-slate-200 shadow-sm shrink-0">
-                        <AvatarFallback className="bg-[#009d98]/10 text-[#009d98] text-xs font-bold">
-                            {comment.author.fullName.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                    </Avatar>
-
-                    {/* Content Bubble */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-xs font-bold text-slate-800">
-                                {comment.author.fullName}
-                            </span>
-                            <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                {format(new Date(comment.createdAt), "HH:mm dd/MM", { locale: vi })}
-                            </span>
-                        </div>
-                        
-                        <div className="bg-slate-50 p-3 rounded-xl rounded-tl-none border border-slate-100 text-sm text-slate-700 leading-relaxed shadow-sm">
-                            {comment.content}
-                        </div>
-
-                        {/* Hiển thị replies nếu có */}
-                        {comment.replies && comment.replies.length > 0 && (
-                            <div className="mt-3 ml-2 pl-3 border-l-2 border-slate-100 space-y-3">
-                                {comment.replies.map(reply => (
-                                    <div key={reply.id} className="flex gap-3 items-start">
-                                        <Avatar className="w-6 h-6 mt-1 shrink-0">
-                                            <AvatarFallback className="bg-slate-100 text-slate-500 text-[9px] font-bold">
-                                                {reply.author.fullName.charAt(0)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="bg-white p-2.5 rounded-lg border border-slate-100 text-xs text-slate-600 shadow-sm w-full">
-                                            <span className="font-bold text-slate-800 mr-1 block mb-0.5">{reply.author.fullName}</span>
-                                            {reply.content}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ))}
-            
-            {/* Read-only Footer */}
-            <div className="pt-8 pb-4 text-center">
-                <span className="text-[10px] text-slate-400 italic bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-                    Chế độ xem: Không thể phản hồi tại đây.
-                </span>
-            </div>
+      <div className="flex flex-col items-center justify-center h-[300px] text-slate-400">
+        <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+           <MessageSquare className="w-6 h-6 md:w-8 md:h-8 text-slate-300" />
         </div>
+        <p className="text-sm font-medium text-slate-500">Chưa có nội dung trao đổi.</p>
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-4 md:space-y-6 p-1">
+      {comments.map((comment) => (
+        <div key={comment.id} className="flex gap-3 md:gap-4 items-start group animate-in fade-in slide-in-from-bottom-2 duration-300">
+           <Avatar className="w-8 h-8 md:w-9 md:h-9 mt-1 border border-slate-200 shadow-sm shrink-0">
+              <AvatarFallback className="bg-[#009d98]/10 text-[#009d98] text-xs font-bold">
+                 {comment.author.fullName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+           </Avatar>
+
+           <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                 <span className="text-xs font-bold text-slate-800 truncate max-w-[150px]">
+                    {comment.author.fullName}
+                 </span>
+                 <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium shrink-0">
+                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                    {format(new Date(comment.createdAt), "HH:mm dd/MM", { locale: vi })}
+                 </span>
+              </div>
+              
+              <div className="bg-slate-50 p-3 rounded-xl rounded-tl-none border border-slate-100 text-sm text-slate-700 leading-relaxed shadow-sm break-words">
+                 {comment.content}
+              </div>
+
+              {comment.replies && comment.replies.length > 0 && (
+                 <div className="mt-3 ml-2 pl-3 border-l-2 border-slate-100 space-y-3">
+                    {comment.replies.map(reply => (
+                       <div key={reply.id} className="flex gap-2 items-start">
+                          <Avatar className="w-5 h-5 mt-1 shrink-0">
+                             <AvatarFallback className="bg-slate-100 text-slate-500 text-[9px] font-bold">
+                                {reply.author.fullName.charAt(0)}
+                             </AvatarFallback>
+                          </Avatar>
+                          <div className="bg-white p-2 rounded-lg border border-slate-100 text-xs text-slate-600 shadow-sm w-full break-words">
+                             <span className="font-bold text-slate-800 mr-1 block mb-0.5">{reply.author.fullName}</span>
+                             {reply.content}
+                          </div>
+                       </div>
+                    ))}
+                 </div>
+              )}
+           </div>
+        </div>
+      ))}
+      <div className="pt-8 pb-4 text-center">
+         <span className="text-[10px] text-slate-400 italic bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+            Chế độ xem: Không thể phản hồi tại đây.
+         </span>
+      </div>
+    </div>
+  );
 };
 
-// --- MAIN PANEL ---
 export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProps) => {
-  
   const getStatusColor = (status: string) => {
       switch (status) {
         case "COMPLETED": return "bg-emerald-50 text-emerald-700 border-emerald-200";
@@ -128,11 +117,11 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
   });
 
   return (
+    // [UPDATE] Mobile: w-full, Desktop: w-[500px]. Z-index cao để đè lên list
     <div className={cn(
-        "absolute top-0 right-0 bottom-0 w-[500px] bg-white border-l border-slate-200 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col font-sans", 
+        "absolute top-0 right-0 bottom-0 w-full md:w-[500px] bg-white md:border-l border-slate-200 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col font-sans", 
         isOpen ? "translate-x-0" : "translate-x-full"
     )}>
-        {/* Loading */}
         {isLoading && (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
                 <Loader2 className="w-8 h-8 animate-spin text-[#009d98]" />
@@ -140,22 +129,20 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
             </div>
         )}
 
-        {/* Error */}
         {isError && (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-red-500">
                 <AlertCircle className="w-12 h-12 mb-3 opacity-20 text-red-600" />
-                <p className="text-sm font-medium">Không thể tải thông tin công việc.</p>
-                <button onClick={onClose} className="mt-4 text-xs font-bold underline hover:text-red-700">Đóng panel</button>
+                <p className="text-sm font-medium">Không thể tải thông tin.</p>
+                <button onClick={onClose} className="mt-4 text-xs font-bold underline hover:text-red-700">Đóng</button>
             </div>
         )}
 
-        {/* Content */}
         {!isLoading && task && (
             <>
-                {/* 1. HEADER (Fixed) */}
-                <div className="px-6 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
-                    <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
+                {/* 1. HEADER */}
+                <div className="px-4 md:px-6 py-4 md:py-5 border-b border-slate-100 bg-white sticky top-0 z-10 shrink-0">
+                    <div className="flex justify-between items-start mb-2 md:mb-3">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <Badge className={cn("px-2.5 py-0.5 text-[10px] font-bold uppercase border shadow-none", getStatusColor(task.status))}>
                                 {task.status}
                             </Badge>
@@ -169,7 +156,7 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                             <XIcon className="w-5 h-5" />
                         </button>
                     </div>
-                    <h2 className="text-xl font-extrabold text-slate-900 leading-tight mb-2">{task.taskName}</h2>
+                    <h2 className="text-lg md:text-xl font-extrabold text-slate-900 leading-tight mb-2 line-clamp-3">{task.taskName}</h2>
                     
                     {task.projectName && (
                         <div className="flex items-center gap-1.5 text-xs font-medium text-[#009d98] mt-1 bg-[#009d98]/5 py-1.5 px-2.5 rounded-md w-fit max-w-full border border-[#009d98]/10">
@@ -181,34 +168,33 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
 
                 {/* 2. TABS CONTENT */}
                 <Tabs defaultValue="info" className="flex-1 flex flex-col min-h-0">
-                    <div className="px-6 border-b border-slate-100 bg-white">
-                        <TabsList className="w-full justify-start h-12 bg-transparent p-0 gap-8">
+                    <div className="px-4 md:px-6 border-b border-slate-100 bg-white shrink-0">
+                        <TabsList className="w-full justify-start h-10 md:h-12 bg-transparent p-0 gap-6 md:gap-8 overflow-x-auto no-scrollbar">
                             <TabsTrigger 
                                 value="info" 
-                                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors"
+                                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors shrink-0"
                             >
                                 Thông tin chung
                             </TabsTrigger>
                             <TabsTrigger 
                                 value="comments" 
-                                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5"
+                                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 shrink-0"
                             >
                                 Trao đổi 
                             </TabsTrigger>
                         </TabsList>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6 custom-scrollbar">
                         
-                        {/* TAB: INFO */}
-                        <TabsContent value="info" className="mt-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <TabsContent value="info" className="mt-0 space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             
                             {/* Card: Người thực hiện */}
-                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm">
                                 <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4">Phân công thực hiện</h3>
-                                <div className="flex items-center gap-4">
-                                    <Avatar className="w-12 h-12 border border-slate-100 shadow-sm">
-                                        <AvatarFallback className="bg-[#009d98]/10 text-[#009d98] font-bold text-sm">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <Avatar className="w-10 h-10 md:w-12 md:h-12 border border-slate-100 shadow-sm shrink-0">
+                                        <AvatarFallback className="bg-[#009d98]/10 text-[#009d98] font-bold text-xs md:text-sm">
                                             {task.assignments?.[0]?.user?.fullName?.charAt(0) || "U"}
                                         </AvatarFallback>
                                     </Avatar>
@@ -217,7 +203,7 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                                             {task.assignments?.[0]?.user?.fullName || "Chưa giao nhân sự"}
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 font-medium">
-                                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                            <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                             <span className="truncate">{task.assignments?.[0]?.unit?.unitName || "Đơn vị chưa xác định"}</span>
                                         </div>
                                     </div>
@@ -225,28 +211,28 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                             </div>
 
                             {/* Info Grid */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="grid grid-cols-2 gap-3 md:gap-4">
+                                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
                                     <div className="flex items-center gap-2 mb-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-wide">
                                         <Calendar className="w-3.5 h-3.5 text-red-500" /> Hạn chót
                                     </div>
-                                    <p className="text-sm font-bold text-slate-800 pl-5">
+                                    <p className="text-sm font-bold text-slate-800 pl-0 md:pl-5">
                                         {task.deadline ? format(new Date(task.deadline), "dd/MM/yyyy") : "---"}
                                     </p>
                                 </div>
-                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
                                     <div className="flex items-center gap-2 mb-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-wide">
                                         <Clock className="w-3.5 h-3.5 text-[#009d98]" /> Ngày tạo
                                     </div>
-                                    <p className="text-sm font-bold text-slate-800 pl-5">
+                                    <p className="text-sm font-bold text-slate-800 pl-0 md:pl-5">
                                         {task.createdAt ? format(new Date(task.createdAt), "dd/MM/yyyy") : "---"}
                                     </p>
                                 </div>
-                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm col-span-2">
+                                <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm col-span-2">
                                     <div className="flex items-center gap-2 mb-3 text-slate-500 text-[10px] font-bold uppercase tracking-wide">
                                         <Tag className="w-3.5 h-3.5 text-indigo-500" /> Phân loại
                                     </div>
-                                    <div className="pl-5 flex gap-2 flex-wrap">
+                                    <div className="md:pl-5 flex gap-2 flex-wrap">
                                         <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-100 font-bold px-2.5 py-1">
                                             {task.tag && (TASK_TAG_LABEL as any)[task.tag] ? (TASK_TAG_LABEL as any)[task.tag] : "Khác"}
                                         </Badge>
@@ -258,11 +244,11 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                             </div>
 
                             {/* Description */}
-                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="bg-white p-4 md:p-5 rounded-xl border border-slate-200 shadow-sm">
                                 <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                     <Info className="w-3.5 h-3.5" /> Mô tả chi tiết
                                 </h3>
-                                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line min-h-[60px]">
+                                <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line min-h-[60px] break-words">
                                     {task.description || <span className="text-slate-400 italic text-xs">Không có mô tả.</span>}
                                 </div>
                             </div>
@@ -274,7 +260,6 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                             </div>
                         </TabsContent>
 
-                        {/* TAB: COMMENTS */}
                         <TabsContent value="comments" className="mt-0">
                             <TaskCommentsTab taskId={task.id} />
                         </TabsContent>

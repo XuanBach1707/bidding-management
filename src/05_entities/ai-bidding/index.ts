@@ -6,15 +6,18 @@ export type {
   AiSearchParams, 
   AiIngestParams, 
   AiMessage,
-  AiDocumentItem,          // [NEW]
-  AiDocumentListResponse   // [NEW]
+  AiDocumentItem,
+  AiDocumentListResponse,
+  AiCollectionResponse // [NEW]
 } from './model/types';
 
 // Export Schemas
 export { 
   aiSearchSchema, 
-  aiIngestSchema, 
+  aiIngestSchema,
+  LEGAL_LEVELS,        // [NEW] Export hằng số để UI dùng làm options cho Select/Dropdown
   aiMessageSchema,
-  aiDocumentItemSchema,         // [NEW]
-  aiDocumentListResponseSchema  // [NEW]
+  aiDocumentItemSchema,
+  aiDocumentListResponseSchema,
+  aiCollectionResponseSchema // [NEW]
 } from './model/schemas';

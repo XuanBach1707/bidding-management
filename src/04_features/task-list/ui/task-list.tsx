@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Task, taskApi } from "@/entities/task";
 import { TaskItem } from "./task-item";
-import { Loader2, Search, ListTodo } from "lucide-react"; // Icon mới
+import { Loader2, Search, ListTodo } from "lucide-react"; 
 import { Input } from "@/shared/ui/input";
+import { cn } from "@/shared/lib/utils";
 
 interface TaskListProps {
   onSelectTask: (task: Task) => void;
@@ -37,9 +38,11 @@ export const TaskList = ({ onSelectTask, selectedTaskId }: TaskListProps) => {
   });
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200">
+    // [UPDATE] Thêm 'md:border-r'. Trên mobile (khi chiếm full màn hình) sẽ không còn cái vạch kẻ bên phải vô duyên nữa.
+    <div className="flex flex-col h-full bg-white md:border-r border-slate-200">
+      
       {/* Header */}
-      <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-10 shadow-sm">
+      <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-10 shadow-sm shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
              <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
@@ -55,7 +58,8 @@ export const TaskList = ({ onSelectTask, selectedTaskId }: TaskListProps) => {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
           <Input 
             placeholder="Tìm kiếm công việc..." 
-            className="pl-9 h-9 text-sm bg-slate-50 focus:bg-white focus:ring-[#009d98] border-slate-200 transition-all"
+            // [UPDATE] Thêm text-base cho mobile để tránh IOS tự zoom khi focus vào input
+            className="pl-9 h-10 md:h-9 text-base md:text-sm bg-slate-50 focus:bg-white focus:ring-[#009d98] border-slate-200 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -63,7 +67,7 @@ export const TaskList = ({ onSelectTask, selectedTaskId }: TaskListProps) => {
       </div>
 
       {/* List Content */}
-      <div className="flex-1 overflow-y-auto p-2 bg-slate-50/30 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-2 md:p-3 bg-slate-50/30 custom-scrollbar">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-10 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin mb-2 text-[#009d98]" />
@@ -77,7 +81,8 @@ export const TaskList = ({ onSelectTask, selectedTaskId }: TaskListProps) => {
             <span className="text-sm font-medium">{searchTerm ? "Không tìm thấy kết quả." : "Danh sách trống."}</span>
           </div>
         ) : (
-          <div className="space-y-2 animate-in fade-in duration-300">
+          <div className="space-y-2 md:space-y-2.5 animate-in fade-in duration-300 pb-20 md:pb-0"> 
+            {/* pb-20 để trên mobile không bị che mất item cuối nếu có bottom nav hoặc browser bar */}
             {filteredTasks.map((task) => (
               <TaskItem 
                 key={task.id} 

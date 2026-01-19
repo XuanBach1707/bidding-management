@@ -5,7 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // [FIX] Import thêm type Resolver để ép kiểu cho zodResolver
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, Loader2, Search, AlertCircle, Tags, X, ChevronDown, Building2, MapPin, Home } from "lucide-react";
+import { 
+  Plus, Pencil, Trash2, Loader2, Search, AlertCircle, Tags, MoreHorizontal, 
+  X, ChevronDown, Building2, MapPin, Home 
+} from "lucide-react";
 
 // --- UI IMPORTS ---
 import { Button } from "@/shared/ui/button";
@@ -24,10 +27,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/shared/ui/select";
 import { useToast } from "@/shared/lib/hooks/use-toast";
-import { Badge } from "@/shared/ui/badge";
+import { Badge } from "@/shared/ui/badge"; 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 
-// [QUAN TRỌNG] Import từ Entity chuẩn (cấu trúc đã tách file schema/types)
-// Hãy đảm bảo folder entity của bạn tên là 'crawler-config' hoặc sửa đường dẫn này cho khớp
+// [QUAN TRỌNG] Import từ Entity chuẩn
 import { 
   ruleApi, 
   ruleSchema, 
@@ -117,20 +125,21 @@ const BudgetDisplay = ({ min, max }: { min: any, max: any }) => {
 const PRIORITY_OPTIONS = [
   { value: 1, label: "1 - Rất Cao", color: "bg-red-100 text-red-700 border-red-200" },
   { value: 2, label: "2 - Cao", color: "bg-orange-100 text-orange-700 border-orange-200" },
-  { value: 3, label: "3 - Trung bình", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: 3, label: "3 - Trung bình", color: "bg-blue-100 text-blue-700 border-blue-200" }, 
   { value: 4, label: "4 - Thấp", color: "bg-slate-100 text-slate-700 border-slate-200" },
   { value: 5, label: "5 - Rất Thấp", color: "bg-slate-50 text-slate-500 border-slate-200" },
 ];
 
 const PriorityBadge = ({ value }: { value: number }) => {
   const option = PRIORITY_OPTIONS.find(p => p.value === value) || PRIORITY_OPTIONS[2];
-  return <Badge className={`border px-2 py-0.5 font-semibold ${option.color}`}>{option.label.split(" - ")[1]}</Badge>;
+  // Hiển thị text ngắn gọn nhưng giữ style
+  const label = option.label.includes(" - ") ? option.label.split(" - ")[1] : option.label;
+  return <Badge className={`border px-2 py-0.5 font-semibold whitespace-nowrap ${option.color}`}>{label}</Badge>;
 };
 
 const ArrayInput = ({ value = [], onChange, placeholder }: { value?: string[]; onChange: (val: string[]) => void; placeholder?: string }) => {
   const [inputValue, setInputValue] = useState("");
   
-  // Sync state khi value props thay đổi
   useEffect(() => { 
       if (Array.isArray(value)) setInputValue(value.join(", ")); 
   }, [value]);
@@ -144,7 +153,13 @@ const ArrayInput = ({ value = [], onChange, placeholder }: { value?: string[]; o
 
   return (
     <div className="space-y-2">
-      <Textarea placeholder={placeholder} value={inputValue} onChange={(e) => setInputValue(e.target.value)} onBlur={handleBlur} className="min-h-[60px] resize-none focus-visible:ring-[#009d98]" />
+      <Textarea 
+        placeholder={placeholder} 
+        value={inputValue} 
+        onChange={(e) => setInputValue(e.target.value)} 
+        onBlur={handleBlur} 
+        className="min-h-[60px] resize-none focus-visible:ring-[#009d98]" 
+      />
       <div className="flex flex-wrap gap-1.5 min-h-[24px]">
         {value.map((item, idx) => <span key={idx} className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">{item}</span>)}
       </div>
@@ -357,19 +372,40 @@ export const CrawlerRuleManager = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div><div className="relative max-w-sm"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input placeholder="Tìm kiếm luật..." className="pl-9 bg-white w-[300px]" /></div></div>
+      {/* HEADER CONTROL */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="w-full md:w-auto">
+           <div className="relative w-full md:w-[350px]">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+             <Input placeholder="Tìm kiếm luật..." className="pl-9 bg-white w-full" />
+           </div>
+        </div>
         
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleCreate} className="bg-[#009d98] hover:bg-[#008580] text-white shadow-sm"><Plus className="mr-2 h-4 w-4" /> Thêm luật mới</Button>
+            <Button onClick={handleCreate} className="w-full md:w-auto bg-[#009d98] hover:bg-[#008580] text-white shadow-sm">
+                <Plus className="mr-2 h-4 w-4" /> Thêm luật mới
+            </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">{editingId ? <Pencil className="w-5 h-5 text-[#009d98]" /> : <Plus className="w-5 h-5 text-[#009d98]" />} {editingId ? "Cập nhật cấu hình luật" : "Thêm luật Crawler mới"}</DialogTitle><DialogDescription>Thiết lập các tham số để bot tự động quét gói thầu phù hợp.</DialogDescription></DialogHeader>
+          
+          {/* [MOBILE FIX] Form Dialog Responsive */}
+          <DialogContent className="w-[95%] max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                 {editingId ? <Pencil className="w-5 h-5 text-[#009d98]" /> : <Plus className="w-5 h-5 text-[#009d98]" />}
+                 {editingId ? "Cập nhật cấu hình" : "Thêm luật mới"}
+              </DialogTitle>
+              <DialogDescription>
+                 Thiết lập tham số tìm kiếm tự động.
+              </DialogDescription>
+            </DialogHeader>
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
-                <div className="grid grid-cols-2 gap-5 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                    <FormField<Rule> control={form.control} name="ruleName" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Tên luật <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} placeholder="VD: Gói thầu IT Miền Bắc" className="bg-white" value={field.value as string} /></FormControl><FormMessage /></FormItem>} />
+                
+                {/* 1. THÔNG TIN CHUNG - Grid 1 cột trên Mobile, 2 cột trên PC */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <FormField<Rule> control={form.control} name="ruleName" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Tên luật <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} placeholder="VD: Gói thầu IT" className="bg-white" value={field.value as string} /></FormControl><FormMessage /></FormItem>} />
                     <FormField<Rule> control={form.control} name="businessField" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold">Lĩnh vực <span className="text-red-500">*</span></FormLabel><Select onValueChange={field.onChange} value={field.value as string}><FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Chọn lĩnh vực" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Xây lắp">Xây lắp</SelectItem><SelectItem value="Hàng hóa">Hàng hóa</SelectItem><SelectItem value="Hỗn hợp">Hỗn hợp</SelectItem><SelectItem value="Phi tư vấn">Phi tư vấn</SelectItem><SelectItem value="Tư vấn">Tư vấn</SelectItem></SelectContent></Select><FormMessage /></FormItem>} />
                     <FormField<Rule> 
                       control={form.control} 
@@ -412,20 +448,28 @@ export const CrawlerRuleManager = () => {
                       )} 
                     />
                 </div>
-                <div className="grid grid-cols-2 gap-5">
+
+                {/* 2. TỪ KHÓA & ĐỊA ĐIỂM (New Fields from Master) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <FormField<Rule> control={form.control} name="keywordsInclude" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Tags size={14} /> Từ khóa bao gồm</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: laptop, server" /></FormControl><FormMessage /></FormItem>} />
                       <FormField<Rule> control={form.control} name="keywordsExclude" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><AlertCircle size={14} /> Từ khóa loại trừ</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: cũ, hỏng" /></FormControl><FormMessage /></FormItem>} />
                       <FormField<Rule> control={form.control} name="locations" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><MapPin size={14} /> Tỉnh / Thành phố</FormLabel><FormControl><ProvinceMultiSelect value={field.value as string[]} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>} />
                       <FormField<Rule> control={form.control} name="commune" render={({ field }) => <FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Home size={14} /> Phường / Xã (Theo tỉnh)</FormLabel><FormControl><CommuneMultiSelect value={field.value as string[]} onChange={field.onChange} provinceNames={selectedLocations || []} /></FormControl><FormMessage /></FormItem>} />
                       <FormField<Rule> control={form.control} name="investor" render={({ field }) => <FormItem className="col-span-2"><FormLabel className="text-slate-700 font-bold flex items-center gap-1"><Building2 size={14} /> Chủ đầu tư</FormLabel><FormControl><ArrayInput value={field.value as string[]} onChange={field.onChange} placeholder="VD: Ban quản lý dự án, EVN..." /></FormControl><FormMessage /></FormItem>} />
                 </div>
+
+                {/* 3. NGÂN SÁCH - Mobile vẫn giữ 2 cột vì số ngắn */}
                 <div className="p-4 rounded-lg border border-dashed border-slate-300 grid grid-cols-2 gap-4">
-                    <FormField<Rule> control={form.control} name="minBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Ngân sách tối thiểu (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-xs font-medium">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
-                    <FormField<Rule> control={form.control} name="maxBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Ngân sách tối đa (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-xs font-medium">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
+                    <FormField<Rule> control={form.control} name="minBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Min (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-[10px] md:text-xs font-medium truncate">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
+                    <FormField<Rule> control={form.control} name="maxBudget" render={({ field }) => <FormItem><FormLabel className="text-slate-700 font-bold text-xs uppercase">Max (VND)</FormLabel><FormControl><Input type="number" {...field} value={field.value as number} onChange={e => field.onChange(e.target.valueAsNumber)} className="font-mono" /></FormControl>{(field.value as number) > 0 && <FormDescription className="text-[#009d98] text-[10px] md:text-xs font-medium truncate">{readMoneyToText(field.value as number)}</FormDescription>}</FormItem>} />
                 </div>
-                <DialogFooter>
-                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Hủy bỏ</Button>
-                   <Button type="submit" className="bg-[#009d98] hover:bg-[#008580] text-white" disabled={createMutation.isPending || updateMutation.isPending}>{createMutation.isPending || updateMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : null} {editingId ? "Lưu thay đổi" : "Tạo mới"}</Button>
+
+                <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">Hủy bỏ</Button>
+                   <Button type="submit" className="w-full sm:w-auto bg-[#009d98] hover:bg-[#008580] text-white" disabled={createMutation.isPending || updateMutation.isPending}>
+                      {createMutation.isPending || updateMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : null}
+                      {editingId ? "Lưu thay đổi" : "Tạo mới"}
+                   </Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -433,7 +477,58 @@ export const CrawlerRuleManager = () => {
         </Dialog>
       </div>
 
-      <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
+      {/* --- CONTENT DISPLAY --- */}
+      
+      {/* 1. MOBILE VIEW (CARDS) - Chỉ hiện trên màn hình nhỏ */}
+      <div className="block md:hidden space-y-4">
+         {!rules || rules.length === 0 ? (
+             <div className="text-center p-8 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-slate-500 text-sm">
+                Chưa có luật nào.
+             </div>
+         ) : (
+            rules.map((item) => (
+               <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                  {/* Card Header */}
+                  <div className="flex justify-between items-start">
+                     <div>
+                        <h4 className="font-bold text-slate-800 text-base">{item.ruleName}</h4>
+                        <p className="text-xs text-slate-500">{item.businessField || "Chưa phân loại"}</p>
+                     </div>
+                     <PriorityBadge value={item.priority} />
+                  </div>
+                  
+                  {/* Card Info (Location/Investor from Master) */}
+                  <div className="flex flex-col gap-1.5 mt-1">
+                      {item.locations?.length ? (<div className="flex items-center gap-1.5 text-xs text-slate-700"><MapPin size={12} className="text-slate-400"/> {item.locations.slice(0, 3).join(", ")}{item.locations.length > 3 ? "..." : ""}</div>) : null}
+                      {item.investor?.length ? (<div className="flex items-center gap-1.5 text-xs text-slate-600"><Building2 size={12} className="text-slate-400"/> {item.investor.slice(0, 2).join(", ")}{item.investor.length > 2 ? "..." : ""}</div>) : null}
+                  </div>
+
+                  {/* Card Footer: Budget + Action */}
+                  <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+                      <BudgetDisplay min={item.minBudget} max={item.maxBudget} />
+                      
+                      {/* Action Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                           <DropdownMenuItem onClick={() => handleEdit(item)}>
+                              <Pencil className="mr-2 h-4 w-4" /> Sửa
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => deleteMutation.mutate(item.id!)} className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" /> Xóa
+                           </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+               </div>
+            ))
+         )}
+      </div>
+
+      {/* 2. DESKTOP VIEW (TABLE) - Chỉ hiện trên màn hình MD trở lên */}
+      <div className="hidden md:block rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow className="hover:bg-slate-50 border-slate-200">
@@ -447,10 +542,13 @@ export const CrawlerRuleManager = () => {
           </TableHeader>
           <TableBody>
             {!rules || rules.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="h-40 text-center text-slate-500">Chưa có luật nào được thiết lập. Hãy thêm luật mới để bắt đầu.</TableCell></TableRow>
+                <TableRow>
+                   <TableCell colSpan={6} className="h-40 text-center text-slate-500">
+                      Chưa có luật nào được thiết lập. Hãy thêm luật mới để bắt đầu.
+                   </TableCell>
+                </TableRow>
             ) : (
                 rules.map((item, index) => (
-                  // [FIX] Sử dụng id làm key, fallback sang index. Dùng ?? để tránh lỗi undefined
                   <TableRow key={item.id || index} className="hover:bg-slate-50/80 transition-colors border-slate-100">
                     <TableCell className="text-slate-500 text-xs font-mono">{index + 1}</TableCell>
                     <TableCell>
@@ -465,11 +563,9 @@ export const CrawlerRuleManager = () => {
                         </div>
                     </TableCell>
                     <TableCell>
-                        {/* [FIX] Fallback giá trị 0 nếu undefined */}
                         <BudgetDisplay min={item.minBudget ?? 0} max={item.maxBudget ?? 0} />
                     </TableCell>
                     <TableCell>
-                         {/* [FIX] Fallback giá trị 3 nếu undefined */}
                         <PriorityBadge value={item.priority ?? 3} />
                     </TableCell>
                     <TableCell className="text-right">

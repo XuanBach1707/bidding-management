@@ -3,16 +3,17 @@ import {
   aiBiddingApi, 
   AiMessage, 
   aiSearchSchema, 
-  aiIngestSchema 
+  aiIngestSchema,
+  AiIngestParams // [NEW] Import type params upload
 } from '@/entities/ai-bidding';
-import { nanoid } from 'nanoid'; // Hoặc dùng Date.now() + Math.random() nếu không muốn cài thêm lib
+import { nanoid } from 'nanoid'; 
 import { CHAT_ERROR_MESSAGE } from './constants';
 
 export const useBiddingChat = () => {
   // --- STATE ---
   const [messages, setMessages] = useState<AiMessage[]>([]);
-  const [isTyping, setIsTyping] = useState(false);     // Trạng thái AI đang trả lời
-  const [isUploading, setIsUploading] = useState(false); // Trạng thái đang upload file
+  const [isTyping, setIsTyping] = useState(false);     
+  const [isUploading, setIsUploading] = useState(false); 
 
   // --- ACTIONS ---
 
@@ -23,13 +24,12 @@ export const useBiddingChat = () => {
     // Validate input rỗng
     const validation = aiSearchSchema.safeParse({ query });
     if (!validation.success) {
-      // Có thể return lỗi hoặc handle UI error tại đây
       return;
     }
 
     const userMsgId = nanoid();
     
-    // 1. Optimistic Update: Hiển thị tin nhắn User ngay lập tức
+    // Optimistic Update
     const userMsg: AiMessage = {
       id: userMsgId,
       role: 'user',
@@ -41,20 +41,17 @@ export const useBiddingChat = () => {
     setIsTyping(true);
 
     try {
-      // 2. Gọi API
       const responseMarkdown = await aiBiddingApi.search({ query });
 
-      // 3. Tạo tin nhắn phản hồi từ AI
       const aiMsg: AiMessage = {
         id: nanoid(),
         role: 'ai',
-        content: responseMarkdown, // API trả về string markdown
+        content: responseMarkdown, 
         createdAt: Date.now(),
       };
 
       setMessages((prev) => [...prev, aiMsg]);
     } catch (error) {
-      // Xử lý lỗi: Thêm tin nhắn lỗi hoặc Toast
       const errorMsg: AiMessage = {
         id: nanoid(),
         role: 'ai',
@@ -71,21 +68,25 @@ export const useBiddingChat = () => {
 
   /**
    * 2. Upload file tài liệu (RAG)
-   * Hàm này trả về Promise để UI có thể await và hiện Toast thành công/thất bại
+   * [UPDATED] Nhận object params đầy đủ thay vì chỉ file
    */
-  const uploadContextFile = useCallback(async (file: File) => {
+  const uploadContextFile = useCallback(async (params: AiIngestParams) => {
     setIsUploading(true);
     try {
-      // 1. Validate File qua Zod Schema (Entity)
-      // Nếu sai, Zod sẽ throw error, ta catch ở dưới để báo UI
-      const validData = aiIngestSchema.parse({ file });
+      // 1. Validate toàn bộ data qua Zod Schema
+      // Schema đã bao gồm check file size, type, và các trường meta mới
+      const validData = aiIngestSchema.parse(params);
 
-      // 2. Gọi API Ingest Async
-      await aiBiddingApi.ingestFile({ file: validData.file });
+      // 2. Gọi API Ingest Async với đầy đủ params
+      await aiBiddingApi.ingestFile({ 
+        file: validData.file,
+        legalLevel: validData.legalLevel,
+        promulgationYear: validData.promulgationYear,
+        collectionName: validData.collectionName
+      });
       
       return { success: true, message: "Đã tiếp nhận tài liệu. AI sẽ học dữ liệu này trong giây lát." };
     } catch (error: any) {
-      // Xử lý lỗi từ Zod hoặc API
       let msg = "Upload thất bại.";
       
       // Check lỗi Zod
@@ -104,7 +105,7 @@ export const useBiddingChat = () => {
   }, []);
 
   /**
-   * 3. Reset hội thoại (nếu cần)
+   * 3. Reset hội thoại
    */
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -115,7 +116,7 @@ export const useBiddingChat = () => {
     isTyping,
     isUploading,
     sendMessage,
-    uploadContextFile,
+    uploadContextFile, // Bây giờ function này nhận input là object {file, legalLevel...}
     clearChat
   };
 };

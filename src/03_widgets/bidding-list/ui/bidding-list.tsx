@@ -12,11 +12,6 @@ import {
   BiddingCardSkeleton 
 } from "@/entities/bidding";
 
-/**
- * FIX LỖI 1: Đưa status mặc định vào INITIAL_PARAMS.
- * Việc này đảm bảo ngay khi hook useBiddingList khởi tạo, 
- * nó sẽ gọi API với đúng filter "Chờ xử lý", không còn tình trạng load "Tất cả".
- */
 const INITIAL_PARAMS = { 
   page: 1, 
   size: 9, 
@@ -37,11 +32,6 @@ export const BiddingList = () => {
     handleChangeFilter 
   } = useBiddingList(INITIAL_PARAMS);
 
-  /**
-   * FIX LỖI 2: Chỉ giữ lại handleSearch trong effect này.
-   * Xóa dòng handleChangeFilter("status", ...) cũ để khi người dùng gõ search,
-   * kết quả vẫn nằm đúng ở tab hiện tại (không bị ép về tab pending).
-   */
   useEffect(() => {
     handleSearch(debouncedSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,10 +54,12 @@ export const BiddingList = () => {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    // Mobile: space-y-4 cho gọn. PC: space-y-6 cho thoáng.
+    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* --- HEADER CONTROLS --- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      {/* Mobile: p-3. PC: p-4. */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
         
         {/* Search Input */}
         <div className="relative w-full md:w-96">
@@ -80,8 +72,9 @@ export const BiddingList = () => {
           />
         </div>
 
-        {/* Tabs: Khớp defaultValue với INITIAL_PARAMS */}
+        {/* Tabs */}
         <Tabs defaultValue="pending" onValueChange={handleTabChange} className="w-full md:w-auto">
+          {/* Grid cols 2 để trên mobile nút bấm to đều, dễ trúng */}
           <TabsList className="bg-slate-100 h-10 p-1 grid grid-cols-2 w-full md:w-auto">
             <TabsTrigger 
                 value="pending" 
@@ -100,7 +93,8 @@ export const BiddingList = () => {
       </div>
 
       {/* --- LIST CONTENT --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+      {/* Grid tự động scale: 1 cột (mobile) -> 2 cột (tablet) -> 3 cột (PC) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6">
         {loading ? (
           Array.from({ length: 9 }).map((_, i) => <BiddingCardSkeleton key={i} />)
         ) : items.length > 0 ? (
@@ -118,31 +112,40 @@ export const BiddingList = () => {
         )}
       </div>
 
-      {/* --- PAGINATION --- */}
+      {/* --- PAGINATION (Đã tối ưu Mobile) --- */}
       {meta.pages > 1 && (
-        <div className="flex items-center justify-between py-4 border-t border-slate-200">
-          <div className="text-xs text-slate-500 font-medium">
+        // Mobile: flex-col-reverse (Nút bấm lên trên, text xuống dưới).
+        // PC: flex-row (ngang).
+        <div className="flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between py-4 border-t border-slate-200">
+          
+          {/* Text thông tin: Mobile căn giữa, PC căn trái */}
+          <div className="text-xs text-slate-500 font-medium text-center md:text-left">
              Hiển thị {(meta.page - 1) * 9 + 1}-{Math.min(meta.page * 9, meta.total)} trong số {meta.total} gói thầu
           </div>
-          <div className="flex gap-2">
+
+          {/* Nút điều hướng */}
+          <div className="flex justify-center gap-2 w-full md:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => changePage(meta.page - 1)}
               disabled={meta.page === 1 || loading}
-              className="h-8 text-xs font-medium hover:bg-slate-50 hover:text-[#009d98] disabled:opacity-50"
+              // Thêm w-full trên mobile nếu muốn nút to hết cỡ, hoặc để auto
+              className="h-9 px-4 text-xs font-medium hover:bg-slate-50 hover:text-[#009d98] disabled:opacity-50"
             >
               Trước
             </Button>
-            <div className="flex items-center justify-center min-w-[32px] h-8 bg-[#009d98]/10 text-[#009d98] font-bold text-xs rounded border border-[#009d98]/20">
+            
+            <div className="flex items-center justify-center min-w-[36px] h-9 bg-[#009d98]/10 text-[#009d98] font-bold text-xs rounded border border-[#009d98]/20">
               {meta.page}
             </div>
+            
             <Button
               variant="outline"
               size="sm"
               onClick={() => changePage(meta.page + 1)}
               disabled={meta.page >= meta.pages || loading}
-              className="h-8 text-xs font-medium hover:bg-slate-50 hover:text-[#009d98] disabled:opacity-50"
+              className="h-9 px-4 text-xs font-medium hover:bg-slate-50 hover:text-[#009d98] disabled:opacity-50"
             >
               Sau
             </Button>

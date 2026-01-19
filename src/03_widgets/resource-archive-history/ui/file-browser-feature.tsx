@@ -1,3 +1,4 @@
+// file-browser-feature.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,6 +11,7 @@ import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { HistoryFolderGrid } from "./history-folder-grid";
 import { HistoryFileList } from "./history-file-list";
+import { cn } from "@/shared/lib/utils"; // Import cn
 
 interface FileBrowserFeatureProps {
   rootFolderId: string;
@@ -23,21 +25,15 @@ interface BreadcrumbItem {
 }
 
 export const FileBrowserFeature = ({ rootFolderId, rootProjectName, onBack }: FileBrowserFeatureProps) => {
-  // State
   const [items, setItems] = useState<ResourceItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Navigation
   const [currentFolderId, setCurrentFolderId] = useState<string>(rootFolderId);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
     { id: rootFolderId, name: rootProjectName }
   ]);
-
-  // Search
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
-  // Effect: Fetch Data
   useEffect(() => {
     if (!isSearching && currentFolderId) {
       const fetchData = async () => {
@@ -56,7 +52,6 @@ export const FileBrowserFeature = ({ rootFolderId, rootProjectName, onBack }: Fi
     }
   }, [currentFolderId, isSearching]);
 
-  // Handlers
   const handleFolderClick = (folder: ResourceItem) => {
     setCurrentFolderId(folder.id);
     setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }]);
@@ -95,7 +90,6 @@ export const FileBrowserFeature = ({ rootFolderId, rootProjectName, onBack }: Fi
     setSearchQuery("");
   };
 
-  // Render Skeleton
   const renderSkeleton = () => (
     <div className="space-y-8 pt-4 animate-pulse">
       <div>
@@ -137,7 +131,7 @@ export const FileBrowserFeature = ({ rootFolderId, rootProjectName, onBack }: Fi
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#009d98]" />
             <Input
               placeholder="Tìm kiếm trong dự án..."
-              className="pl-9 pr-10 bg-slate-50 border-slate-200 h-9 focus-visible:ring-[#009d98]"
+              className="pl-9 pr-10 bg-slate-50 border-slate-200 h-9 focus-visible:ring-[#009d98] text-base md:text-sm" // text-base mobile
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearch}
@@ -150,28 +144,29 @@ export const FileBrowserFeature = ({ rootFolderId, rootProjectName, onBack }: Fi
           </div>
         </div>
 
-        {/* Breadcrumbs */}
-        <div className="flex items-center flex-wrap pt-2 border-t border-slate-100 gap-1 text-sm">
-           <Button variant="ghost" size="sm" onClick={onBack} className="h-6 px-1.5 text-slate-400 hover:text-[#009d98]">
+        {/* Breadcrumbs: [UPDATE] Horizontal Scroll */}
+        <div className="flex items-center overflow-x-auto whitespace-nowrap pt-2 border-t border-slate-100 gap-1 text-sm no-scrollbar pb-1">
+           <Button variant="ghost" size="sm" onClick={onBack} className="h-6 px-1.5 text-slate-400 hover:text-[#009d98] shrink-0">
              <Home className="w-3.5 h-3.5" />
            </Button>
            {breadcrumbs.map((item, index) => {
              const isLast = index === breadcrumbs.length - 1;
              return (
-               <div key={item.id} className="flex items-center">
+               <div key={item.id} className="flex items-center shrink-0">
                  <ChevronRight className="w-3.5 h-3.5 text-slate-300 mx-0.5" />
                  <Button
                    variant="ghost" size="sm"
                    onClick={() => handleBreadcrumbClick(index, item)}
                    disabled={isLast}
-                   className={`h-6 px-2 max-w-[120px] truncate text-xs ${
-                      isLast 
-                      ? "font-bold bg-slate-100 text-slate-800 opacity-100 pointer-events-none" 
-                      : "text-slate-500 hover:text-[#009d98] hover:bg-[#009d98]/5"
-                   }`}
+                   className={cn(
+                     "h-6 px-2 text-xs transition-colors",
+                     isLast 
+                     ? "font-bold bg-slate-100 text-slate-800 opacity-100 pointer-events-none" 
+                     : "text-slate-500 hover:text-[#009d98] hover:bg-[#009d98]/5"
+                   )}
                    title={item.name}
                  >
-                   {item.name}
+                   <span className="truncate max-w-[120px] md:max-w-[200px]">{item.name}</span>
                  </Button>
                </div>
              );
@@ -186,15 +181,16 @@ export const FileBrowserFeature = ({ rootFolderId, rootProjectName, onBack }: Fi
             
             {/* Search Result Banner */}
             {isSearching && (
-               <div className="bg-[#009d98]/5 p-4 rounded-lg border border-[#009d98]/20 flex justify-between items-center mb-4">
-                  <p className="text-[#009d98] text-sm font-medium">Kết quả tìm kiếm: <b>"{searchQuery}"</b></p>
-                  <Button variant="ghost" size="sm" onClick={clearSearch} className="text-[#009d98] hover:bg-[#009d98]/10 h-8 text-xs">Thoát tìm kiếm</Button>
+               <div className="bg-[#009d98]/5 p-4 rounded-lg border border-[#009d98]/20 flex justify-between items-center mb-4 mx-1 md:mx-0">
+                  <p className="text-[#009d98] text-sm font-medium truncate mr-2">Kết quả: <b>"{searchQuery}"</b></p>
+                  <Button variant="ghost" size="sm" onClick={clearSearch} className="text-[#009d98] hover:bg-[#009d98]/10 h-8 text-xs shrink-0">Thoát</Button>
                </div>
             )}
 
             {/* Folders */}
             {!isSearching && items.some(i => i.type === "FOLDER") && (
-                <HistoryFolderGrid items={items.filter(i => i.type === "FOLDER")} onFolderClick={handleFolderClick} />
+               // Assumption: HistoryFolderGrid handles its own responsiveness (grid-cols-2)
+               <HistoryFolderGrid items={items.filter(i => i.type === "FOLDER")} onFolderClick={handleFolderClick} />
             )}
             
             {/* Files */}

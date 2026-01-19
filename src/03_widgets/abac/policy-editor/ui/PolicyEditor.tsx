@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { 
   abacApi, 
@@ -14,8 +16,11 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { Save, Plus, Trash2, Shield, AlertTriangle, Layers, Check, X } from "lucide-react";
+import { Save, Plus, Trash2, Shield, AlertTriangle, Layers, Check, X, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+} from "@/shared/ui/dropdown-menu";
 
 // ====================================================================
 // 0. HELPER: VALIDATE & FORMAT
@@ -49,7 +54,7 @@ const formatConditionForPayload = (node: any): any => {
 };
 
 // ====================================================================
-// 1. SUB-COMPONENTS (Classic Nested Style - Refined)
+// 1. SUB-COMPONENTS (Refined for Mobile)
 // ====================================================================
 
 const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
@@ -58,13 +63,16 @@ const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
   const operators = getOperatorsForType(attrType);
 
   return (
-    <div className="flex gap-2 items-center p-2 bg-white border border-slate-200 rounded mb-2 shadow-sm hover:border-[#009d98]/30 transition-colors">
+    // Mobile: flex-wrap để tự xuống dòng nếu màn hình quá bé.
+    <div className="flex flex-wrap md:flex-nowrap gap-2 items-center p-2 bg-white border border-slate-200 rounded mb-2 shadow-sm hover:border-[#009d98]/30 transition-colors">
+      
+      {/* Attribute Select: Full width on mobile, 1/3 on PC */}
       <select 
-        className="border border-slate-300 rounded px-2 h-9 w-1/3 text-sm font-medium focus:ring-1 focus:ring-[#009d98] focus:border-[#009d98] outline-none bg-white"
+        className="border border-slate-300 rounded px-2 h-9 w-full md:w-1/3 text-sm font-medium focus:ring-1 focus:ring-[#009d98] focus:border-[#009d98] outline-none bg-white"
         value={rule.field}
         onChange={(e) => onUpdate({ field: e.target.value, value: "" })} 
       >
-        <option value="">-- Chọn thuộc tính --</option>
+        <option value="">-- Thuộc tính --</option>
         {attributes.map((a: AbacAttribute) => (
           <option key={a.id} value={a.attr_key}>
              {a.attr_key} {a.description ? `(${a.description})` : ''}
@@ -72,8 +80,9 @@ const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
         ))}
       </select>
       
+      {/* Operator Select: Auto width or fixed width */}
       <select 
-        className="border border-slate-300 rounded px-2 h-9 w-[160px] text-sm bg-slate-50 font-mono text-slate-700 focus:ring-1 focus:ring-[#009d98] focus:border-[#009d98] outline-none"
+        className="border border-slate-300 rounded px-2 h-9 w-[120px] md:w-[160px] text-sm bg-slate-50 font-mono text-slate-700 focus:ring-1 focus:ring-[#009d98] focus:border-[#009d98] outline-none shrink-0"
         value={rule.operator}
         onChange={(e) => onUpdate({ operator: e.target.value })}
       >
@@ -82,14 +91,15 @@ const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
         ))}
       </select>
       
+      {/* Value Input: Flex 1 */}
       <input 
-        className="border border-slate-300 rounded px-3 h-9 flex-1 text-sm focus:ring-1 focus:ring-[#009d98] focus:border-[#009d98] outline-none transition-all placeholder:text-slate-300"
+        className="border border-slate-300 rounded px-3 h-9 flex-1 min-w-[120px] text-sm focus:ring-1 focus:ring-[#009d98] focus:border-[#009d98] outline-none transition-all placeholder:text-slate-300"
         value={Array.isArray(rule.value) ? rule.value.join(', ') : (rule.value || '')}
         onChange={(e) => onUpdate({ value: e.target.value })}
-        placeholder={['IN', 'NOT_IN'].includes(rule.operator) ? "Giá trị 1, Giá trị 2..." : "Nhập giá trị..."}
+        placeholder={['IN', 'NOT_IN'].includes(rule.operator) ? "Giá trị 1,..." : "Giá trị..."}
       />
       
-      <button onClick={onRemove} className="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded hover:bg-red-50 transition-colors">
+      <button onClick={onRemove} className="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded hover:bg-red-50 transition-colors shrink-0">
          <X size={16} />
       </button>
     </div>
@@ -98,46 +108,68 @@ const RuleRowUI = ({ rule, attributes, onUpdate, onRemove }: any) => {
 
 const GroupUI = ({ group, path, attributes, actions }: any) => {
   const isRoot = path.length === 0;
-  // Giữ nguyên logic màu (Xanh cho AND, Vàng cho OR) nhưng làm dịu hơn
   const borderColor = group.condition === 'AND' ? 'border-l-blue-500' : 'border-l-amber-500';
   const badgeColor = group.condition === 'AND' ? 'bg-blue-600' : 'bg-amber-500';
 
   return (
     <div 
-      className={`p-3 rounded-lg border-l-4 my-2 transition-all ${
+      className={`p-2 md:p-3 rounded-lg border-l-4 my-2 transition-all ${
         path.length % 2 === 0 ? 'bg-slate-50 border border-slate-200' : 'bg-white border border-slate-100 shadow-sm'
       } ${borderColor}`}
     >
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
         <button 
           onClick={() => actions.toggleCondition(path)}
-          className={`px-3 py-1 rounded text-xs font-bold text-white shadow-sm hover:opacity-90 transition-opacity ${badgeColor}`}
+          className={`px-2 md:px-3 py-1 rounded text-xs font-bold text-white shadow-sm hover:opacity-90 transition-opacity ${badgeColor}`}
         >
           {group.condition}
         </button>
         
-        <div className="ml-auto flex gap-2">
-          <button onClick={() => actions.addRule(path)} className="text-xs bg-white border border-emerald-200 text-emerald-700 px-3 py-1 rounded hover:bg-emerald-50 font-medium transition-colors flex items-center gap-1">
-             <Plus size={12} /> Điều kiện
-          </button>
-          <button onClick={() => actions.addGroup(path)} className="text-xs bg-white border border-purple-200 text-purple-700 px-3 py-1 rounded hover:bg-purple-50 font-medium transition-colors flex items-center gap-1">
-             <Layers size={12} /> Nhóm con
-          </button>
-          {!isRoot && ( 
-             <button onClick={() => {
-                 const parentPath = path.slice(0, -1);
-                 const index = path[path.length - 1];
-                 actions.removeNode(parentPath, index);
-               }} className="text-xs text-red-500 px-3 py-1 hover:bg-red-50 rounded font-medium transition-colors flex items-center gap-1">
-                 <Trash2 size={12} /> Xóa nhóm
-             </button>
-          )}
+        {/* Actions Group: Mobile dùng Dropdown nếu quá chật, PC hiện hết */}
+        <div className="ml-auto flex gap-1 md:gap-2">
+          {/* Mobile: Chỉ hiện icon + hoặc Dropdown */}
+          <div className="hidden md:flex gap-2">
+              <button onClick={() => actions.addRule(path)} className="text-xs bg-white border border-emerald-200 text-emerald-700 px-3 py-1 rounded hover:bg-emerald-50 font-medium transition-colors flex items-center gap-1">
+                 <Plus size={12} /> Điều kiện
+              </button>
+              <button onClick={() => actions.addGroup(path)} className="text-xs bg-white border border-purple-200 text-purple-700 px-3 py-1 rounded hover:bg-purple-50 font-medium transition-colors flex items-center gap-1">
+                 <Layers size={12} /> Nhóm con
+              </button>
+              {!isRoot && ( 
+                 <button onClick={() => {
+                     const parentPath = path.slice(0, -1);
+                     const index = path[path.length - 1];
+                     actions.removeNode(parentPath, index);
+                   }} className="text-xs text-red-500 px-3 py-1 hover:bg-red-50 rounded font-medium transition-colors flex items-center gap-1">
+                     <Trash2 size={12} /> Xóa nhóm
+                 </button>
+              )}
+          </div>
+
+          {/* Mobile Dropdown Menu for Actions */}
+          <div className="md:hidden">
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                   <button className="p-1 rounded hover:bg-slate-200"><MoreHorizontal size={16} /></button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                   <DropdownMenuItem onClick={() => actions.addRule(path)}><Plus size={14} className="mr-2"/> Thêm điều kiện</DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => actions.addGroup(path)}><Layers size={14} className="mr-2"/> Thêm nhóm con</DropdownMenuItem>
+                   {!isRoot && <DropdownMenuItem onClick={() => {
+                        const parentPath = path.slice(0, -1);
+                        const index = path[path.length - 1];
+                        actions.removeNode(parentPath, index);
+                   }} className="text-red-600"><Trash2 size={14} className="mr-2"/> Xóa nhóm</DropdownMenuItem>}
+                </DropdownMenuContent>
+             </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      <div className="pl-3 border-l-2 border-slate-200/50 ml-1 space-y-2">
+      {/* Indentation giảm trên mobile để tiết kiệm diện tích */}
+      <div className="pl-1 md:pl-3 border-l-2 border-slate-200/50 md:ml-1 space-y-2">
         {group.rules.length === 0 && (
-            <div className="text-xs text-slate-400 italic py-2">Nhóm trống</div>
+            <div className="text-xs text-slate-400 italic py-2 pl-2">Chưa có điều kiện nào</div>
         )}
         {group.rules.map((item: any, index: number) => {
           const currentPath = [...path, index];
@@ -152,7 +184,7 @@ const GroupUI = ({ group, path, attributes, actions }: any) => {
 };
 
 // ====================================================================
-// 2. MAIN WIDGET: POLICY EDITOR (Layout & Style Updated)
+// 2. MAIN WIDGET: POLICY EDITOR (Responsive Layout)
 // ====================================================================
 
 interface PolicyEditorProps {
@@ -245,33 +277,35 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
     <div className="flex flex-col h-full bg-slate-50/30">
       
       {/* HEADER */}
-      <div className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-20">
+      <div className="bg-white border-b px-4 md:px-6 py-3 md:py-4 flex justify-between items-center shadow-sm sticky top-0 z-20 shrink-0">
         <div className="flex items-center gap-3">
            <div className="p-2 bg-[#009d98]/10 rounded-lg">
               <Shield className="w-5 h-5 text-[#009d98]" />
            </div>
-           <h2 className="text-lg font-extrabold text-slate-800">
-             {initialPolicy ? `Chỉnh sửa: ${initialPolicy.name}` : 'Tạo Chính Sách Mới'}
+           <h2 className="text-base md:text-lg font-extrabold text-slate-800 line-clamp-1">
+             {initialPolicy ? `Sửa: ${initialPolicy.name}` : 'Tạo Chính Sách'}
            </h2>
         </div>
         <div className="flex gap-2">
-           <Button variant="outline" onClick={onCancel} className="text-slate-600">Hủy bỏ</Button>
-           <Button onClick={handleSubmit} className="bg-[#009d98] hover:bg-[#008580] text-white font-bold shadow-sm">
-              <Save size={16} className="mr-2" /> Lưu chính sách
+           <Button variant="outline" onClick={onCancel} className="text-slate-600 px-3 h-9">Hủy</Button>
+           <Button onClick={handleSubmit} className="bg-[#009d98] hover:bg-[#008580] text-white font-bold shadow-sm px-3 h-9">
+              <Save size={16} className="mr-1 md:mr-2" /> <span className="hidden md:inline">Lưu chính sách</span><span className="md:hidden">Lưu</span>
            </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 pb-20">
+      {/* Main Content Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
         <div className="max-w-5xl mx-auto space-y-6">
             
             {/* SECTION 1: INFO */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 className="text-sm font-bold text-slate-700 uppercase mb-5 border-b border-slate-100 pb-2 tracking-wide">1. Thông tin chung</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Mobile: Grid 1 cột. PC: Grid 2 cột */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     {/* Column 1 */}
-                    <div className="space-y-5">
+                    <div className="space-y-4 md:space-y-5">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Tên chính sách <span className="text-red-500">*</span></label>
                             <Input value={name} onChange={e => setName(e.target.value)} className="bg-white font-semibold" placeholder="VD: Quản lý xem báo cáo" />
@@ -283,7 +317,7 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
                     </div>
 
                     {/* Column 2 */}
-                    <div className="space-y-5">
+                    <div className="space-y-4 md:space-y-5">
                         <div className="flex gap-4">
                              <div className="flex-1">
                                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Resource <span className="text-red-500">*</span></label>
@@ -334,17 +368,18 @@ export const PolicyEditor: React.FC<PolicyEditorProps> = ({ initialPolicy, onSuc
             </div>
 
             {/* SECTION 2: LOGIC BUILDER */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[300px]">
+            <div className="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm min-h-[300px]">
                  <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
                     <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">2. Thiết lập điều kiện</h3>
                     {(treeErrors.length > 0) && (
                         <div className="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100 animate-pulse">
-                           <AlertTriangle size={14} /> Có lỗi logic trong điều kiện
+                           <AlertTriangle size={14} /> <span className="hidden md:inline">Có lỗi logic trong điều kiện</span><span className="md:hidden">Lỗi logic</span>
                         </div>
                     )}
                  </div>
                  
-                 <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+                 {/* Mobile: p-2. PC: p-4 */}
+                 <div className="bg-slate-50/50 p-2 md:p-4 rounded-lg border border-slate-100">
                     <GroupUI 
                         group={rootCondition} 
                         path={[]} 
