@@ -115,27 +115,27 @@ export const TaskDetailPanel = ({
       </div>
 
       {/* --- CONTENT BODY --- */}
-      <div className="flex-1 overflow-hidden bg-slate-50/50 relative">
-        
-        <TabsContent value="general" className="h-full overflow-y-auto p-4 md:p-6 m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200">
-          <GeneralTab 
-            task={task} 
-            onRefresh={onRefresh} 
-            isReviewMode={isReviewMode} 
+      <div className="flex-1 overflow-y-auto bg-slate-50/50">
+
+        <TabsContent value="general" className="h-full p-4 md:p-6 m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200">
+          <GeneralTab
+            task={task}
+            onRefresh={onRefresh}
+            isReviewMode={isReviewMode}
           />
         </TabsContent>
-        
-        <TabsContent 
-          value="workspace" 
+
+        <TabsContent
+          value="workspace"
           // Tab này thường chứa Editor full màn hình nên không cần padding
-          className="h-full m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col"
+          className="absolute inset-0 m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200 flex flex-col"
         >
-          <WorkspaceTab 
-            task={task} 
-            isReviewMode={isReviewMode} 
+          <WorkspaceTab
+            task={task}
+            isReviewMode={isReviewMode}
           />
         </TabsContent>
-        
+
         <TabsContent value="documents" className="h-full overflow-y-auto p-4 md:p-6 m-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-1 duration-200">
           <DocumentsTab task={task} />
         </TabsContent>

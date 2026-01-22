@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { 
   Calendar, 
   User as UserIcon, 
@@ -37,8 +37,7 @@ interface GeneralTabProps {
 }
 
 /**
- * Helper: Lấy chữ cái đầu của Tên (Ví dụ: "Nguyễn Văn Hùng" -> "H")
- * Đồng bộ với Dashboard và CommentItem
+ * Helper: Lấy chữ cái đầu của Tên
  */
 const getInitials = (name: string) => {
   if (!name || name === "Chưa phân công") return "U";
@@ -68,9 +67,15 @@ const getStatusBadge = (status: string) => {
 
 export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTabProps) => {
   const { toast } = useToast();
+  
+  // State xử lý Submit/Approve/Reject
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+
+  // State xử lý Upload
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const priorityInfo = getPriorityDisplay(task.priority);
   const statusInfo = getStatusBadge(task.status);
@@ -79,7 +84,34 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
   const assigneeName = mainAssignment?.user?.fullName || mainAssignment?.unit?.unitName || "Chưa phân công";
   const isUnitAssigned = !mainAssignment?.user && !!mainAssignment?.unit;
 
-  // Handlers
+  // --- HANDLERS ---
+
+  // Xử lý chọn file (Upload)
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+        setIsUploading(true);
+        // Gọi API Upload
+        await taskApi.uploadAttachment(task.id, files);
+        
+        toast({ title: "Thành công", description: "Đã tải lên tài liệu.", className: "bg-[#009d98] text-white border-none" });
+        
+        // Refresh lại data để hiện file mới ngay lập tức
+        onRefresh(); 
+    } catch (error) {
+        console.error(error);
+        toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải lên tài liệu." });
+    } finally {
+        setIsUploading(false);
+        // Reset input để cho phép chọn lại cùng 1 file nếu muốn
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    }
+  };
+
   const handleSubmit = async () => {
     try {
         setIsProcessing(true);
@@ -160,6 +192,7 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 Tài liệu đính kèm
              </h3>
              
+             {/* Danh sách file đã upload */}
              {task.attachmentUrl && task.attachmentUrl.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {task.attachmentUrl.map((url, idx) => (
@@ -168,7 +201,8 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                             href={url} 
                             target="_blank" 
                             rel="noreferrer" 
-                            className="flex items-center p-3 border border-slate-200 rounded-lg hover:border-[#009d98]/50 hover:bg-[#009d98]/5 transition-all group bg-slate-50/30"
+                            // [FIX] Thêm relative z-10 để đảm bảo click được
+                            className="flex items-center p-3 border border-slate-200 rounded-lg hover:border-[#009d98]/50 hover:bg-[#009d98]/5 transition-all group bg-slate-50/30 relative z-10 cursor-pointer"
                         >
                             <div className="p-2 bg-white rounded-md border border-slate-100 shadow-sm mr-3 group-hover:border-[#009d98]/20">
                                 <CloudUpload className="w-4 h-4 text-[#009d98]" />
@@ -185,12 +219,36 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 </div>
              )}
 
-             {!isReviewMode && (
-                <div className="mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-all cursor-pointer">
-                    <CloudUpload className="w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-sm text-slate-500 font-medium">Click để tải lên tài liệu</p>
-                    <p className="text-xs text-slate-400">Hỗ trợ PDF, Excel, Word (Max 20MB)</p>
-                </div>
+             {/* Khu vực Upload */}
+             {!isReviewMode && task.status !== "COMPLETED" && (
+                <label
+                    className={cn(
+                        "mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 transition-all relative z-10",
+                        isUploading ? "cursor-wait opacity-70 pointer-events-none" : "cursor-pointer hover:bg-slate-100 hover:border-slate-300 active:scale-[0.98]"
+                    )}
+                >
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        multiple
+                        onChange={handleFileSelect}
+                        disabled={isUploading}
+                    />
+
+                    {isUploading ? (
+                        <>
+                            <Loader2 className="w-8 h-8 text-[#009d98] mb-2 animate-spin" />
+                            <p className="text-sm text-[#009d98] font-medium animate-pulse">Đang tải lên...</p>
+                        </>
+                    ) : (
+                        <>
+                            <CloudUpload className="w-8 h-8 text-slate-300 mb-2" />
+                            <p className="text-sm text-slate-500 font-medium">Click để tải lên tài liệu</p>
+                            <p className="text-xs text-slate-400">Hỗ trợ PDF, Excel, Word (Max 20MB)</p>
+                        </>
+                    )}
+                </label>
              )}
           </div>
 
@@ -260,7 +318,6 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                         "w-10 h-10 border shadow-sm",
                         isUnitAssigned ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-blue-50 border-blue-200 text-blue-600"
                     )}>
-                        {/* Logic Avatar đồng bộ: Ưu tiên ảnh của User */}
                         {mainAssignment?.user?.avatarUrl && (
                              <AvatarImage src={mainAssignment.user.avatarUrl} alt="avt" className="object-cover" />
                         )}

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+// [UPDATE] Thêm import format từ date-fns
+import { format } from "date-fns"; 
 import { Building2, FileText, CalendarDays, ArrowRight, CheckCircle2, ExternalLink } from "lucide-react";
 import { BiddingPackage } from "../model/types";
 import { Badge } from "@/shared/ui/badge";
@@ -15,9 +17,7 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
   const detailUrl = data.hsmtId ? `/opportunities/${data.hsmtId}` : "#";
   const projectUrl = data.projectId ? `/bidding-projects/${data.projectId}` : "#";
 
-  // Giữ nguyên logic màu Badge của bạn
   const getStatusBadge = () => {
-    // Thêm whitespace-nowrap để Badge không bị ngắt dòng xấu trên mobile
     const baseClasses = "whitespace-nowrap"; 
     switch (data.trangThai) {
       case "BIDDING":
@@ -33,18 +33,25 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
     }
   };
 
+    // [FIX] Sửa lại type đầu vào: thêm | null
+    const formatDeadline = (dateString?: string | null) => {
+        if (!dateString) return "Chưa có"; // Dòng này sẽ chặn cả null, undefined và chuỗi rỗng
+        try {
+        return format(new Date(dateString), "HH:mm dd/MM/yyyy");
+        } catch (error) {
+        return dateString;
+        }
+    };
+
   return (
     <div className={cn(
       "group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300",
-      // Hover effects
       "hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-[#009d98]/30 hover:-translate-y-1",
-      // Mobile: p-4 cho rộng rãi nội dung. PC: p-5 như cũ.
       "p-4 md:p-5"
     )}>
       
       <div>
-        {/* HEADER: Mã + Trạng thái */}
-        {/* Mobile: gap-2. Dùng flex-wrap để nếu màn hình quá bé, badge rớt xuống dòng chứ không đè mã */}
+        {/* HEADER */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
                 <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
@@ -70,7 +77,6 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
         </Link>
 
         {/* INFO GRID */}
-        {/* Mobile: space-y-3 để dễ đọc hơn chút. */}
         <div className="space-y-3 mb-5">
             <div className="flex items-start gap-2.5 text-sm text-slate-600">
                 <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
@@ -91,12 +97,7 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
       </div>
 
       {/* FOOTER: Hạn đóng thầu + Action */}
-      {/* Mobile: pt-3. PC: pt-4. border-t */}
       <div className="mt-auto pt-3 md:pt-4 border-t border-slate-50">
-         {/* Mobile trick: Sử dụng flex-wrap.
-            Nếu màn hình đủ rộng: Date bên trái, Button bên phải (như cũ).
-            Nếu màn hình hẹp: Button sẽ tự rớt xuống dòng, không bị đè.
-         */}
          <div className="flex flex-wrap items-end justify-between gap-3">
              {/* Deadline */}
              <div className="flex flex-col min-w-[100px]">
@@ -107,12 +108,12 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
                     "text-sm font-bold tabular-nums mt-0.5 whitespace-nowrap",
                     "text-slate-800" 
                 )}>
-                    {data.thoiDiemMoThau || "Chưa có"}
+                    {/* [UPDATE] Sử dụng hàm format ở đây */}
+                    {formatDeadline(data.thoiDiemMoThau)}
                 </span>
              </div>
 
              {/* ACTIONS */}
-             {/* Mobile: ml-auto để nút luôn dính về bên phải, kể cả khi rớt dòng */}
              <div className="flex gap-2 ml-auto">
                 {data.projectId ? (
                     <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-slate-200 text-slate-600 hover:text-[#009d98] hover:border-[#009d98] active:scale-95 transition-transform" asChild>
