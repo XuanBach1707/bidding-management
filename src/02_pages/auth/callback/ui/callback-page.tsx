@@ -7,12 +7,32 @@ import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 /**
  * OAuth Callback Page
  *
+ * QUAN TRỌNG: Set flags NGAY LẬP TỨC trước khi component render
+ * để tránh race condition với AuthContext
+ */
+
+// ⚠️ CRITICAL: Set flags ĐỒNG BỘ ngay khi module load
+if (typeof window !== 'undefined') {
+  const params = new URLSearchParams(window.location.search);
+  const state = params.get('state');
+
+  if (state === 'success') {
+    // OAuth luôn coi như persistent (ghi nhớ)
+    localStorage.setItem('IS_PERSISTENT', '1');
+    sessionStorage.setItem('SESSION_ACTIVE', '1');
+    console.log('[OAuth Callback] Flags set immediately on module load');
+  }
+}
+
+/**
+ * OAuth Callback Page Component
+ *
  * Flow:
  * 1. Backend xử lý Microsoft OAuth
  * 2. Backend set HTTP-only cookie
- * 3. Backend redirect về: /auth/callback?state=success&remember=true
- * 4. Page này set session flags
- * 5. Redirect về dashboard
+ * 3. Backend redirect về: /auth/callback?state=success
+ * 4. Module load → Set flags NGAY
+ * 5. Component render → Hiển thị UI và redirect
  */
 export function AuthCallbackPage() {
   const router = useRouter();
@@ -23,9 +43,8 @@ export function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const state = searchParams.get('state');
-        const remember = searchParams.get('remember');
-        const error = searchParams.get('error');
+        const state = searchParams?.get('state');
+        const error = searchParams?.get('error');
 
         // Trường hợp lỗi từ BE
         if (error) {
@@ -41,24 +60,15 @@ export function AuthCallbackPage() {
 
         // Trường hợp thành công
         if (state === 'success') {
-          console.log('[OAuth Callback] Authentication successful');
-
-          // Set session flags dựa trên remember param
-          if (remember === 'true') {
-            localStorage.setItem('IS_PERSISTENT', '1');
-            console.log('[OAuth Callback] Set persistent session');
-          }
-
-          // Luôn set session active flag
-          sessionStorage.setItem('SESSION_ACTIVE', '1');
+          console.log('[OAuth Callback] Authentication successful, redirecting...');
 
           setStatus('success');
           setMessage('Đăng nhập thành công!');
 
-          // Redirect về dashboard sau 1s
+          // Redirect về dashboard sau 800ms
           setTimeout(() => {
             router.replace('/');
-          }, 1000);
+          }, 800);
         } else {
           // State không hợp lệ
           throw new Error('Invalid callback state');

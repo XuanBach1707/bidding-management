@@ -29,31 +29,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Bước 1: Gọi API check Cookie xem còn sống không
         const userFromCookie = await authApi.getMe();
 
-        // Bước 2: [UPDATED] KIỂM TRA CỜ HIỆU
+        // Bước 2: KIỂM TRA CỜ HIỆU
         // Cookie còn sống nhưng chúng ta phải xem User có quyền vào không
         // (để chặn trường hợp Browser tự khôi phục Tab cũ)
 
         const isPersistent = localStorage.getItem("IS_PERSISTENT"); // Có tích Ghi nhớ
         const isSessionActive = sessionStorage.getItem("SESSION_ACTIVE"); // Tab chưa tắt
 
-        // [FIX OAuth] Nếu KHÔNG phải ghi nhớ VÀ KHÔNG có cờ session
-        // NHƯNG cookie còn sống → Có thể là OAuth login hoặc Tab đang active
+        // Nếu KHÔNG phải ghi nhớ VÀ KHÔNG có cờ session (nghĩa là đã tắt tab mở lại)
         if (!isPersistent && !isSessionActive) {
-             console.warn("AuthProvider: Session exists but flags missing");
-
-             // Kiểm tra xem có phải đang ở callback page không
-             // Nếu đúng thì callback page sẽ tự set flags, ta chỉ cần đợi
-             const isCallbackPage = typeof window !== 'undefined' &&
-                                    window.location.pathname === '/auth/callback';
-
-             if (isCallbackPage) {
-                console.log("AuthProvider: At callback page, skip flag check");
-             } else {
-                // Không phải callback page VÀ không có flags
-                // → Browser restore hoặc user xóa flags → Force logout
-                console.warn("AuthProvider: Tab Closed or Invalid Session -> Force Logout");
-                throw new Error("Force Logout: Tab Closed");
-             }
+             console.warn("AuthProvider: Tab Closed or Invalid Session -> Force Logout");
+             // Ném lỗi để nhảy xuống catch bên dưới -> Logout
+             throw new Error("Force Logout: Tab Closed");
         }
 
         // Nếu qua được ải trên thì set user
