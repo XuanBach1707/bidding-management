@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { useQuery } from "@tanstack/react-query";
-import { 
-  X as XIcon, Lock, Calendar, Tag, Info, AlertCircle, Loader2, 
+import {
+  X as XIcon, Lock, Calendar, Tag, Info, AlertCircle, Loader2,
   Briefcase, User as UserIcon, Shield, Building2, MessageSquare, Clock,
   // [NEW] Icons cho History
-  History, ArrowRight, Activity, CheckCircle2, FileEdit
+  History, ArrowRight, Activity, CheckCircle2, FileEdit, Sparkles
 } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar"; 
@@ -134,24 +134,41 @@ const TaskHistoryTab = ({ taskId }: { taskId: number }) => {
       }
   };
 
+  // Đảo ngược thứ tự: Event mới nhất (bao gồm future) ở trên cùng
+  const sortedHistory = [...history].reverse();
+
   return (
     <div className="space-y-6 p-2 relative ml-2 pb-10">
         {/* Line dọc */}
         <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-slate-100 -z-10"></div>
 
-        {history.map((log) => {
+        {sortedHistory.map((log) => {
             const style = getActionStyle(log.action);
             const Icon = style.icon;
+            const isFuture = log.isFuture;
 
             return (
-                <div key={log.id} className="flex gap-4 items-start group animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white shadow-sm z-10", style.bg)}>
-                        <Icon className={cn("w-4 h-4", style.color)} />
+                <div key={log.id} className={cn(
+                    "flex gap-4 items-start group animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    isFuture && "opacity-70"
+                )}>
+                    <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm z-10",
+                        isFuture ? "bg-blue-50 border-blue-200" : cn(style.bg, "border-white")
+                    )}>
+                        {isFuture ? (
+                            <Sparkles className="w-4 h-4 text-blue-500" />
+                        ) : (
+                            <Icon className={cn("w-4 h-4", style.color)} />
+                        )}
                     </div>
 
-                    <div className="flex-1 min-w-0 bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className={cn(
+                        "flex-1 min-w-0 p-3 rounded-xl border shadow-sm hover:shadow-md transition-shadow",
+                        isFuture ? "bg-blue-50/30 border-blue-200" : "bg-white border-slate-100"
+                    )}>
                         <div className="flex justify-between items-start gap-2 mb-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <Avatar className="w-5 h-5 border border-slate-100">
                                     <AvatarFallback className="text-[9px] bg-slate-100 text-slate-600">
                                         {log.actor.fullName.charAt(0)}
@@ -160,23 +177,39 @@ const TaskHistoryTab = ({ taskId }: { taskId: number }) => {
                                 <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">
                                     {log.actor.fullName}
                                 </span>
+                                {isFuture && (
+                                    <Badge className="bg-blue-500 text-white text-[9px] h-4 px-1.5 font-bold">
+                                        Dự đoán
+                                    </Badge>
+                                )}
                             </div>
-                            <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                                {format(new Date(log.createdAt), "HH:mm dd/MM", { locale: vi })}
-                            </span>
+                            {log.createdAt && (
+                                <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                                    {format(new Date(log.createdAt), "HH:mm dd/MM", { locale: vi })}
+                                </span>
+                            )}
                         </div>
 
-                        <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                        <p className={cn(
+                            "text-xs leading-relaxed mb-2",
+                            isFuture ? "text-slate-500 italic" : "text-slate-600"
+                        )}>
                             {log.detail}
                         </p>
 
                         {log.oldStatus && log.newStatus && log.oldStatus !== log.newStatus && (
-                            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">
+                            <div className={cn(
+                                "flex items-center gap-2 p-2 rounded-lg border mt-2",
+                                isFuture ? "bg-blue-50 border-blue-100" : "bg-slate-50 border-slate-100"
+                            )}>
                                 <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200 h-5 px-1.5">
                                     {log.oldStatus}
                                 </Badge>
                                 <ArrowRight className="w-3 h-3 text-slate-300" />
-                                <Badge variant="outline" className="text-[9px] bg-white text-slate-800 border-slate-300 h-5 px-1.5 font-bold shadow-sm">
+                                <Badge variant="outline" className={cn(
+                                    "text-[9px] bg-white h-5 px-1.5 font-bold shadow-sm",
+                                    isFuture ? "text-blue-600 border-blue-300" : "text-slate-800 border-slate-300"
+                                )}>
                                     {log.newStatus}
                                 </Badge>
                             </div>
@@ -185,9 +218,9 @@ const TaskHistoryTab = ({ taskId }: { taskId: number }) => {
                 </div>
             );
         })}
-        
+
         <div className="pt-2 text-center">
-            <span className="text-[10px] text-slate-300 italic">Khởi đầu công việc</span>
+            <span className="text-[10px] text-slate-300 italic">Bắt đầu công việc</span>
         </div>
     </div>
   );
@@ -283,7 +316,7 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                                 value="history" 
                                 className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 shrink-0"
                             >
-                                <History className="w-3.5 h-3.5 mb-0.5" /> Lịch sử
+                                <History className="w-3.5 h-3.5 mb-0.5" /> Luồng Xử Lý
                             </TabsTrigger>
                         </TabsList>
                     </div>

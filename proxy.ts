@@ -38,16 +38,34 @@ export function proxy(request: NextRequest) {
   // 5. QUAN TRỌNG: BƠM HEADER ĐỂ BE BIẾT NÓ ĐANG NẰM SAU PROXY
   // =====================================================================
   const requestHeaders = new Headers(request.headers);
-  
+
   requestHeaders.set('X-Forwarded-Host', request.headers.get('host') || '');
   requestHeaders.set('X-Forwarded-Proto', request.nextUrl.protocol.replace(':', ''));
   requestHeaders.set('X-Forwarded-Prefix', '/api-proxy');
 
-  // 6. THỰC HIỆN REWRITE KÈM HEADERS MỚI
-  return NextResponse.rewrite(new URL(destinationUrl), {
-    request: {
-      headers: requestHeaders,
-    },
+  // 6. GỌI BACKEND VÀ XỬ LÝ REDIRECT
+  return fetch(destinationUrl, {
+    method: request.method,
+    headers: requestHeaders,
+    body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+    redirect: 'manual', // ✅ QUAN TRỌNG: Không tự động follow redirect
+  }).then(async (backendResponse) => {
+    // Nếu backend trả về redirect (3xx), forward redirect ra browser
+    if (backendResponse.status >= 300 && backendResponse.status < 400) {
+      const location = backendResponse.headers.get('location');
+      if (location) {
+        console.log(`[Proxy] Forwarding redirect to: ${location}`);
+        return NextResponse.redirect(location, backendResponse.status);
+      }
+    }
+
+    // Nếu không phải redirect, forward response như bình thường
+    const responseBody = await backendResponse.arrayBuffer();
+    return new NextResponse(responseBody, {
+      status: backendResponse.status,
+      statusText: backendResponse.statusText,
+      headers: backendResponse.headers,
+    });
   });
 }
 
