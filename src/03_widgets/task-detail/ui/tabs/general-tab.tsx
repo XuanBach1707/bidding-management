@@ -11,8 +11,12 @@ import {
   Loader2,
   CheckCircle, 
   XCircle,
-  AlertCircle
+  AlertCircle,
+  FileCheck, // Icon mới cho phần nộp bài
+  Trash2,
+  FileText
 } from "lucide-react";
+// [UPDATE] Import Schema type
 import { Task, TaskPriority, taskApi } from "@/entities/task";
 import { DiscussionThread } from "@/features/comment/discussion-thread";
 import { cn } from "@/shared/lib/utils";
@@ -29,6 +33,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/shared/ui/dialog";
+import { Download } from "lucide-react";
 
 interface GeneralTabProps {
   task: Task;
@@ -70,12 +75,20 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
   
   // State xử lý Submit/Approve/Reject
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Dialog Reject
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  // State xử lý Upload
+  // Dialog Submit Files (Nộp bài)
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [submissionFiles, setSubmissionFiles] = useState<File[]>([]);
+  const [submissionComment, setSubmissionComment] = useState("");
+
+  // State xử lý Upload thường
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitFileInputRef = useRef<HTMLInputElement>(null);
 
   const priorityInfo = getPriorityDisplay(task.priority);
   const statusInfo = getStatusBadge(task.status);
@@ -86,32 +99,67 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
 
   // --- HANDLERS ---
 
-  // Xử lý chọn file (Upload)
+  // 1. Xử lý Upload file Đính kèm (Giữ nguyên logic cũ)
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     try {
         setIsUploading(true);
-        // Gọi API Upload
         await taskApi.uploadAttachment(task.id, files);
-        
-        toast({ title: "Thành công", description: "Đã tải lên tài liệu.", className: "bg-[#009d98] text-white border-none" });
-        
-        // Refresh lại data để hiện file mới ngay lập tức
+        toast({ title: "Thành công", description: "Đã tải lên tài liệu đính kèm.", className: "bg-[#009d98] text-white border-none" });
         onRefresh(); 
     } catch (error) {
-        console.error(error);
         toast({ variant: "destructive", title: "Lỗi", description: "Không thể tải lên tài liệu." });
     } finally {
         setIsUploading(false);
-        // Reset input để cho phép chọn lại cùng 1 file nếu muốn
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
+        if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
+  // 2. [NEW] Xử lý chọn file Nộp bài (Chưa upload ngay, chỉ lưu vào state)
+  const handleSubmitFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+     if (e.target.files && e.target.files.length > 0) {
+        // Cộng dồn file mới vào danh sách cũ
+        setSubmissionFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+     }
+  };
+
+  const removeSubmissionFile = (index: number) => {
+     setSubmissionFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 3. [NEW] Handler Nộp kết quả (Gọi API submitFiles)
+  const handleSubmitResult = async () => {
+     if (submissionFiles.length === 0) {
+        toast({ variant: "destructive", description: "Vui lòng chọn ít nhất 1 file kết quả." });
+        return;
+     }
+
+     try {
+        setIsProcessing(true);
+
+        // Gọi API submitFiles trực tiếp với File[] và comment
+        // Backend sẽ tự upload lên Drive và lưu vào submission_data
+        await taskApi.submitFiles(
+            task.id,
+            submissionFiles,
+            submissionComment || undefined
+        );
+
+        toast({ title: "Nộp bài thành công", description: "Đã gửi kết quả và chờ duyệt.", className: "bg-[#009d98] text-white border-none" });
+        setIsSubmitDialogOpen(false);
+        setSubmissionFiles([]);
+        setSubmissionComment("");
+        onRefresh();
+     } catch (error) {
+        toast({ variant: "destructive", title: "Lỗi nộp bài", description: "Có lỗi xảy ra khi gửi dữ liệu." });
+     } finally {
+        setIsProcessing(false);
+     }
+  };
+
+  // 4. Submit thường (chuyển trạng thái)
   const handleSubmit = async () => {
     try {
         setIsProcessing(true);
@@ -185,14 +233,39 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
              </div>
           </div>
 
-          {/* 2. ATTACHMENTS */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <Paperclip className="w-4 h-4 text-[#009d98]" />
-                Tài liệu đính kèm
-             </h3>
+          {/* 2. ATTACHMENTS (ĐÍNH KÈM THƯỜNG) */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm group">
+             <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                    <Paperclip className="w-4 h-4 text-[#009d98]" />
+                    Tài liệu tham khảo / Đính kèm
+                </h3>
+                {/* Nút Upload nhỏ gọn hơn */}
+                {!isReviewMode && task.status !== "COMPLETED" && (
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 gap-2 text-[#009d98] border-[#009d98]/30 hover:bg-[#009d98]/10"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                    >
+                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin"/> : <CloudUpload className="w-3 h-3"/>}
+                        Thêm tài liệu
+                    </Button>
+                )}
+             </div>
              
-             {/* Danh sách file đã upload */}
+             {/* Hidden Input cho Upload Thường */}
+             <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                multiple
+                onChange={handleFileSelect}
+                disabled={isUploading}
+             />
+             
+             {/* List Files */}
              {task.attachmentUrl && task.attachmentUrl.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {task.attachmentUrl.map((url, idx) => (
@@ -201,13 +274,12 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                             href={url} 
                             target="_blank" 
                             rel="noreferrer" 
-                            // [FIX] Thêm relative z-10 để đảm bảo click được
-                            className="flex items-center p-3 border border-slate-200 rounded-lg hover:border-[#009d98]/50 hover:bg-[#009d98]/5 transition-all group bg-slate-50/30 relative z-10 cursor-pointer"
+                            className="flex items-center p-3 border border-slate-200 rounded-lg hover:border-[#009d98]/50 hover:bg-[#009d98]/5 transition-all bg-slate-50/30 relative z-10 cursor-pointer"
                         >
-                            <div className="p-2 bg-white rounded-md border border-slate-100 shadow-sm mr-3 group-hover:border-[#009d98]/20">
-                                <CloudUpload className="w-4 h-4 text-[#009d98]" />
+                            <div className="p-2 bg-white rounded-md border border-slate-100 shadow-sm mr-3 text-[#009d98]">
+                                <Paperclip className="w-4 h-4" />
                             </div>
-                            <span className="text-sm text-slate-600 font-medium truncate flex-1 group-hover:text-[#009d98] transition-colors">
+                            <span className="text-sm text-slate-600 font-medium truncate flex-1">
                                 {url.split('/').pop() || `File ${idx + 1}`}
                             </span>
                         </a>
@@ -215,44 +287,70 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 </div>
              ) : (
                 <div className="text-sm text-slate-400 italic bg-slate-50 p-4 rounded border border-dashed text-center">
-                    Chưa có file đính kèm.
+                    Chưa có tài liệu đính kèm.
                 </div>
-             )}
-
-             {/* Khu vực Upload */}
-             {!isReviewMode && task.status !== "COMPLETED" && (
-                <label
-                    className={cn(
-                        "mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 transition-all relative z-10",
-                        isUploading ? "cursor-wait opacity-70 pointer-events-none" : "cursor-pointer hover:bg-slate-100 hover:border-slate-300 active:scale-[0.98]"
-                    )}
-                >
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        multiple
-                        onChange={handleFileSelect}
-                        disabled={isUploading}
-                    />
-
-                    {isUploading ? (
-                        <>
-                            <Loader2 className="w-8 h-8 text-[#009d98] mb-2 animate-spin" />
-                            <p className="text-sm text-[#009d98] font-medium animate-pulse">Đang tải lên...</p>
-                        </>
-                    ) : (
-                        <>
-                            <CloudUpload className="w-8 h-8 text-slate-300 mb-2" />
-                            <p className="text-sm text-slate-500 font-medium">Click để tải lên tài liệu</p>
-                            <p className="text-xs text-slate-400">Hỗ trợ PDF, Excel, Word (Max 20MB)</p>
-                        </>
-                    )}
-                </label>
              )}
           </div>
 
-          {/* 3. DISCUSSION */}
+          {/* 3. SUBMISSION FILES (FILE ĐÃ NỘP) */}
+          {task.submissionData && task.submissionData.length > 0 && (
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+               <div className="flex items-center gap-2 mb-4">
+                  <FileCheck className="w-4 h-4 text-emerald-600" />
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                     Kết quả đã nộp
+                  </h3>
+                  <Badge variant="outline" className="ml-auto bg-emerald-50 text-emerald-700 border-emerald-200">
+                     {task.submissionData.length} file
+                  </Badge>
+               </div>
+
+               <div className="space-y-3">
+                  {task.submissionData.map((item) => (
+                     <div key={item.fileId} className="border border-slate-200 rounded-lg p-4 bg-slate-50/30 hover:bg-emerald-50/30 transition-colors">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                           <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="p-2 bg-white rounded-md border border-emerald-100 shadow-sm text-emerald-600 shrink-0">
+                                 <FileText className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                 <p className="text-sm font-semibold text-slate-800 truncate" title={item.name}>
+                                    {item.name}
+                                 </p>
+                                 <p className="text-xs text-slate-500">
+                                    Nộp bởi <span className="font-medium text-slate-700">{item.uploadedName}</span>
+                                 </p>
+                              </div>
+                           </div>
+                           <a
+                              href={item.downloadUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="shrink-0 p-2 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
+                              title="Tải xuống"
+                           >
+                              <Download className="w-4 h-4" />
+                           </a>
+                        </div>
+
+                        {item.comment && (
+                           <div className="mt-2 pt-2 border-t border-slate-200">
+                              <p className="text-xs text-slate-500 italic">
+                                 <span className="font-semibold text-slate-600">Ghi chú:</span> {item.comment}
+                              </p>
+                           </div>
+                        )}
+
+                        <div className="mt-2 text-xs text-slate-400">
+                           {new Date(item.uploadedAt).toLocaleString('vi-VN')}
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+          )}
+
+          {/* 4. DISCUSSION */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
              <DiscussionThread taskId={task.id} />
           </div>
@@ -270,22 +368,42 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 </Badge>
              </div>
 
-             {!isReviewMode && task.status === "IN_PROGRESS" && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
+             {/* === [NEW] KHU VỰC NỘP KẾT QUẢ === */}
+             {!isReviewMode && task.status !== "COMPLETED" && (
+                <div className="mt-4 pt-4 border-t border-slate-100 relative z-20">
+                    <div className="bg-emerald-50/50 rounded-lg p-4 border border-emerald-100 mb-3">
+                        <h4 className="text-xs font-bold text-emerald-800 uppercase mb-2 flex items-center gap-2">
+                             <FileCheck className="w-4 h-4" /> Báo cáo kết quả
+                        </h4>
+                        <p className="text-[11px] text-slate-500 leading-tight mb-3">
+                            Nộp các file sản phẩm cuối cùng tại đây để gửi duyệt.
+                        </p>
+
+                        {/* Nút mở Dialog Nộp bài */}
+                        <Button
+                            onClick={() => setIsSubmitDialogOpen(true)}
+                            disabled={isProcessing}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 shadow-sm gap-2 relative z-20"
+                        >
+                            <CloudUpload className="w-4 h-4"/>
+                            Nộp kết quả
+                        </Button>
+                    </div>
+
+                    {/* Nút gửi duyệt (chỉ chuyển trạng thái nếu đã nộp file trước đó) */}
                     <Button 
                         onClick={handleSubmit} 
+                        variant="ghost"
                         disabled={isProcessing}
-                        className="w-full bg-[#009d98] hover:bg-[#008580] text-white font-bold h-11 shadow-md gap-2"
+                        className="w-full text-slate-500 hover:text-[#009d98] hover:bg-[#009d98]/10 h-9 gap-2 text-xs"
                     >
-                        {isProcessing ? <Loader2 className="animate-spin w-4 h-4"/> : <Send className="w-4 h-4"/>}
-                        Gửi duyệt
+                        {isProcessing ? <Loader2 className="animate-spin w-3 h-3"/> : <Send className="w-3 h-3"/>}
+                        Chỉ gửi yêu cầu duyệt (Không nộp thêm file)
                     </Button>
-                    <p className="text-xs text-center text-slate-400 mt-2">
-                        Xác nhận hoàn thành công việc để quản lý kiểm tra.
-                    </p>
                 </div>
              )}
 
+             {/* ACTIONS CHO REVIEWER */}
              {isReviewMode && task.status === "PENDING_REVIEW" && (
                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
                     <Button 
@@ -357,7 +475,7 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
         </div>
       </div>
 
-      {/* DIALOG TỪ CHỐI */}
+      {/* --- DIALOG 1: TỪ CHỐI --- */}
       <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -387,6 +505,90 @@ export const GeneralTab = ({ task, onRefresh, isReviewMode = false }: GeneralTab
                 disabled={isProcessing}
             >
                 {isProcessing ? "Đang gửi..." : "Gửi yêu cầu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- DIALOG 2: NỘP KẾT QUẢ --- */}
+      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-[#009d98] mb-1">
+                <FileCheck className="w-5 h-5" />
+                <DialogTitle>Nộp kết quả công việc</DialogTitle>
+            </div>
+            <DialogDescription>
+                Tải lên các tài liệu sản phẩm và gửi lời nhắn cho người duyệt.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+             {/* 1. Chọn file */}
+             <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Tài liệu đính kèm</label>
+                
+                {/* Khu vực Drag/Click Upload */}
+                <div 
+                    onClick={() => submitFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 hover:border-[#009d98]/50 cursor-pointer transition-colors"
+                >
+                     <CloudUpload className="w-8 h-8 text-slate-300 mb-2" />
+                     <p className="text-sm font-medium text-slate-600">Nhấn để chọn file</p>
+                     <p className="text-xs text-slate-400">(Hỗ trợ nhiều file)</p>
+                     <input 
+                        type="file" 
+                        ref={submitFileInputRef} 
+                        className="hidden" 
+                        multiple 
+                        onChange={handleSubmitFileSelect}
+                     />
+                </div>
+
+                {/* Danh sách file đã chọn */}
+                {submissionFiles.length > 0 && (
+                    <div className="space-y-2 mt-2 max-h-[150px] overflow-y-auto custom-scrollbar">
+                        {submissionFiles.map((file, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100 text-sm">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <FileText className="w-4 h-4 text-[#009d98] shrink-0" />
+                                    <span className="truncate max-w-[250px] text-slate-700">{file.name}</span>
+                                    <span className="text-xs text-slate-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                </div>
+                                <button 
+                                    onClick={() => removeSubmissionFile(idx)}
+                                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+             </div>
+
+             {/* 2. Lời nhắn */}
+             <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Lời nhắn / Ghi chú</label>
+                <Textarea 
+                    value={submissionComment}
+                    onChange={(e) => setSubmissionComment(e.target.value)}
+                    placeholder="Nhập nội dung ghi chú cho người duyệt..."
+                    className="resize-none"
+                    rows={3}
+                />
+             </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsSubmitDialogOpen(false)}>Hủy bỏ</Button>
+            <Button 
+                className="bg-[#009d98] hover:bg-[#008580] text-white font-bold gap-2" 
+                onClick={handleSubmitResult} 
+                disabled={isProcessing || submissionFiles.length === 0}
+            >
+                {isProcessing ? <Loader2 className="animate-spin w-4 h-4" /> : <Send className="w-4 h-4" />}
+                Gửi bài & Hoàn thành
             </Button>
           </DialogFooter>
         </DialogContent>
