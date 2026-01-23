@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
-import { authApi } from "@/features/auth/api/auth.api";
-import { useToast } from "@/shared/lib/hooks/use-toast";
 
 interface MicrosoftLoginButtonProps {
   className?: string;
@@ -15,43 +13,29 @@ interface MicrosoftLoginButtonProps {
  *
  * Flow:
  * 1. User click button
- * 2. Gọi API GET /auth/microsoft/login để lấy OAuth URL
- * 3. Redirect user sang Microsoft login với URL nhận được
- * 4. BE tự xử lý callback và set HTTP-only cookie
- * 5. BE redirect về /auth/callback?state=success
- * 6. Callback page set session flags và redirect về dashboard
+ * 2. Redirect trực tiếp đến /api-proxy/auth/microsoft/login
+ * 3. BE redirect sang Microsoft OAuth URL
+ * 4. User login tại Microsoft
+ * 5. Microsoft callback về BE
+ * 6. BE set HTTP-only cookie và redirect về /auth/callback?state=success
+ * 7. Callback page set session flags và redirect về dashboard
  */
 export function MicrosoftLoginButton({
   className = "",
 }: MicrosoftLoginButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
-  const handleMicrosoftLogin = async () => {
-    try {
-      setIsLoading(true);
+  const handleMicrosoftLogin = () => {
+    setIsLoading(true);
 
-      // Gọi API để lấy Microsoft OAuth URL
-      console.log('[Microsoft Login] Fetching OAuth URL...');
-      const microsoftUrl = await authApi.getMicrosoftLoginUrl();
+    // Log để debug
+    console.log('[Microsoft Login] Redirecting to OAuth endpoint...');
 
-      console.log('[Microsoft Login] Redirecting to:', microsoftUrl);
+    // Redirect trực tiếp đến BE endpoint
+    // BE sẽ tự redirect sang Microsoft login page
+    window.location.href = '/api-proxy/auth/microsoft/login';
 
-      // Redirect user sang Microsoft login
-      window.location.href = microsoftUrl;
-
-      // Note: Không cần setIsLoading(false) vì page sẽ redirect ngay
-    } catch (error: any) {
-      console.error('[Microsoft Login] Error:', error);
-
-      setIsLoading(false);
-
-      toast({
-        variant: "destructive",
-        title: "Lỗi đăng nhập Microsoft",
-        description: error.message || "Không thể kết nối đến dịch vụ Microsoft. Vui lòng thử lại.",
-      });
-    }
+    // Note: Không cần setIsLoading(false) vì page sẽ redirect ngay
   };
 
   return (
