@@ -9,15 +9,16 @@ export const TaskTimelineActorSchema = z.object({
 });
 
 // 2. Schema cho từng sự kiện trong Timeline
-// API gốc: old_status, new_status, created_at -> Client: oldStatus, newStatus, createdAt
+// API gốc: old_status, new_status, created_at, is_future -> Client: oldStatus, newStatus, createdAt, isFuture
 export const TaskTimelineEventSchema = z.object({
   id: z.number(),
   action: z.string(), // Có thể dùng z.enum([...]) nếu danh sách action cố định
   oldStatus: z.string().nullable(),
   newStatus: z.string().nullable(),
   detail: z.string(),
-  createdAt: z.string(), // Dạng ISO string
+  createdAt: z.string().nullable(), // Dạng ISO string, null nếu là event tương lai
   actor: TaskTimelineActorSchema,
+  isFuture: z.boolean().default(false), // Đánh dấu sự kiện dự đoán trong tương lai
 });
 
 // 3. Schema cho danh sách (Response trả về array)
