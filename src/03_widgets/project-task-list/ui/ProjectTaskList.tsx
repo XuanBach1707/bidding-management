@@ -56,16 +56,18 @@ const TaskRowItem = ({ task, unitMap, isExpanded, onToggleExpand, onSelect, sele
     const renderAssignee = () => {
         if (!isSubTask) {
             if (task.isFileTask) {
-                return <div onClick={e => e.stopPropagation()}><AutoFetchFileCell taskName={task.taskName} /></div>;
+                // [FIX] Thêm min-w-0 để tránh tràn file name
+                return <div onClick={e => e.stopPropagation()} className="min-w-0"><AutoFetchFileCell taskName={task.taskName} /></div>;
             }
             let displayUnitName = task.assignments?.[0]?.unit?.unitName || (task.assignedUnitId ? unitMap[task.assignedUnitId] : null);
             if (displayUnitName) {
                 return (
-                    <div className="flex items-center gap-2" title={displayUnitName}>
-                         <div className="h-5 w-5 md:h-6 md:w-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
-                            <Building2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-500" />
-                         </div>
-                         <span className="truncate text-slate-700 font-medium text-xs">{displayUnitName}</span>
+                    // [FIX] Thêm min-w-0 để truncate hoạt động
+                    <div className="flex items-center gap-2 min-w-0" title={displayUnitName}>
+                          <div className="h-5 w-5 md:h-6 md:w-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                             <Building2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-500" />
+                          </div>
+                          <span className="truncate text-slate-700 font-medium text-xs">{displayUnitName}</span>
                     </div>
                 );
             }
@@ -77,7 +79,7 @@ const TaskRowItem = ({ task, unitMap, isExpanded, onToggleExpand, onSelect, sele
         
         if (user?.fullName) {
              return (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     <div className="h-6 w-6 rounded-full bg-[#009d98]/10 border border-[#009d98]/20 flex items-center justify-center shrink-0 overflow-hidden text-[#009d98] font-bold text-[10px]">
                         {user.avatarUrl ? <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" /> : user.fullName.charAt(0).toUpperCase()}
                     </div>
@@ -114,16 +116,16 @@ const TaskRowItem = ({ task, unitMap, isExpanded, onToggleExpand, onSelect, sele
                 {isSubTask && (
                      <div className="mt-0.5 md:mt-0 shrink-0">
                         {task.status === 'COMPLETED' 
-                         ? <CircleCheck className="w-4 h-4 text-emerald-500" />
-                         : <div className="w-4 h-4 rounded-full border-2 border-slate-300" />
+                          ? <CircleCheck className="w-4 h-4 text-emerald-500" />
+                          : <div className="w-4 h-4 rounded-full border-2 border-slate-300" />
                         }
-                     </div>
+                      </div>
                 )}
                 
                 <div className="flex-1 min-w-0">
                     {/* Mobile: Status Badge floats right next to name */}
                     <div className="flex justify-between items-start gap-2">
-                        <h3 className={cn("font-bold text-sm leading-snug", isSubTask && selectedId === task.id ? "text-[#009d98]" : "text-slate-700")}>
+                        <h3 className={cn("font-bold text-sm leading-snug truncate pr-2", isSubTask && selectedId === task.id ? "text-[#009d98]" : "text-slate-700")}>
                             {task.taskName}
                         </h3>
                         {/* Mobile Status Badge */}
@@ -147,24 +149,26 @@ const TaskRowItem = ({ task, unitMap, isExpanded, onToggleExpand, onSelect, sele
 
             {/* Col 2,3,4: Details (Mobile Row) */}
             <div className="md:col-span-6 flex items-center justify-between md:grid md:grid-cols-6 gap-2 md:gap-4 w-full mt-1 md:mt-0">
-                {/* Assignee */}
-                <div className="md:col-span-2 text-xs font-medium min-w-0 flex items-center">
+                {/* [FIX] Assignee: Tăng lên col-span-3 (50%) + overflow-hidden để cắt chữ dài 
+                */}
+                <div className="md:col-span-3 text-xs font-medium min-w-0 flex items-center overflow-hidden pr-2">
                     {renderAssignee()}
                 </div>
                 
-                {/* Deadline */}
-                <div className="md:col-span-2 text-xs text-slate-500 font-medium flex items-center md:justify-start">
+                {/* [FIX] Deadline: Giảm xuống col-span-1 (vừa đủ cho ngày tháng) 
+                */}
+                <div className="md:col-span-1 text-xs text-slate-500 font-medium flex items-center md:justify-start">
                     {task.deadline ? (
                          <span className={cn("flex items-center gap-1.5 bg-slate-50 md:bg-transparent px-2 md:px-0 py-1 md:py-0 rounded", new Date(task.deadline) < new Date() && task.status !== 'COMPLETED' ? "text-red-600 font-bold" : "")}>
                             <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                            {format(new Date(task.deadline), "dd/MM")}
+                            <span className="whitespace-nowrap">{format(new Date(task.deadline), "dd/MM")}</span>
                          </span>
                     ) : <span className="text-slate-300">--</span>}
                 </div>
 
-                {/* Status (Desktop Only) */}
+                {/* Status (Desktop Only): Giữ nguyên col-span-2 */}
                 <div className="hidden md:block md:col-span-2 text-right pr-4">
-                     <Badge variant="outline" className={cn("h-5 px-2 font-bold text-[9px] uppercase shadow-none border shrink-0 inline-flex", getStatusColor(displayStatus))}>
+                      <Badge variant="outline" className={cn("h-5 px-2 font-bold text-[9px] uppercase shadow-none border shrink-0 inline-flex", getStatusColor(displayStatus))}>
                         {displayStatus}
                     </Badge>
                 </div>
@@ -245,7 +249,7 @@ export const ProjectTaskList = ({ projectId, driveFolderId, projectName }: Proje
 
   const { data: unitMap = {} } = useQuery({
     queryKey: ["all-org-units-map"],
-    queryFn: async () => { /* ... giữ nguyên logic fetch ... */ return {}; }, // (Giả lập để code ngắn gọn, bạn giữ nguyên logic cũ)
+    queryFn: async () => { /* ... giữ nguyên logic fetch ... */ return {}; }, 
   });
 
   const roadmapData = useMemo(() => {
@@ -275,8 +279,8 @@ export const ProjectTaskList = ({ projectId, driveFolderId, projectName }: Proje
   return (
     <div className="relative flex h-full overflow-hidden bg-slate-50 w-full">
       {/* [UPDATE] Layout Container
-         - Mobile: w-full (Panel sẽ đè lên hoặc dùng fixed)
-         - Desktop: mr-[450px] khi chọn Task
+          - Mobile: w-full (Panel sẽ đè lên hoặc dùng fixed)
+          - Desktop: mr-[450px] khi chọn Task
       */}
       <div className={cn(
           "flex-1 flex flex-col transition-all duration-300 ease-in-out h-full", 
@@ -308,8 +312,9 @@ export const ProjectTaskList = ({ projectId, driveFolderId, projectName }: Proje
                     {/* Header Table: Hidden on Mobile */}
                     <div className="hidden md:grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
                         <div className="col-span-6 pl-10">Hạng mục công việc</div>
-                        <div className="col-span-2">Phụ trách / Hồ sơ</div>
-                        <div className="col-span-2">Hạn chót</div>
+                        {/* [UPDATE HEADER] Điều chỉnh lại header cho khớp với row bên dưới */}
+                        <div className="col-span-3">Phụ trách / Hồ sơ</div>
+                        <div className="col-span-1">Hạn chót</div>
                         <div className="col-span-2 text-right pr-4">Trạng thái</div>
                     </div>
                     {roadmapData.length === 0 && <div className="text-center py-20 text-slate-400 text-sm">Không có dữ liệu.</div>}

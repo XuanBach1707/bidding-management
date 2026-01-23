@@ -11,9 +11,10 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
-import { useToast } from "@/shared/lib/hooks/use-toast"; 
-import { authStorage } from "@/shared/lib/auth"; 
-import { authApi, LoginRequest, LoginRequestSchema } from "@/features/auth/api/auth.api"; 
+import { useToast } from "@/shared/lib/hooks/use-toast";
+import { authStorage } from "@/shared/lib/auth";
+import { authApi, LoginRequest, LoginRequestSchema } from "@/features/auth/api/auth.api";
+import { MicrosoftLoginButton } from "@/features/auth"; 
 
 export function LoginForm() {
   const router = useRouter();
@@ -149,18 +150,31 @@ export function LoginForm() {
         </div>
 
         {/* Submit Button */}
-        <Button 
-          type="submit" 
-          className="w-full h-12 text-base font-bold bg-[#20a19c] hover:bg-[#1a8e8a] transition-all shadow-lg shadow-[#20a19c]/20 rounded-lg mt-4" 
+        <Button
+          type="submit"
+          className="w-full h-12 text-base font-bold bg-[#20a19c] hover:bg-[#1a8e8a] transition-all shadow-lg shadow-[#20a19c]/20 rounded-lg mt-4"
           disabled={loginMutation.isPending}
         >
           {loginMutation.isPending ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> 
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
               "Đăng nhập"
           )}
         </Button>
-        
+
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-3 text-slate-400 font-medium">Hoặc</span>
+          </div>
+        </div>
+
+        {/* Microsoft Login Button */}
+        <MicrosoftLoginButton />
+
         <div className="pt-6 text-center">
           <p className="text-sm text-slate-500">
             Bạn gặp sự cố đăng nhập? <a href="#" className="text-[#20a19c] font-semibold hover:underline">Liên hệ IT Support</a>

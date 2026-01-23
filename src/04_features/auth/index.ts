@@ -2,6 +2,7 @@
 
 // 1. Export UI Components
 export { LoginForm } from "./ui/login-form";
+export { MicrosoftLoginButton } from "./ui/microsoft-login-button";
 
 // 2. Export API & Types (Explicit Named Exports)
 export { 

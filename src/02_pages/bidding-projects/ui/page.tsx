@@ -1,5 +1,7 @@
 "use client";
 import React, { useEffect, useState, use, useMemo } from 'react';
+// [UPDATE] Thêm Link để điều hướng
+import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow, differenceInCalendarDays } from 'date-fns';
@@ -78,18 +80,28 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
   const stats = useMemo(() => {
     if (!tasks || tasks.length === 0) return { progress: 0, timeLeft: "Chưa có deadline", isUrgent: false, timeBarPercent: 0, daysLeft: 0 };
 
-    // A. Tiến độ
-    const parentScores = tasks.map(parent => {
-        const isFileTask = FILE_ONLY_TASKS.some(t => parent.taskName.includes(t));
-        if (isFileTask) return 100; 
+    // A. TIẾN ĐỘ (LOGIC MỚI: Chỉ tính các task công việc, bỏ qua task hồ sơ)
+    
+    // 1. Lọc các task thực tế cần tính toán (loại bỏ task nằm trong FILE_ONLY_TASKS)
+    const calculableTasks = tasks.filter(parent => 
+        !FILE_ONLY_TASKS.some(t => parent.taskName.includes(t))
+    );
 
+    // 2. Tính điểm % cho từng task còn lại dựa trên subTasks
+    const scores = calculableTasks.map(parent => {
         const subTasks = parent.subTasks || [];
         if (subTasks.length === 0) return 0;
+        
         const completedCount = subTasks.filter(s => s.status === 'COMPLETED').length;
         return (completedCount / subTasks.length) * 100;
     });
-    const totalScore = parentScores.reduce((a, b) => a + b, 0);
-    const progressPercent = Math.round(totalScore / (tasks.length || 1));
+
+    // 3. Tính trung bình cộng trên số lượng task thực tế
+    const totalScore = scores.reduce((a, b) => a + b, 0);
+    const progressPercent = calculableTasks.length > 0 
+        ? Math.round(totalScore / calculableTasks.length) 
+        : 0;
+
 
     // B. Thời gian
     const allTasksWithDeadline = tasks.flatMap(t => [t, ...(t.subTasks || [])]);
@@ -236,7 +248,20 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                                 <TableBody>
                                     {(project.packages || []).map((pkg) => (
                                         <TableRow key={pkg.maTbmt} className="hover:bg-slate-50">
-                                            <TableCell className="font-mono text-[#009d98] font-bold text-xs whitespace-nowrap">{pkg.maTbmt}</TableCell>
+                                            {/* [UPDATE] Bấm vào mã TBMT nhảy sang trang Opportunity
+                                                - URL: /opportunities/{hsmtId}
+                                                - Text hiển thị: {maTbmt}
+                                                - Dùng (pkg as any).hsmt_id phòng trường hợp chưa map snake_case
+                                            */}
+                                            <TableCell className="font-mono text-[#009d98] font-bold text-xs whitespace-nowrap">
+                                                <Link 
+                                                  href={`/opportunities/${pkg.hsmtId || (pkg as any).hsmt_id}`} 
+                                                  className="hover:underline hover:text-[#008580] transition-colors"
+                                                  title="Xem chi tiết cơ hội"
+                                                >
+                                                  {pkg.maTbmt}
+                                                </Link>
+                                            </TableCell>
                                             <TableCell className="font-medium text-sm text-slate-700 min-w-[200px]">{pkg.tenGoiThau}</TableCell>
                                             <TableCell className="text-right text-xs text-slate-500 whitespace-nowrap">{new Date(pkg.ngayDangTai).toLocaleDateString('vi-VN')}</TableCell>
                                         </TableRow>
@@ -384,21 +409,21 @@ export default function BiddingProjectDetailPage({ params }: PageProps) {
                      {/* Content 1: Roadmap */}
                      {!isLegacyMode && (
                          <TabsContent value="roadmap" className="m-0 h-full data-[state=inactive]:hidden">
-                              {/* NOTE: ProjectTaskList là component phức tạp nhất.
+                             {/* NOTE: ProjectTaskList là component phức tạp nhất.
                                  Cần đảm bảo bên trong nó responsive tốt (dùng Card thay Table trên mobile).
-                              */}
-                              <ProjectTaskList 
-                                 projectId={projectId} 
-                                 driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
-                                 projectName={project.name}
-                              />
+                             */}
+                             <ProjectTaskList 
+                                projectId={projectId} 
+                                driveFolderId={project.driveFolderId || (project as any).drive_folder_id}
+                                projectName={project.name}
+                             />
                          </TabsContent>
                      )}
 
                      {/* Content 2: Kết quả LCNT */}
                      {shouldShowResultTab && targetHsmtId && (
                          <TabsContent value="result" className="m-0 min-h-full h-auto p-4 md:p-6 data-[state=inactive]:hidden animate-in fade-in zoom-in-95 duration-300 pb-24">
-                              <BiddingResultTab hsmtId={targetHsmtId} />
+                             <BiddingResultTab hsmtId={targetHsmtId} />
                          </TabsContent>
                      )}
                  </div>

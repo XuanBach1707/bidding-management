@@ -38,6 +38,24 @@ export const taskApi = {
     return http.put(`/tasks/${id}`, data);
   },
 
+  // [MỚI] Upload file đính kèm
+  // Endpoint: POST /tasks/{task_id}/attachments
+  // Body: FormData (files: File[])
+  uploadAttachment: (id: number, files: FileList | File[]): Promise<Task> => {
+    const formData = new FormData();
+    
+    // Convert FileList sang mảng nếu cần
+    const fileArray = Array.from(files);
+
+    // Backend yêu cầu field là 'files'
+    fileArray.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    // Header Content-Type sẽ được Interceptor tự động xử lý (xóa đi để browser tự set boundary)
+    return http.post(`/tasks/${id}/attachments`, formData);
+  },
+
   // Submit (Gửi duyệt)
   submit: (id: number): Promise<Task> => {
     return http.post(`/tasks/${id}/submit`);
@@ -53,7 +71,7 @@ export const taskApi = {
   // =========================================================
 
   /**
-   * [MỚI] 1. Lấy danh sách task cần tôi duyệt
+   * 1. Lấy danh sách task cần tôi duyệt
    * GET /users/reviewer-list
    */
   getReviewerList: (): Promise<Task[]> => {
@@ -61,7 +79,7 @@ export const taskApi = {
   },
 
   /**
-   * [MỚI] 2. Xem chi tiết task dưới góc độ Reviewer
+   * 2. Xem chi tiết task dưới góc độ Reviewer
    * GET /users/reviewer/{task_id}
    * (Lưu ý: Khác với getDetail ở trên)
    */
@@ -70,7 +88,7 @@ export const taskApi = {
   },
 
   /**
-   * [MỚI] 3. Cập nhật trạng thái duyệt (Duyệt hoặc Từ chối)
+   * 3. Cập nhật trạng thái duyệt (Duyệt hoặc Từ chối)
    * PATCH /tasks/{task_id}/status
    * Params: status (COMPLETED | REJECTED)
    */
