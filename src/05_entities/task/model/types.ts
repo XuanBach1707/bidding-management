@@ -28,14 +28,27 @@ export type TaskType = z.infer<typeof TaskTypeEnum>;
 // [TỐI ƯU] Lấy type trực tiếp từ Schema để đảm bảo có field user và unit
 export type TaskAssignment = z.infer<typeof TaskAssignmentSchema>;
 
+// Submission Data item (File đã nộp)
+export interface SubmissionDataItem {
+  fileId: string;
+  name: string;
+  url: string;
+  downloadUrl: string;
+  uploadedBy: number;
+  uploadedName: string;
+  uploadedAt: string;
+  comment?: string | null;
+}
+
 export interface Task extends Omit<CreateTaskDto, 'assignments'> {
   id: number;
   assignments: TaskAssignment[]; // Tự động nhận type có user, unit
-  subTasks: Task[]; 
+  subTasks: Task[];
   createdAt?: string;
   updatedAt?: string;
-  progress?: number; 
+  progress?: number;
   hasFile?: boolean;
-  projectName?: string; 
+  projectName?: string;
+  submissionData?: SubmissionDataItem[]; // Danh sách file đã nộp
   // attachmentUrl đã có trong CreateTaskDto
 }

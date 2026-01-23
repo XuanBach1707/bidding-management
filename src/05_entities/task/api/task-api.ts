@@ -1,4 +1,4 @@
-import { http } from "@/shared/api"; 
+import { http } from "@/shared/api";
 import { CreateTaskDto, Task } from "../model/types";
 
 export type UpdateTaskDto = Partial<CreateTaskDto>;
@@ -61,7 +61,26 @@ export const taskApi = {
     return http.post(`/tasks/${id}/submit`);
   },
 
-  // Xóa task
+  // [MỚI] Nộp bài kèm nhiều file (Lưu vào submission_data & Drive)
+  // Endpoint: POST /tasks/task/{task_id}/submit-files
+  // Backend yêu cầu multipart/form-data với files (File[]) và comment (string)
+  submitFiles: (id: number, files: File[], comment?: string): Promise<string> => {
+    const formData = new FormData();
+
+    // Append từng file vào FormData
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    // Append comment nếu có
+    if (comment) {
+      formData.append('comment', comment);
+    }
+
+    return http.post(`/tasks/task/${id}/submit-files`, formData);
+  },
+
+  // Xóa task 
   delete: (id: number): Promise<any> => {
     return http.delete(`/tasks/${id}`);
   },

@@ -96,3 +96,12 @@ export const CreateTaskSchema = z.object({
 });
 
 export type CreateTaskFormValues = z.infer<typeof CreateTaskSchema>;
+
+// --- SUB-SCHEMA: Submit Files ---
+// Dùng cho API: POST /tasks/task/{task_id}/submit-files
+export const SubmitTaskFilesSchema = z.object({
+  files: z.array(z.string()).min(1, "Vui lòng chọn ít nhất một file"),
+  comment: z.string().nullable().optional(),
+});
+
+export type SubmitTaskFilesValues = z.infer<typeof SubmitTaskFilesSchema>;

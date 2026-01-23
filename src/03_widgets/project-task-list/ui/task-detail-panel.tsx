@@ -1,11 +1,12 @@
-// task-detail-panel.tsx
 "use client";
 
 import React from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { 
   X as XIcon, Lock, Calendar, Tag, Info, AlertCircle, Loader2, 
-  Briefcase, User as UserIcon, Shield, Building2, MessageSquare, Clock
+  Briefcase, User as UserIcon, Shield, Building2, MessageSquare, Clock,
+  // [NEW] Icons cho History
+  History, ArrowRight, Activity, CheckCircle2, FileEdit
 } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar"; 
@@ -15,6 +16,8 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { taskApi, TASK_TAG_LABEL, TASK_TYPE_LABEL } from "@/entities/task";
 import { commentApi } from "@/entities/comment"; 
+// [NEW] Import API History
+import { getTaskHistory } from "@/entities/task-timeline";
 
 interface TaskDetailPanelProps {
   taskId: number | null;
@@ -22,6 +25,7 @@ interface TaskDetailPanelProps {
   onClose: () => void;
 }
 
+// --- TAB 1: COMMENTS (GIỮ NGUYÊN) ---
 const TaskCommentsTab = ({ taskId }: { taskId: number }) => {
   const { data: comments = [], isLoading, isError } = useQuery({
     queryKey: ["task-comments", taskId],
@@ -97,6 +101,99 @@ const TaskCommentsTab = ({ taskId }: { taskId: number }) => {
   );
 };
 
+// --- [NEW] TAB 2: HISTORY TIMELINE ---
+const TaskHistoryTab = ({ taskId }: { taskId: number }) => {
+  const { data: history = [], isLoading, isError } = useQuery({
+    queryKey: ["task-history", taskId],
+    queryFn: () => getTaskHistory(taskId),
+    staleTime: 0,
+  });
+
+  if (isLoading) return <div className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#009d98]" /></div>;
+  if (isError) return <div className="p-6 text-center text-red-500 text-xs">Không thể tải lịch sử.</div>;
+
+  if (history.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[300px] text-slate-400">
+        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+           <History className="w-6 h-6 text-slate-300" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">Chưa có lịch sử hoạt động.</p>
+      </div>
+    );
+  }
+
+  // Helper chọn màu/icon cho log
+  const getActionStyle = (action: string) => {
+      switch(action) {
+          case 'CREATED': return { icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' };
+          case 'APPROVED': return { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' };
+          case 'REJECTED': return { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' };
+          case 'SUBMITTED': return { icon: FileEdit, color: 'text-amber-500', bg: 'bg-amber-50' };
+          default: return { icon: Info, color: 'text-slate-400', bg: 'bg-slate-50' };
+      }
+  };
+
+  return (
+    <div className="space-y-6 p-2 relative ml-2 pb-10">
+        {/* Line dọc */}
+        <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-slate-100 -z-10"></div>
+
+        {history.map((log) => {
+            const style = getActionStyle(log.action);
+            const Icon = style.icon;
+
+            return (
+                <div key={log.id} className="flex gap-4 items-start group animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white shadow-sm z-10", style.bg)}>
+                        <Icon className={cn("w-4 h-4", style.color)} />
+                    </div>
+
+                    <div className="flex-1 min-w-0 bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="w-5 h-5 border border-slate-100">
+                                    <AvatarFallback className="text-[9px] bg-slate-100 text-slate-600">
+                                        {log.actor.fullName.charAt(0)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-bold text-slate-700 truncate max-w-[120px]">
+                                    {log.actor.fullName}
+                                </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                                {format(new Date(log.createdAt), "HH:mm dd/MM", { locale: vi })}
+                            </span>
+                        </div>
+
+                        <p className="text-xs text-slate-600 leading-relaxed mb-2">
+                            {log.detail}
+                        </p>
+
+                        {log.oldStatus && log.newStatus && log.oldStatus !== log.newStatus && (
+                            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">
+                                <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200 h-5 px-1.5">
+                                    {log.oldStatus}
+                                </Badge>
+                                <ArrowRight className="w-3 h-3 text-slate-300" />
+                                <Badge variant="outline" className="text-[9px] bg-white text-slate-800 border-slate-300 h-5 px-1.5 font-bold shadow-sm">
+                                    {log.newStatus}
+                                </Badge>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        })}
+        
+        <div className="pt-2 text-center">
+            <span className="text-[10px] text-slate-300 italic">Khởi đầu công việc</span>
+        </div>
+    </div>
+  );
+};
+
+// --- MAIN PANEL ---
 export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProps) => {
   const getStatusColor = (status: string) => {
       switch (status) {
@@ -117,7 +214,6 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
   });
 
   return (
-    // [UPDATE] Mobile: w-full, Desktop: w-[500px]. Z-index cao để đè lên list
     <div className={cn(
         "absolute top-0 right-0 bottom-0 w-full md:w-[500px] bg-white md:border-l border-slate-200 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col font-sans", 
         isOpen ? "translate-x-0" : "translate-x-full"
@@ -181,6 +277,13 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
                                 className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 shrink-0"
                             >
                                 Trao đổi 
+                            </TabsTrigger>
+                            {/* [NEW] Tab History Trigger */}
+                            <TabsTrigger 
+                                value="history" 
+                                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-[#009d98] data-[state=active]:text-[#009d98] px-0 font-bold text-xs uppercase text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 shrink-0"
+                            >
+                                <History className="w-3.5 h-3.5 mb-0.5" /> Lịch sử
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -262,6 +365,11 @@ export const TaskDetailPanel = ({ taskId, isOpen, onClose }: TaskDetailPanelProp
 
                         <TabsContent value="comments" className="mt-0">
                             <TaskCommentsTab taskId={task.id} />
+                        </TabsContent>
+
+                        {/* [NEW] Tab History Content */}
+                        <TabsContent value="history" className="mt-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <TaskHistoryTab taskId={task.id} />
                         </TabsContent>
 
                     </div>

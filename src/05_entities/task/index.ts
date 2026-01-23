@@ -6,6 +6,7 @@ export type { UpdateTaskDto } from "./api/task-api";
 export {
   CreateTaskSchema,
   TaskAssignmentSchema,
+  SubmitTaskFilesSchema, // [MỚI] Schema validate form nộp bài
   SecurityLevelEnum,
   AssignmentTypeEnum,
   UserRoleEnum,
@@ -14,6 +15,9 @@ export {
   TaskTagEnum,
   TaskTypeEnum
 } from "./model/schemas";
+
+// [MỚI] Export Type infer từ Schema (do đang nằm bên file schemas.ts)
+export type { SubmitTaskFilesValues } from "./model/schemas";
 
 // 3. Constants & Configs (QUAN TRỌNG: Để dùng Label, Color ở UI)
 export { 
@@ -37,4 +41,4 @@ export type {
   TaskAssignment,
   TaskStatus,
   Task,
-} from "./model/types";
+} from "./model/types"; 
