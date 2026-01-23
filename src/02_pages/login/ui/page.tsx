@@ -18,19 +18,16 @@ export function LoginPage() {
       <div className="relative z-10 grid lg:grid-cols-12 w-full h-full">
 
         {/* === CỘT TRÁI: BRANDING & INFO (PC ONLY) === */}
-        <div className="hidden lg:flex lg:col-span-7 flex-col justify-between p-12 lg:p-16 xl:p-24 text-white h-screen relative">
-          
-          {/* 1. HEADER BRAND */}
-          <div>
-             <h3 className="text-lg font-bold tracking-[0.2em] uppercase opacity-80 flex items-center gap-3">
-               CÔNG TY CỔ PHẦN TẬP ĐOÀN PC1
-             </h3>
-          </div>
+        <div className="hidden lg:flex lg:col-span-7 flex-col justify-center p-12 lg:p-16 xl:p-24 text-white h-screen relative">
 
-          {/* 2. MAIN CONTENT */}
+          {/* MAIN CONTENT */}
           <div className="max-w-3xl">
-            <h1 className="text-5xl xl:text-7xl font-bold tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
-              Hệ thống quản lý <br /> 
+            {/* HEADER BRAND */}
+            <h3 className="text-base font-bold tracking-[0.2em] uppercase opacity-70 flex items-center gap-3 mb-3">
+              CÔNG TY CỔ PHẦN TẬP ĐOÀN PC1
+            </h3>
+            <h1 className="text-4xl xl:text-6xl font-bold tracking-tight leading-[1.1] mb-8 drop-shadow-sm">
+              Hệ thống quản lý <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#20a19c] to-[#4fd1c5]">
                 Đấu thầu tập trung
               </span>
@@ -53,15 +50,16 @@ export function LoginPage() {
                 </div>
               ))}
             </div>
+
+            {/* FOOTER */}
+            <div className="text-xs text-white/50 font-medium tracking-wider flex gap-6 mt-16">
+              <span>© 2026 PC1 GROUP</span>
+              <span className="w-[1px] h-4 bg-white/20"></span>
+              <span>Privacy Policy</span>
+              <span>Terms of Service</span>
+            </div>
           </div>
 
-          {/* 3. FOOTER */}
-          <div className="text-xs text-white/50 font-medium tracking-wider flex gap-6">
-            <span>© 2026 PC1 GROUP</span>
-            <span className="w-[1px] h-4 bg-white/20"></span>
-            <span>Privacy Policy</span>
-            <span>Terms of Service</span>
-          </div>
         </div>
 
         {/* === CỘT PHẢI: FORM ĐĂNG NHẬP === */}

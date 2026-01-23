@@ -204,17 +204,21 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
   // RENDER UI
   // =========================================================
 
+  // [FIX START]: Bọc TemplateSelector trong div có padding để tránh bị Header đè
   if (step === "SELECT" && !isReadOnly) {
     return (
-        <TemplateSelector 
-            templates={templates} 
-            isLoading={isLoadingTemplates} 
-            onSelect={handleSelectTemplate}
-            onLoadDraft={handleLoadDraft}
-            isLoadingDraft={isLoadingDraft}
-        />
+        <div className="w-full h-full p-6 overflow-y-auto bg-slate-50">
+            <TemplateSelector 
+                templates={templates} 
+                isLoading={isLoadingTemplates} 
+                onSelect={handleSelectTemplate}
+                onLoadDraft={handleLoadDraft}
+                isLoadingDraft={isLoadingDraft}
+            />
+        </div>
     );
   }
+  // [FIX END]
 
   return (
     <div className="h-[calc(100vh-60px)] w-full flex flex-col bg-slate-100 overflow-hidden relative">
@@ -319,11 +323,11 @@ export const DraftingEditor = ({ task, isReadOnly = false }: DraftingEditorProps
 
             {/* AI DRAWER (Trượt ra từ phải) */}
             <AiAssistant 
-                 isOpen={isAiOpen} 
-                 onClose={() => setIsAiOpen(false)}
-                 currentHtml={fullHtmlContent}
-                 onApplyChanges={(html) => setFullHtmlContent(html)}
-                 mode="sidebar" // Đưa về dạng sidebar
+                  isOpen={isAiOpen} 
+                  onClose={() => setIsAiOpen(false)}
+                  currentHtml={fullHtmlContent}
+                  onApplyChanges={(html) => setFullHtmlContent(html)}
+                  mode="sidebar" // Đưa về dạng sidebar
             />
         </div>
     </div>

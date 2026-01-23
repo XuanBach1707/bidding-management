@@ -80,5 +80,25 @@ export const authApi = {
   logout: async () => {
     // Gọi endpoint này để BE xóa cookie
     return http.post<any, ApiResponse<any>>("/auth/logout");
+  },
+
+  /**
+   * Lấy Microsoft OAuth Login URL
+   * Backend sẽ trả về URL để redirect user sang Microsoft login
+   */
+  getMicrosoftLoginUrl: async (): Promise<string> => {
+    const response = await http.get<any, ApiResponse<{ url: string }>>(
+      "/auth/microsoft/login"
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || "Không thể lấy URL đăng nhập Microsoft");
+    }
+
+    if (!response.data?.url) {
+      throw new Error("Không nhận được URL đăng nhập");
+    }
+
+    return response.data.url;
   }
 };
