@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 // --- CẤU HÌNH ---
 // Loại bỏ dấu / ở cuối để tránh double slash
-const BACKEND_URL = (process.env.BACKEND_URL || "http://10.11.1.7:43210").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL || "http://10.11.1.92:43210").replace(/\/$/, "");
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -44,12 +44,15 @@ export function proxy(request: NextRequest) {
   requestHeaders.set('X-Forwarded-Prefix', '/api-proxy');
 
   // 6. GỌI BACKEND VÀ XỬ LÝ REDIRECT
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
   return fetch(destinationUrl, {
     method: request.method,
     headers: requestHeaders,
-    body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+    body: hasBody ? request.body : undefined,
+    // Node.js 18+ yêu cầu duplex: 'half' khi body là ReadableStream
+    ...(hasBody && { duplex: 'half' }),
     redirect: 'manual', // ✅ QUAN TRỌNG: Không tự động follow redirect
-  }).then(async (backendResponse) => {
+  } as RequestInit).then(async (backendResponse) => {
     // Nếu backend trả về redirect (3xx), forward redirect ra browser
     if (backendResponse.status >= 300 && backendResponse.status < 400) {
       const location = backendResponse.headers.get('location');
