@@ -1,3 +1,4 @@
+// src/entities/bidding/ui/bidding-list.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button"; 
 import { useDebounce } from "@/shared/lib/hooks/use-debounce"; 
+import { useAuth } from "@/features/auth/model/auth-context"; 
+
 import { 
   useBiddingList, 
   BiddingCard, 
@@ -21,6 +24,7 @@ const INITIAL_PARAMS = {
 export const BiddingList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
+  const { user } = useAuth(); 
 
   const { 
     items, 
@@ -43,6 +47,8 @@ export const BiddingList = () => {
       statusParam = "NEW,INTERESTED"; 
     } else if (value === "approved") {
       statusParam = "BIDDING";
+    } else if (value === "reviewing") {
+      statusParam = "PENDING_REVIEW"; 
     }
     handleChangeFilter("status", statusParam); 
   };
@@ -53,12 +59,14 @@ export const BiddingList = () => {
     </div>
   );
 
+  // [FIX] Cập nhật mảng cấu hình Role được phép xem danh sách chờ duyệt
+  const allowedRolesForReview = ["BID_MANAGER", "MANAGER"];
+  const canViewPendingReview = user?.role ? allowedRolesForReview.includes(user.role) : false;
+
   return (
-    // Mobile: space-y-4 cho gọn. PC: space-y-6 cho thoáng.
     <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* --- HEADER CONTROLS --- */}
-      {/* Mobile: p-3. PC: p-4. */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
         
         {/* Search Input */}
@@ -74,14 +82,25 @@ export const BiddingList = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="pending" onValueChange={handleTabChange} className="w-full md:w-auto">
-          {/* Grid cols 2 để trên mobile nút bấm to đều, dễ trúng */}
-          <TabsList className="bg-slate-100 h-10 p-1 grid grid-cols-2 w-full md:w-auto">
+          {/* Tự động scale Grid-cols theo Role */}
+          <TabsList className={`bg-slate-100 h-10 p-1 grid w-full md:w-auto ${canViewPendingReview ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger 
                 value="pending" 
                 className="data-[state=active]:bg-white data-[state=active]:text-[#009d98] data-[state=active]:shadow-sm text-xs font-semibold px-4 transition-all"
             >
                 Chờ xử lý
             </TabsTrigger>
+
+            {/* Tab Chờ Duyệt hiển thị dựa trên mảng allowedRolesForReview */}
+            {canViewPendingReview && (
+              <TabsTrigger 
+                  value="reviewing" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-sm text-xs font-semibold px-4 transition-all"
+              >
+                  Chờ duyệt
+              </TabsTrigger>
+            )}
+
             <TabsTrigger 
                 value="approved" 
                 className="data-[state=active]:bg-white data-[state=active]:text-[#009d98] data-[state=active]:shadow-sm text-xs font-semibold px-4 transition-all"
@@ -93,7 +112,6 @@ export const BiddingList = () => {
       </div>
 
       {/* --- LIST CONTENT --- */}
-      {/* Grid tự động scale: 1 cột (mobile) -> 2 cột (tablet) -> 3 cột (PC) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6">
         {loading ? (
           Array.from({ length: 9 }).map((_, i) => <BiddingCardSkeleton key={i} />)
@@ -112,25 +130,19 @@ export const BiddingList = () => {
         )}
       </div>
 
-      {/* --- PAGINATION (Đã tối ưu Mobile) --- */}
+      {/* --- PAGINATION --- */}
       {meta.pages > 1 && (
-        // Mobile: flex-col-reverse (Nút bấm lên trên, text xuống dưới).
-        // PC: flex-row (ngang).
         <div className="flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between py-4 border-t border-slate-200">
-          
-          {/* Text thông tin: Mobile căn giữa, PC căn trái */}
           <div className="text-xs text-slate-500 font-medium text-center md:text-left">
              Hiển thị {(meta.page - 1) * 9 + 1}-{Math.min(meta.page * 9, meta.total)} trong số {meta.total} gói thầu
           </div>
 
-          {/* Nút điều hướng */}
           <div className="flex justify-center gap-2 w-full md:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => changePage(meta.page - 1)}
               disabled={meta.page === 1 || loading}
-              // Thêm w-full trên mobile nếu muốn nút to hết cỡ, hoặc để auto
               className="h-9 px-4 text-xs font-medium hover:bg-slate-50 hover:text-[#009d98] disabled:opacity-50"
             >
               Trước

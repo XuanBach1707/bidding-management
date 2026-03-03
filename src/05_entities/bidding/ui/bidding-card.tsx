@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-// [UPDATE] Thêm import format từ date-fns
 import { format } from "date-fns"; 
 import { Building2, FileText, CalendarDays, ArrowRight, CheckCircle2, ExternalLink } from "lucide-react";
 import { BiddingPackage } from "../model/types";
@@ -28,20 +27,22 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
         return <Badge className={`${baseClasses} bg-amber-50 text-amber-700 hover:bg-amber-50 border-amber-100 font-semibold`}>Quan tâm</Badge>;
       case "NEW":
         return <Badge className={`${baseClasses} bg-blue-50 text-blue-700 hover:bg-blue-50 border-blue-100 font-semibold`}>Mới</Badge>;
+      // [NEW] Ánh xạ trạng thái chờ duyệt (PENDING_REVIEW)
+      case "PENDING_REVIEW":
+        return <Badge className={`${baseClasses} bg-yellow-50 text-yellow-700 hover:bg-yellow-50 border-yellow-100 font-semibold`}>Chờ duyệt</Badge>;
       default:
         return <Badge variant="outline" className={`${baseClasses} text-slate-600`}>{data.trangThai || "Unknown"}</Badge>;
     }
   };
 
-    // [FIX] Sửa lại type đầu vào: thêm | null
-    const formatDeadline = (dateString?: string | null) => {
-        if (!dateString) return "Chưa có"; // Dòng này sẽ chặn cả null, undefined và chuỗi rỗng
-        try {
-        return format(new Date(dateString), "HH:mm dd/MM/yyyy");
-        } catch (error) {
-        return dateString;
-        }
-    };
+  const formatDeadline = (dateString?: string | null) => {
+    if (!dateString) return "Chưa có"; 
+    try {
+      return format(new Date(dateString), "HH:mm dd/MM/yyyy");
+    } catch (error) {
+      return dateString;
+    }
+  };
 
   return (
     <div className={cn(
@@ -108,7 +109,6 @@ export const BiddingCard = ({ data }: BiddingCardProps) => {
                     "text-sm font-bold tabular-nums mt-0.5 whitespace-nowrap",
                     "text-slate-800" 
                 )}>
-                    {/* [UPDATE] Sử dụng hàm format ở đây */}
                     {formatDeadline(data.thoiDiemMoThau)}
                 </span>
              </div>

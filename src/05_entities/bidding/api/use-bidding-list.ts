@@ -1,3 +1,4 @@
+// src/entities/bidding/api/use-bidding-list.ts
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -46,10 +47,6 @@ export const useBiddingList = (
 
   const [searchQuery, setSearchQuery] = useState(initialParams.search || '');
 
-  /**
-   * FIX: Khởi tạo filters từ initialParams.status ngay lập tức.
-   * Dùng Type Assertion 'as' để tránh lỗi Record<string, string> của TS.
-   */
   const [filters, setFilters] = useState<Record<string, string>>(
     (initialParams.status ? { status: initialParams.status } : {}) as Record<string, string>
   );
@@ -67,8 +64,21 @@ export const useBiddingList = (
 
       let responseData: { items: BiddingPackage[], total: number } = { items: [], total: 0 };
 
-      // [LOGIC XỬ LÝ NHIỀU STATUS SONG SONG]
-      if (statusParam && statusParam.includes(',')) {
+      // [NEW] LOGIC GỌI API RIÊNG CHO TAB CHỜ DUYỆT
+      if (statusParam === 'PENDING_REVIEW') {
+        const body = await http.get<any, BiddingPackageListResponse>('/bidding-packages/status/pending-review', {
+          params: { limit, skip, search: search || undefined }
+        });
+
+        if (!body.success) throw new Error(body.message || "Không thể tải dữ liệu.");
+        
+        const parseResult = BiddingPackagePaginatedSchema.safeParse(body.data);
+        if (parseResult.success) {
+            responseData = parseResult.data;
+        }
+      } 
+      // [LOGIC CŨ] XỬ LÝ NHIỀU STATUS SONG SONG
+      else if (statusParam && statusParam.includes(',')) {
         const statuses = statusParam.split(',').map(s => s.trim());
         
         const promises = statuses.map(status => {
@@ -96,7 +106,7 @@ export const useBiddingList = (
         responseData = { items: combinedItems, total: combinedTotal };
 
       } else {
-        // [LOGIC GỌI 1 API BÌNH THƯỜNG]
+        // [LOGIC CŨ] GỌI 1 API BÌNH THƯỜNG
         const body = await http.get<any, BiddingPackageListResponse>('/bidding-packages', {
           params: { limit, skip, search: search || undefined, ...currentFilters }
         });
@@ -126,9 +136,6 @@ export const useBiddingList = (
     }
   }, []);
 
-  /**
-   * FIX: Dòng 131 - Dùng Type Assertion để TS không bắt bẻ object rỗng.
-   */
   useEffect(() => {
     const initialFilters = (initialParams.status 
       ? { status: initialParams.status } 

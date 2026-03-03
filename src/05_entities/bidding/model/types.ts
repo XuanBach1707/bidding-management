@@ -91,8 +91,18 @@ export const BiddingPackageSchema = z.object({
   // LIÊN KẾT DỰ ÁN
   projectId: z.number().optional().nullable(),
 
-  // TRẠNG THÁI
-  trangThai: z.enum(["NEW", "INTERESTED", "NO_GO", "BIDDING", "SUBMITTED", "CLOSED"]).optional().nullable(),
+// TRẠNG THÁI (Bổ sung PENDING_REVIEW, SUBMIT_REVIEW, LIST_PENDING)
+  trangThai: z.enum([
+    "NEW", 
+    "INTERESTED", 
+    "NO_GO", 
+    "BIDDING", 
+    "SUBMITTED", 
+    "CLOSED", 
+    "PENDING_REVIEW", // Status: Chờ duyệt
+    "SUBMIT_REVIEW",  
+    "LIST_PENDING"
+  ]).optional().nullable(),
 
   // PHÂN QUYỀN (Action Based Access Control)
   allowedActions: z.array(z.string()).optional().default([]),

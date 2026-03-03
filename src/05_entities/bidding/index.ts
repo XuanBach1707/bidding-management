@@ -1,30 +1,29 @@
+// src/entities/bidding/index.ts
+
 // 1. Export Models & Types
 export {
-  // Types
   type BiddingPackage,
   type BiddingFile,
   type GetBiddingPackagesParams,
-  
-  // AI Types (Để Feature dùng)
   type BidAiExtractData,
   type BidGeneralInfo,
   type BidFinancialReq,
   type BidPersonnelReq,
   type BidEquipmentReq,
-
-  // Schemas (Nếu cần validate lại ở form)
   BiddingPackageSchema,
   BidAiExtractDataSchema,
 } from "./model";
 
-// 2. Export APIs
+// 2. Export APIs (Gom tất cả vào 1 block)
 export {
   getBiddingPackages,
   getBiddingPackageDetail,
   getBiddingPackageFiles,
   updateBiddingDecision,
-  analyzeBidAi, // API mới
-  getBidAnalysisResult, // API mới
+  analyzeBidAi, 
+  getBidAnalysisResult,
+  getPendingReviewPackages, // [NEW] Danh sách chờ duyệt
+  submitBiddingReview       // [NEW] Trình duyệt
 } from "./api";
 
 // 3. Export UI Components

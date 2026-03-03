@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "types": ["node"],
     "plugins": [
       {
         "name": "next"
@@ -20,9 +21,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      // Alias cho từng layer FSD (KHÔNG dùng số trong alias)
       "@/app/*": ["./src/01_app/*"],
-      "@/pages/*": ["./src/02_pages/*"], // Alias mới cho layer Pages
+      "@/pages/*": ["./src/02_pages/*"],
       "@/widgets/*": ["./src/03_widgets/*"],
       "@/features/*": ["./src/04_features/*"],
       "@/entities/*": ["./src/05_entities/*"],
