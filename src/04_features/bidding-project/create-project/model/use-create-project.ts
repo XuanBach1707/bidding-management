@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/shared/lib/hooks/use-toast";
 import { organizationApi, OrganizationUnit } from "@/entities/organization";
 import { biddingProjectApi } from "@/entities/bidding-project";
@@ -78,7 +78,6 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
   // --- LOGIC DRIVE AUTO-FETCH ---
   const fetchAutoDocuments = useCallback(async (currentTasks: TempTask[]) => {
     try {
-      console.log("🔍 Đang tìm tài liệu mẫu từ Drive...");
       const legalTask = currentTasks.find(t => t.tag === "LEGAL");
       const financeTask = currentTasks.find(t => t.tag === "FINANCE");
       if (!legalTask && !financeTask) return; 
@@ -175,7 +174,6 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
       });
       console.timeEnd("Create Project DB");
       const newProjectId = projectRes.id;
-      console.log(`✅ Project Created with ID: ${newProjectId}`);
 
       // 2. Init Drive & Lấy cấu trúc Folder mới
       let driveStructureLog: DriveStructureItem[] = [];
@@ -240,7 +238,6 @@ export const useCreateProject = ({ isOpen, hsmtId, defaultName, onClose }: UseCr
           }
       });
 
-      console.log(`📝 Tìm thấy ${finalTasksToCreate.length} công việc thực tế cần tạo.`);
 
       // 4. TIẾN HÀNH TẠO
       for (const t of finalTasksToCreate) {

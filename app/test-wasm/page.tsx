@@ -1,4 +1,4 @@
-// app/test-wasm/page.tsx
+﻿// app/test-wasm/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -95,7 +95,6 @@ export default function TestWasmPage() {
       const compressedBytes = wasm.compress_image(u8Array);
       const end = performance.now();
       
-      console.log(`Nén ảnh: ${(end - start).toFixed(2)}ms`);
 
       const blob = new Blob([compressedBytes], { type: "image/png" });
       setImgCompressed(URL.createObjectURL(blob));
@@ -136,7 +135,6 @@ export default function TestWasmPage() {
         const html = wasm.read_docx_to_html(u8Array);
         const end = performance.now();
         
-        console.log(`Đọc Docx: ${(end - start).toFixed(2)}ms`);
         setImportedHtml(html);
     } catch (err) {
         alert("Lỗi đọc file Docx: " + err);

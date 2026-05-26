@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,7 +20,6 @@ if (typeof window !== 'undefined') {
     // OAuth luôn coi như persistent (ghi nhớ)
     localStorage.setItem('IS_PERSISTENT', '1');
     sessionStorage.setItem('SESSION_ACTIVE', '1');
-    console.log('[OAuth Callback] Flags set immediately on module load');
   }
 }
 
@@ -60,7 +59,6 @@ export function AuthCallbackPage() {
 
         // Trường hợp thành công
         if (state === 'success') {
-          console.log('[OAuth Callback] Authentication successful, redirecting...');
 
           setStatus('success');
           setMessage('Đăng nhập thành công!');
