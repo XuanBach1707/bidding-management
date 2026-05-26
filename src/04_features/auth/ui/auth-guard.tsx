@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       } catch (error) {
         // 4. Nếu lỗi (401 Unauthorized), đá về login
-        console.log("AuthGuard: Session invalid or expired");
         authStorage.clear(); // Xóa info rác
         router.replace("/login");
       }

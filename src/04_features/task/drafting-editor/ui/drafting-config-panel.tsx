@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { 
   Sparkles, Loader2, Database, 
   MessageSquare, CheckSquare, Square, FileText
@@ -193,7 +193,6 @@ export const DraftingConfigPanel = ({
         referenceDoc: selectedFiles
       });
       
-      console.log("AI Response:", res); // Debug
 
       // Xử lý kết quả trả về
       // API trả về Object: { status, project, used_template, data }

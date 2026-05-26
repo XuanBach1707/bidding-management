@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +24,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log("AuthProvider: Checking session via Cookie...");
 
         // Bước 1: Gọi API check Cookie xem còn sống không
         const userFromCookie = await authApi.getMe();
@@ -44,7 +43,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Nếu qua được ải trên thì set user
-        console.log("AuthProvider: Session Valid", userFromCookie);
         setUser(userFromCookie);
         authStorage.setUser(userFromCookie); 
 

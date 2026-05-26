@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -29,7 +29,6 @@ export function MicrosoftLoginButton({
     setIsLoading(true);
 
     // Log để debug
-    console.log('[Microsoft Login] Redirecting to OAuth endpoint...');
 
     // Redirect trực tiếp đến BE endpoint
     // BE sẽ tự redirect sang Microsoft login page

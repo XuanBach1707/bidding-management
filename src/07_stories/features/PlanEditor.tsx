@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { PlanNode, EditorAssignee } from '../types/ai-plan-editor';
 import { PlanEditorRow } from './PlanEditorRow';
 import { Button } from "@/shared/ui/button";
@@ -74,7 +74,6 @@ export function PlanEditor({ initialData, users }: PlanEditorProps) {
   };
 
   const handleSave = () => {
-      console.log("Saving 2-Level Data:", data);
   };
 
   return (
